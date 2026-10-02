@@ -23,6 +23,8 @@ pnpm stack:down    # stop the stack, keep the database data
 pnpm stack:reset   # wipe the database volume and start fresh
 ```
 
+With only Docker and make installed, the same commands exist as `make up`, `make down`, `make reset`, plus `make logs`, `make ps` and `make psql`; `make help` lists them. The `pnpm stack:*` scripts just call these targets.
+
 Host ports default to `3000` (API) and `5433` (Postgres); override with `API_PORT` and `DB_PORT`, e.g. `API_PORT=3100 pnpm stack:up`.
 
 ## Development
