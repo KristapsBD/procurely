@@ -1,91 +1,29 @@
-export interface HealthResponse {
-  status: 'ok';
-  database: 'up';
-}
-
-export type Role = 'REQUESTER' | 'APPROVER' | 'BUYER' | 'ADMIN';
-
-export interface Person {
-  id: string;
-  email: string;
-  name: string;
-}
-
-/** Dev-only login: signs in as any seeded person by id. */
-export interface DevLoginRequest {
-  personId: string;
-}
-
-export interface SessionResponse {
-  /** Bearer token for the Authorization header. */
-  token: string;
-  person: Person;
-}
-
-export interface CompanyMembership {
-  companyId: string;
-  companyName: string;
-  currency: string;
-  role: Role;
-}
-
-export interface MeResponse extends Person {
-  /** Active memberships only. Empty for a person who belongs to no company. */
-  memberships: CompanyMembership[];
-}
-
-export interface CostCenter {
-  id: string;
-  companyId: string;
-  code: string;
-  name: string;
-}
-
-export interface CreateCostCenterRequest {
-  code: string;
-  name: string;
-}
-
-export interface UpdateCostCenterRequest {
-  name: string;
-}
-
-/** A person's membership of the company they act in, as an admin sees it. */
-export interface Member {
-  /** The membership id (not the person id). */
-  id: string;
-  personId: string;
-  email: string;
-  name: string;
-  role: Role;
-  active: boolean;
-}
+import type { components } from './generated/api';
 
 /**
- * Invites a person by email. The person record is created if the email is new, so a later
- * Google sign-in with that email finds it. No email is sent.
+ * Client types for the HTTP API, generated from the API's own contract (apps/api/openapi.json).
+ * Do not hand-write request or response shapes here: change the DTO classes in
+ * apps/api/src/contract/api.dto.ts and run `pnpm contract:generate`. CI fails when the committed
+ * generated types differ from what the API would generate.
  */
-export interface InviteMemberRequest {
-  email: string;
-  /** Display name for a new person; defaults to the part of the email before the @. */
-  name?: string;
-  role: Role;
-}
+type Schemas = components['schemas'];
 
-export interface UpdateMemberRequest {
-  role?: Role;
-  active?: boolean;
-}
+export type { components, operations, paths } from './generated/api';
 
-export interface AuditEntry {
-  id: string;
-  actorPersonId: string;
-  action: string;
-  entityType: string;
-  entityId: string | null;
-  details: unknown;
-  createdAt: string;
-}
+export type Role = Schemas['Role'];
+export type HealthResponse = Schemas['HealthResponse'];
+export type Person = Schemas['Person'];
+export type DevLoginRequest = Schemas['DevLoginRequest'];
+export type SessionResponse = Schemas['SessionResponse'];
+export type CompanyMembership = Schemas['CompanyMembership'];
+export type MeResponse = Schemas['MeResponse'];
+export type CostCenter = Schemas['CostCenter'];
+export type CreateCostCenterRequest = Schemas['CreateCostCenterRequest'];
+export type UpdateCostCenterRequest = Schemas['UpdateCostCenterRequest'];
+export type Member = Schemas['Member'];
+export type InviteMemberRequest = Schemas['InviteMemberRequest'];
+export type UpdateMemberRequest = Schemas['UpdateMemberRequest'];
+export type AuditEntry = Schemas['AuditEntry'];
 
 /** Request header naming the company the person is acting in. */
 export const COMPANY_HEADER = 'x-company-id';

@@ -1,6 +1,6 @@
 import { ConflictException, Injectable } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
-import type { Member, UpdateMemberRequest } from '@procurely/shared-types';
+import type { Member, UpdateMemberRequest } from '../contract/api.dto';
 import { writeAudit } from '../audit/audit-log';
 import type { CompanyRequestScope } from '../tenancy/request-scope';
 import { rejectUnmatchedWrite } from '../tenancy/roles';

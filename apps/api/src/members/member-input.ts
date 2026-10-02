@@ -3,7 +3,7 @@ import type {
   InviteMemberRequest,
   Role,
   UpdateMemberRequest,
-} from '@procurely/shared-types';
+} from '../contract/api.dto';
 
 const ROLES: readonly Role[] = ['REQUESTER', 'APPROVER', 'BUYER', 'ADMIN'];
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

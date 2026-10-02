@@ -14,12 +14,19 @@
     "db:reset": "make seed",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "contract:generate": "pnpm --filter @procurely/api contract:generate",
+    "contract:check": "pnpm --filter @procurely/api contract:check",
+    "deps:check": "depcruise apps packages --config .dependency-cruiser.cjs",
+    "dup:check": "jscpd",
+    "audit:deps": "pnpm audit --audit-level high"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "dependency-cruiser": "^18.5.0",
     "eslint": "^10.11.0",
     "globals": "^17.13.0",
+    "jscpd": "^5.4.0",
     "prettier": "^3.9.9",
     "typescript-eslint": "^8.71.0"
   }

@@ -1,5 +1,6 @@
 import { Controller, Get, UseGuards } from '@nestjs/common';
-import type { AuditEntry } from '@procurely/shared-types';
+import { AuditEntry } from '../contract/api.dto';
+import { ApiCompanyHeader, ApiSession } from '../contract/decorators';
 import { SessionGuard } from '../auth/session.guard';
 import {
   CompanyScope,
@@ -11,6 +12,8 @@ const PAGE_SIZE = 200;
 
 @Controller('audit-log')
 @UseGuards(SessionGuard)
+@ApiSession()
+@ApiCompanyHeader()
 export class AuditLogController {
   constructor(private readonly db: TenantDb) {}
 

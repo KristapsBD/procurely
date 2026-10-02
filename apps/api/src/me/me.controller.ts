@@ -4,13 +4,15 @@ import {
   UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
-import type { MeResponse } from '@procurely/shared-types';
+import { MeResponse } from '../contract/api.dto';
+import { ApiSession } from '../contract/decorators';
 import { SessionGuard } from '../auth/session.guard';
 import { Scope, type RequestScope } from '../tenancy/request-scope';
 import { TenantDb } from '../tenancy/tenant-db.service';
 
 @Controller('me')
 @UseGuards(SessionGuard)
+@ApiSession()
 export class MeController {
   constructor(private readonly db: TenantDb) {}
 

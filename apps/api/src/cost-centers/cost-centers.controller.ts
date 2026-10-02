@@ -12,11 +12,13 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import type {
+import { ApiNoContentResponse } from '@nestjs/swagger';
+import {
   CostCenter,
   CreateCostCenterRequest,
   UpdateCostCenterRequest,
-} from '@procurely/shared-types';
+} from '../contract/api.dto';
+import { ApiCompanyHeader, ApiSession } from '../contract/decorators';
 import { SessionGuard } from '../auth/session.guard';
 import { translateDbError } from '../tenancy/db-errors';
 import {
@@ -35,6 +37,8 @@ function requireString(value: unknown, field: string): string {
 
 @Controller('cost-centers')
 @UseGuards(SessionGuard)
+@ApiSession()
+@ApiCompanyHeader()
 export class CostCentersController {
   constructor(private readonly db: TenantDb) {}
 
@@ -60,7 +64,7 @@ export class CostCentersController {
   @Post()
   async create(
     @CompanyScope() scope: CompanyRequestScope,
-    @Body() body: Partial<CreateCostCenterRequest>,
+    @Body() body: CreateCostCenterRequest,
   ): Promise<CostCenter> {
     const data = {
       code: requireString(body?.code, 'code'),
@@ -76,7 +80,7 @@ export class CostCentersController {
   async update(
     @CompanyScope() scope: CompanyRequestScope,
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() body: Partial<UpdateCostCenterRequest>,
+    @Body() body: UpdateCostCenterRequest,
   ): Promise<CostCenter> {
     const name = requireString(body?.name, 'name');
     return this.db
@@ -93,6 +97,7 @@ export class CostCentersController {
 
   @Delete(':id')
   @HttpCode(204)
+  @ApiNoContentResponse()
   async remove(
     @CompanyScope() scope: CompanyRequestScope,
     @Param('id', ParseUUIDPipe) id: string,
