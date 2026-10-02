@@ -31,6 +31,8 @@ Host ports default to `3000` (API) and `5433` (Postgres); override with `API_POR
 
 Every pull request runs `.github/workflows/ci.yml`: five parallel jobs, each its own required check: `format`, `lint` (ESLint, cyclomatic complexity cap of 10), `typecheck`, `unit-tests` and `docker-smoke` (builds the API image, starts it with Postgres, hits `/health`). Branch protection on `main` should require exactly those five check names.
 
+Every push to `main` also runs `.github/workflows/publish-image.yml`, which builds the API image and pushes it to `ghcr.io/kristapsbd/procurely-api` tagged with the commit SHA and `latest`. It runs on `main` only and is not a required check.
+
 ## Development
 
 ```sh
