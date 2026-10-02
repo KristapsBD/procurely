@@ -76,29 +76,28 @@ The API allows cross-origin browser calls only when `NODE_ENV` is `development` 
 
 ### On a physical iPhone with Expo Go
 
-The phone must reach two things on your machine: Metro (default port 8081, serves the JavaScript) and the API (3000). The dev login signs in as any seeded user and the compose stack runs in development mode, so the API must not be put on a public tunnel. Keep both on your LAN. Under WSL2 that takes a one-time setup **on Windows, done by you; it cannot be done from inside WSL**:
+The phone must reach two things on your machine: Metro (port 8081, serves the JavaScript) and the API (port 3000). The dev login signs in as any seeded user and the compose stack runs in development mode, so the API must **never** be put on a public tunnel or otherwise exposed to the internet. The setup below uses [Tailscale](https://tailscale.com): the phone reaches WSL directly over a private tailnet that contains only your own devices, and nothing is opened on the home network, the Windows firewall or the internet (no `.wslconfig` or firewall changes).
 
-1. In `%UserProfile%\.wslconfig` (Windows 11 22H2 or newer), then run `wsl --shutdown` and reopen WSL:
-   ```ini
-   [wsl2]
-   networkingMode=mirrored
-   ```
-2. In an elevated PowerShell, allow inbound connections to only the Metro and API ports. Mirrored mode has two firewalls: the Windows Defender one (limited here to the private network profile) and the Hyper-V one that guards the WSL VM (limited here to the same two ports):
-   ```powershell
-   New-NetFirewallRule -DisplayName "Procurely dev (Metro and API)" -Direction Inbound -Action Allow -Protocol TCP -LocalPort 8081,3000 -Profile Private
-   New-NetFirewallHyperVRule -Name "ProcurelyDev" -DisplayName "Procurely dev (Metro and API)" -Direction Inbound -VMCreatorId '{40E0AC32-46A5-438A-A0B2-2B479E8F2E90}' -Protocol TCP -LocalPorts 8081,3000
-   ```
-   Make sure the Wi-Fi network is marked Private, and use a Wi-Fi without client isolation (guest networks often have it).
-3. Start the stack and Metro with the Windows host's LAN address (the same address the phone sees, e.g. from `ipconfig`):
-   ```sh
-   pnpm stack:up && pnpm db:reset
-   EXPO_PUBLIC_API_URL=http://192.168.1.20:3000 REACT_NATIVE_PACKAGER_HOSTNAME=192.168.1.20 pnpm mobile:start
-   ```
-   Scan the QR code with the iPhone camera (opens Expo Go). The phone must be on the same Wi-Fi.
+One-time setup, on your machine and phone:
+
+1. In WSL (systemd must be enabled, it is by default on current WSL), install Tailscale and sign in: `curl -fsSL https://tailscale.com/install.sh | sh`, then `sudo tailscale up` and open the printed login URL.
+2. On the iPhone, install the Tailscale app from the App Store and sign in with the same account. Keep it connected (VPN on) while testing.
+
+Each session:
+
+```sh
+pnpm stack:up && pnpm db:reset                    # compose publishes the API on port 3000
+TS_IP=$(tailscale ip -4)                          # the WSL address on the tailnet, 100.x.y.z
+EXPO_PUBLIC_API_URL=http://$TS_IP:3000 REACT_NATIVE_PACKAGER_HOSTNAME=$TS_IP pnpm mobile:start
+```
+
+Then open Expo Go on the iPhone and enter `exp://<TS_IP>:8081` (or scan the QR code Metro prints). Sign in with a dev-login quick pick.
+
+Keep the tailnet private to your own devices: do not share the node, and do not use `tailscale funnel` (it publishes a port to the internet). Compose also publishes Postgres on 5433, which is reachable on the tailnet the same way.
 
 Expo's built-in tunnel (`expo start --tunnel`) is a fallback for Metro only: it does not carry the app's API calls, so sign-in would fail unless the API is reachable some other way. Do not expose the API to get around this.
 
-The exact commands in step 2 and the whole phone path are unverified: they were written from Microsoft's and Expo's documentation and could not be run from the agent environment. What was verified: the iOS bundle builds (`expo export --platform ios`), and the same app runs end to end in the browser.
+**Not yet verified:** nobody has opened the app on a phone yet. The Tailscale setup and the Expo Go connection are written from Tailscale's and Expo's documentation and could not be run from the agent environment. What was verified: the iOS bundle builds (`expo export --platform ios`) and the same app runs end to end in the browser.
 
 ## CI
 
@@ -109,7 +108,7 @@ Every pull request runs `.github/workflows/ci.yml`: fifteen parallel jobs, each 
 | `format`                | Prettier                                                                                                                                           |
 | `lint`                  | ESLint, cyclomatic complexity cap of 10, only the tenancy module touches the raw database client                                                   |
 | `typecheck`             | `tsc` in the API and shared types (the Expo app has its own job)                                                                                   |
-| `unit-tests`            | tests that need no database                                                                                                                        |
+| `unit-tests`            | API tests that need no database                                                                                                                    |
 | `api-tests`             | HTTP tests as seeded users against a real Postgres                                                                                                 |
 | `rls-audit`             | every table has RLS enabled and forced, the API role cannot bypass it, the audit log has no update or delete path                                  |
 | `docker-smoke`          | builds the API image, starts it with Postgres, hits `/health`                                                                                      |
@@ -124,7 +123,7 @@ Every pull request runs `.github/workflows/ci.yml`: fifteen parallel jobs, each 
 
 Branch protection on `main` should require exactly those fifteen check names.
 
-`audit:deps` ignores one advisory, GHSA-86w9-cpqp-85rv (high, `node-forge` up to 1.4.0, RSA PKCS#1 v1.5 signature verification). It comes in through `@expo/cli` (the Metro dev server and `expo export` on a developer machine; it is not in the API or in the app bundle), and no patched version exists (1.4.0 is the latest release). Remove the `--ignore` in the root `package.json` once `node-forge` or Expo ships a fix.
+`audit:deps` ignores one advisory, GHSA-86w9-cpqp-85rv (high, `node-forge` up to 1.4.0, RSA PKCS#1 v1.5 signature verification). It comes in through `@expo/cli` (the Metro dev server and `expo export` on a developer machine; it is not in the API or in the app bundle), and no patched version exists (1.4.0 is the latest release). Review ignored advisories periodically and remove an ignore as soon as an upstream fix exists: remove the `--ignore` in the root `package.json` once `node-forge` or Expo ships a fix (check on each Expo upgrade).
 
 Every push to `main` also runs `.github/workflows/publish-image.yml`, which builds the API image and pushes it to `ghcr.io/kristapsbd/procurely-api` tagged with the commit SHA and `latest`. It runs on `main` only and is not a required check.
 
