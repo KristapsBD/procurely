@@ -2,7 +2,62 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// DATABASE_URL is the restricted API role (subject to RLS).
+// DIRECT_URL is the owner role used by migrations, the seed and the RLS audit.
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  REQUESTER
+  APPROVER
+  BUYER
+  ADMIN
+}
+
+model Company {
+  id          String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String
+  /// ISO 4217 code. One currency per company; amounts are integer minor units.
+  currency    String       @db.Char(3)
+  memberships Membership[]
+  costCenters CostCenter[]
+
+  @@map("companies")
+}
+
+model Person {
+  id          String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email       String       @unique
+  name        String
+  memberships Membership[]
+
+  @@map("people")
+}
+
+model Membership {
+  id        String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId String  @map("company_id") @db.Uuid
+  personId  String  @map("person_id") @db.Uuid
+  role      Role
+  active    Boolean @default(true)
+  company   Company @relation(fields: [companyId], references: [id])
+  person    Person  @relation(fields: [personId], references: [id])
+
+  @@unique([companyId, personId])
+  @@index([personId])
+  @@map("memberships")
+}
+
+model CostCenter {
+  id        String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId String  @map("company_id") @db.Uuid
+  code      String
+  name      String
+  company   Company @relation(fields: [companyId], references: [id])
+
+  @@unique([companyId, code])
+  @@map("cost_centers")
 }

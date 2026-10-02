@@ -5,9 +5,12 @@
   "scripts": {
     "build": "prisma generate && nest build",
     "start": "node dist/main.js",
-    "start:dev": "nest start --watch",
+    "start:dev": "NODE_ENV=development nest start --watch",
     "typecheck": "tsc --noEmit",
-    "test": "jest"
+    "test": "jest --testPathIgnorePatterns /test/http/",
+    "test:http": "pnpm db:reset && jest --config jest.http.config.json --runInBand",
+    "db:reset": "tsx --env-file=db.env scripts/db-reset.ts && node --env-file=db.env node_modules/prisma/build/index.js migrate deploy && node --env-file=db.env node_modules/prisma/build/index.js db seed",
+    "rls:audit": "tsx --env-file=db.env scripts/rls-audit.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.2.7",
@@ -29,11 +32,15 @@
     "prisma": "^6.19.3",
     "supertest": "^7.3.1",
     "ts-jest": "^29.4.14",
+    "tsx": "^4.23.15",
     "typescript": "~5.9.3"
   },
   "jest": {
     "preset": "ts-jest",
     "testEnvironment": "node",
     "testRegex": "test/.*\\.spec\\.ts$"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   }
 }

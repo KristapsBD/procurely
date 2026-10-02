@@ -1,0 +1,62 @@
+import { Test } from '@nestjs/testing';
+import type { INestApplication } from '@nestjs/common';
+import request from 'supertest';
+import { COMPANY_HEADER, type SessionResponse } from '@procurely/shared-types';
+import { AppModule } from '../../src/app.module';
+
+export async function startApp(): Promise<INestApplication> {
+  const mod = await Test.createTestingModule({
+    imports: [AppModule],
+  }).compile();
+  const app = mod.createNestApplication();
+  await app.init();
+  return app;
+}
+
+/** A seeded person signed in through the dev-only login, acting in a chosen company. */
+export class Actor {
+  private constructor(
+    private readonly app: INestApplication,
+    readonly token: string,
+  ) {}
+
+  static async signIn(app: INestApplication, personId: string) {
+    const res = await request(app.getHttpServer())
+      .post('/auth/dev-login')
+      .send({ personId })
+      .expect(201);
+    return new Actor(app, (res.body as SessionResponse).token);
+  }
+
+  private call(
+    method: 'get' | 'post' | 'patch' | 'delete',
+    path: string,
+    companyId?: string,
+  ) {
+    const agent = request(this.app.getHttpServer());
+    const req = agent[method](path).set(
+      'Authorization',
+      `Bearer ${this.token}`,
+    );
+    return companyId ? req.set(COMPANY_HEADER, companyId) : req;
+  }
+
+  me() {
+    return this.call('get', '/me');
+  }
+  listCostCenters(companyId?: string) {
+    return this.call('get', '/cost-centers', companyId);
+  }
+  getCostCenter(companyId: string, id: string) {
+    return this.call('get', `/cost-centers/${id}`, companyId);
+  }
+  createCostCenter(companyId: string, body: object) {
+    return this.call('post', '/cost-centers', companyId).send(body);
+  }
+  renameCostCenter(companyId: string, id: string, name: string) {
+    return this.call('patch', `/cost-centers/${id}`, companyId).send({ name });
+  }
+  deleteCostCenter(companyId: string, id: string) {
+    return this.call('delete', `/cost-centers/${id}`, companyId);
+  }
+}
