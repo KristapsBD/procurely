@@ -10,9 +10,7 @@ export const queryKeys = {
     ['company', companyId, 'cost-centers'] as const,
 };
 
-export const cache = {
-  belongsToOtherCompany(query: Query, companyId: string): boolean {
-    const key: QueryKey = query.queryKey;
-    return key[0] === 'company' && key[1] !== companyId;
-  },
-};
+export function isOtherCompanyQuery(query: Query, companyId: string) {
+  const key: QueryKey = query.queryKey;
+  return key[0] === 'company' && key[1] !== companyId;
+}

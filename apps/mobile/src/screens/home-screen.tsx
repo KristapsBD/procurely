@@ -1,12 +1,11 @@
 import type { CompanyMembership } from '@procurely/shared-types';
-import { useEffect } from 'react';
 import { FlatList, Text, View } from 'react-native';
-import { ApiError } from '../api/client';
 import { Button, ErrorNote, Loading, styles } from '../components/ui';
 import {
   pickActiveCompany,
   useCompanies,
   useCostCenters,
+  useSignOutWhenUnauthorized,
 } from '../features/data';
 import { useSession } from '../session/session';
 
@@ -24,15 +23,9 @@ export function HomeScreen() {
 }
 
 function Companies() {
-  const { selectedCompanyId, selectCompany, signOut } = useSession();
+  const { selectedCompanyId, selectCompany } = useSession();
   const companies = useCompanies();
-
-  // The API no longer accepts the token (expired): back to the login screen.
-  const unauthorized =
-    companies.error instanceof ApiError && companies.error.status === 401;
-  useEffect(() => {
-    if (unauthorized) void signOut();
-  }, [unauthorized, signOut]);
+  const unauthorized = useSignOutWhenUnauthorized(companies.error);
 
   if (companies.isPending) return <Loading label="Loading companies" />;
   if (companies.isError) {
@@ -88,6 +81,7 @@ function CompanySwitcher(props: {
 function CostCenters(props: { company: CompanyMembership }) {
   const { companyId, companyName, role } = props.company;
   const costCenters = useCostCenters(companyId);
+  const unauthorized = useSignOutWhenUnauthorized(costCenters.error);
   return (
     <View style={{ flex: 1, gap: 8 }}>
       <Text style={styles.heading}>Cost centers</Text>
@@ -95,7 +89,7 @@ function CostCenters(props: { company: CompanyMembership }) {
         {`${companyName} (${props.company.currency}), you are ${role.toLowerCase()}`}
       </Text>
       {costCenters.isPending && <Loading label="Loading cost centers" />}
-      {costCenters.isError && (
+      {costCenters.isError && !unauthorized && (
         <ErrorNote
           message="Could not load cost centers."
           onRetry={() => void costCenters.refetch()}

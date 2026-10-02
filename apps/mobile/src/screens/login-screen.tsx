@@ -7,6 +7,15 @@ import { useSession } from '../session/session';
 
 /** Dev login: signs in as a seeded person by id. Google sign-in replaces this later. */
 export function LoginScreen() {
+  // The API refuses the dev login outside development; do not offer it in a release bundle.
+  return __DEV__ ? (
+    <DevLogin />
+  ) : (
+    <Text style={styles.body}>Sign-in is not available yet.</Text>
+  );
+}
+
+function DevLogin() {
   const { signIn } = useSession();
   const [personId, setPersonId] = useState('');
   const [busy, setBusy] = useState(false);

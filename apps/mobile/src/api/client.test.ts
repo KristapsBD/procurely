@@ -1,5 +1,5 @@
 import { COMPANY_HEADER } from '@procurely/shared-types';
-import { ApiError, createApi } from './client';
+import { createApi } from './client';
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status });
@@ -45,6 +45,5 @@ describe('createApi', () => {
     ).rejects.toEqual(
       expect.objectContaining({ name: 'ApiError', status: 401 }),
     );
-    expect(ApiError).toBeDefined();
   });
 });

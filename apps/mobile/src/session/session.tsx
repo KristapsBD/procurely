@@ -10,7 +10,8 @@ import {
   type ReactNode,
 } from 'react';
 import type { Api } from '../api/client';
-import { cache } from '../api/query-keys';
+import { ApiError } from '../api/client';
+import { isOtherCompanyQuery } from '../api/query-keys';
 import type { TokenStore } from './token-store';
 
 type SessionState =
@@ -54,19 +55,25 @@ export function SessionProvider(props: {
     null,
   );
 
-  // Restore a saved session; a token the API no longer accepts (expired) is dropped.
+  // Restore a saved session. Only a token the API rejects (expired) is dropped; when the API
+  // cannot be reached the token is kept for the next launch.
   useEffect(() => {
     let cancelled = false;
+    const settle = (next: SessionState) => {
+      if (!cancelled) setState(next);
+    };
     void (async () => {
       const token = await store.load();
-      if (!token) return cancelled || setState({ status: 'signedOut' });
+      if (!token) return settle({ status: 'signedOut' });
       try {
         const me = await api.me(token);
         const person = { id: me.id, email: me.email, name: me.name };
-        if (!cancelled) setState({ status: 'signedIn', token, person });
-      } catch {
-        await store.clear();
-        if (!cancelled) setState({ status: 'signedOut' });
+        settle({ status: 'signedIn', token, person });
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 401) {
+          await store.clear();
+        }
+        settle({ status: 'signedOut' });
       }
     })();
     return () => {
@@ -78,7 +85,8 @@ export function SessionProvider(props: {
     async (personId: string) => {
       const { token, person } = await api.devLogin(personId);
       await store.save(token);
-      // A new person never inherits what the previous one fetched.
+      // A new person never inherits what the previous one fetched, nor a late response for it.
+      await queryClient.cancelQueries();
       queryClient.clear();
       setSelectedCompanyId(null);
       setState({ status: 'signedIn', token, person });
@@ -88,6 +96,7 @@ export function SessionProvider(props: {
 
   const signOut = useCallback(async () => {
     await store.clear();
+    await queryClient.cancelQueries();
     queryClient.clear();
     setSelectedCompanyId(null);
     setState({ status: 'signedOut' });
@@ -98,7 +107,7 @@ export function SessionProvider(props: {
       // Drop (and stop in-flight fetches of) every other company's data, so nothing from the
       // company just left can be rendered, even briefly. Queries are also keyed by company.
       queryClient.removeQueries({
-        predicate: (query) => cache.belongsToOtherCompany(query, companyId),
+        predicate: (query) => isOtherCompanyQuery(query, companyId),
       });
       setSelectedCompanyId(companyId);
     },

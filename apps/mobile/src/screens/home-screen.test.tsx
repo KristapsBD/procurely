@@ -13,6 +13,8 @@ import {
   fakeApi,
   membership,
 } from '../test/fakes';
+import { ApiError } from '../api/client';
+import { memoryStore } from '../test/fakes';
 import { HomeScreen } from './home-screen';
 
 const acme = membership('company-acme', 'Acme Trading');
@@ -110,5 +112,21 @@ describe('HomeScreen company switching', () => {
         screen.getByText(/do not have access to any company/),
       ).toBeTruthy(),
     );
+  });
+
+  it('signs out when the API rejects the token on a company call', async () => {
+    const store = memoryStore('token-alice');
+    const api = fakeApi({
+      companies: async () => [acme],
+      costCenters: async () => {
+        throw new ApiError(401, 'expired');
+      },
+    });
+    render(
+      <TestApp api={api} store={store}>
+        <HomeScreen />
+      </TestApp>,
+    );
+    await waitFor(async () => expect(await store.load()).toBeNull());
   });
 });
