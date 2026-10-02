@@ -3,6 +3,8 @@ dist
 .env
 *.tsbuildinfo
 .expo
+.env.local
+.env.*.local
 coverage
 reports
 .stryker-tmp

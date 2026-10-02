@@ -7,10 +7,10 @@ A small multi-tenant procure-to-pay product built to learn Postgres row-level se
 pnpm monorepo:
 
 - `apps/api` – NestJS API (Prisma for schema and queries)
-- `apps/mobile` – Expo app (placeholder; real setup comes in a later ticket)
+- `apps/mobile` – Expo app (React Native, runs in Expo Go and in the browser)
 - `packages/shared-types` – TypeScript types shared by API and mobile
 
-Tooling choices: pnpm workspaces (no extra monorepo tool), Node 24 (`.nvmrc`), Nest 11, Prisma 6, TypeScript 5.9, Postgres 17. Health endpoint: `GET /health`.
+Tooling choices: Expo SDK 57 with Expo Router, pnpm workspaces (no extra monorepo tool), Node 24 (`.nvmrc`), Nest 11, Prisma 6, TypeScript 5.9, Postgres 17. Health endpoint: `GET /health`.
 
 ## Backend stack (Docker)
 
@@ -61,16 +61,54 @@ Every membership change writes an audit entry in the same transaction: call `wri
 
 Host ports default to `3000` (API) and `5433` (Postgres); override with `API_PORT` and `DB_PORT`, e.g. `API_PORT=3100 pnpm stack:up`.
 
+## Mobile app
+
+Expo SDK 57 (TypeScript, Expo Router, TanStack Query). The dev login screen signs in as a seeded person, shows their companies with a switcher and lists the cost centers of the selected company. The API address is one value, `EXPO_PUBLIC_API_URL`, read when Metro bundles; nothing in the code names a host. Copy `apps/mobile/.env.example` to `apps/mobile/.env.local` (gitignored) or export it in the shell, then restart Metro (`--clear` after changing it).
+
+In the browser (the fast loop, and how an agent drives the app, see [docs/agent-browser-verification.md](docs/agent-browser-verification.md)):
+
+```sh
+pnpm stack:up && pnpm db:reset
+EXPO_PUBLIC_API_URL=http://localhost:3000 pnpm mobile:web      # Metro on http://localhost:8081
+```
+
+The API allows cross-origin browser calls only when `NODE_ENV` is `development` or `test` (the same fail-closed switch as the dev login), because the web target runs on a different port than the API.
+
+### On a physical iPhone with Expo Go
+
+The phone must reach two things on your machine: Metro (port 8081, serves the JavaScript) and the API (port 3000). The dev login signs in as any seeded user and the compose stack runs in development mode, so the API must **never** be put on a public tunnel or otherwise exposed to the internet. The setup below uses [Tailscale](https://tailscale.com): the phone reaches WSL directly over a private tailnet that contains only your own devices, and nothing is opened on the home network, the Windows firewall or the internet (no `.wslconfig` or firewall changes).
+
+One-time setup, on your machine and phone:
+
+1. In WSL (systemd must be enabled, it is by default on current WSL), install Tailscale and sign in: `curl -fsSL https://tailscale.com/install.sh | sh`, then `sudo tailscale up` and open the printed login URL.
+2. On the iPhone, install the Tailscale app from the App Store and sign in with the same account. Keep it connected (VPN on) while testing.
+
+Each session:
+
+```sh
+pnpm stack:up && pnpm db:reset                    # compose publishes the API on port 3000
+TS_IP=$(tailscale ip -4)                          # the WSL address on the tailnet, 100.x.y.z
+EXPO_PUBLIC_API_URL=http://$TS_IP:3000 REACT_NATIVE_PACKAGER_HOSTNAME=$TS_IP pnpm mobile:start
+```
+
+Then open Expo Go on the iPhone and enter `exp://<TS_IP>:8081` (or scan the QR code Metro prints). Sign in with a dev-login quick pick.
+
+Keep the tailnet private to your own devices: do not share the node, and do not use `tailscale funnel` (it publishes a port to the internet). Compose also publishes Postgres on 5433, which is reachable on the tailnet the same way.
+
+Expo's built-in tunnel (`expo start --tunnel`) is a fallback for Metro only: it does not carry the app's API calls, so sign-in would fail unless the API is reachable some other way. Do not expose the API to get around this.
+
+**Not yet verified:** nobody has opened the app on a phone yet. The Tailscale setup and the Expo Go connection are written from Tailscale's and Expo's documentation and could not be run from the agent environment. What was verified: the iOS bundle builds (`expo export --platform ios`) and the same app runs end to end in the browser.
+
 ## CI
 
-Every pull request runs `.github/workflows/ci.yml`: thirteen parallel jobs, each its own required check with a three-minute timeout:
+Every pull request runs `.github/workflows/ci.yml`: fifteen parallel jobs, each its own required check with a three-minute timeout:
 
 | Check                   | What it enforces                                                                                                                                   |
 | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `format`                | Prettier                                                                                                                                           |
 | `lint`                  | ESLint, cyclomatic complexity cap of 10, only the tenancy module touches the raw database client                                                   |
-| `typecheck`             | `tsc` in every package                                                                                                                             |
-| `unit-tests`            | tests that need no database                                                                                                                        |
+| `typecheck`             | `tsc` in the API and shared types (the Expo app has its own job)                                                                                   |
+| `unit-tests`            | API tests that need no database                                                                                                                    |
 | `api-tests`             | HTTP tests as seeded users against a real Postgres                                                                                                 |
 | `rls-audit`             | every table has RLS enabled and forced, the API role cannot bypass it, the audit log has no update or delete path                                  |
 | `docker-smoke`          | builds the API image, starts it with Postgres, hits `/health`                                                                                      |
@@ -78,10 +116,14 @@ Every pull request runs `.github/workflows/ci.yml`: thirteen parallel jobs, each
 | `dependency-boundaries` | [dependency-cruiser](https://github.com/sverweij/dependency-cruiser), rules in `.dependency-cruiser.cjs` (`pnpm deps:check`)                       |
 | `duplicate-code`        | [jscpd](https://github.com/kucherenko/jscpd), at most 3% duplicated lines, config in `.jscpd.json` (`pnpm dup:check`)                              |
 | `secret-scan`           | [gitleaks](https://github.com/gitleaks/gitleaks) over the full git history                                                                         |
-| `dependency-audit`      | `pnpm audit --audit-level high` (`pnpm audit:deps`)                                                                                                |
+| `dependency-audit`      | `pnpm audit --audit-level high` (`pnpm audit:deps`), except GHSA-86w9-cpqp-85rv (see below)                                                        |
 | `api-contract`          | fails when the committed contract or shared client types differ from what the API generates (`pnpm contract:check`)                                |
+| `mobile-typecheck`      | `tsc` on the Expo app (`pnpm typecheck:mobile`; the `typecheck` job covers the API and shared types)                                               |
+| `mobile-unit-tests`     | Jest (jest-expo) unit tests of the Expo app, no database or device (`pnpm test:mobile`; `unit-tests` covers the API)                               |
 
-Branch protection on `main` should require exactly those thirteen check names.
+Branch protection on `main` should require exactly those fifteen check names.
+
+`audit:deps` ignores one advisory, GHSA-86w9-cpqp-85rv (high, `node-forge` up to 1.4.0, RSA PKCS#1 v1.5 signature verification). It comes in through `@expo/cli` (the Metro dev server and `expo export` on a developer machine; it is not in the API or in the app bundle), and no patched version exists (1.4.0 is the latest release). Review ignored advisories periodically and remove an ignore as soon as an upstream fix exists: remove the `--ignore` in the root `package.json` once `node-forge` or Expo ships a fix (check on each Expo upgrade).
 
 Every push to `main` also runs `.github/workflows/publish-image.yml`, which builds the API image and pushes it to `ghcr.io/kristapsbd/procurely-api` tagged with the commit SHA and `latest`. It runs on `main` only and is not a required check.
 
@@ -104,8 +146,10 @@ After changing a route or a DTO, run `pnpm contract:generate` and commit the res
 pnpm install
 pnpm format:check
 pnpm lint
-pnpm typecheck
-pnpm test                                     # unit tests, no database needed
+pnpm typecheck                                # API and shared types
+pnpm typecheck:mobile
+pnpm test                                     # API unit tests, no database needed
+pnpm test:mobile                              # mobile unit tests
 pnpm --filter @procurely/api test:http        # HTTP/RLS tests; resets and seeds the compose database first
 pnpm --filter @procurely/api rls:audit        # RLS audit against the seeded compose database
 pnpm --filter @procurely/api test:coverage    # HTTP tests with the coverage floor (same database needs)

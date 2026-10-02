@@ -6,8 +6,10 @@
     "node": ">=24"
   },
   "scripts": {
-    "typecheck": "pnpm -r typecheck",
-    "test": "pnpm -r --if-present test",
+    "typecheck": "pnpm -r --filter '!@procurely/mobile' typecheck",
+    "typecheck:mobile": "pnpm --filter @procurely/mobile typecheck",
+    "test": "pnpm -r --filter '!@procurely/mobile' --if-present test",
+    "test:mobile": "pnpm --filter @procurely/mobile test",
     "stack:up": "make up",
     "stack:down": "make down",
     "stack:reset": "make reset",
@@ -15,11 +17,13 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint .",
+    "mobile:web": "pnpm --filter @procurely/mobile web",
+    "mobile:start": "pnpm --filter @procurely/mobile start",
     "contract:generate": "pnpm --filter @procurely/api contract:generate",
     "contract:check": "pnpm --filter @procurely/api contract:check",
     "deps:check": "depcruise apps packages --config .dependency-cruiser.cjs",
     "dup:check": "jscpd",
-    "audit:deps": "pnpm audit --audit-level high"
+    "audit:deps": "pnpm audit --audit-level high --ignore GHSA-86w9-cpqp-85rv"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

@@ -3,12 +3,14 @@ import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { COMPANY_HEADER, type SessionResponse } from '@procurely/shared-types';
 import { AppModule } from '../../src/app.module';
+import { configureApp } from '../../src/configure-app';
 
 export async function startApp(): Promise<INestApplication> {
   const mod = await Test.createTestingModule({
     imports: [AppModule],
   }).compile();
   const app = mod.createNestApplication();
+  configureApp(app);
   await app.init();
   return app;
 }

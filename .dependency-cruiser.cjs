@@ -33,8 +33,11 @@ module.exports = {
       name: 'src-does-not-import-tests',
       severity: 'error',
       comment: 'Production code must not depend on test code.',
-      from: { path: '^apps/[^/]+/src/' },
-      to: { path: '^apps/[^/]+/test/' },
+      from: {
+        path: '^apps/[^/]+/src/',
+        pathNot: ['\\.(spec|test)\\.tsx?$', '^apps/[^/]+/src/test/'],
+      },
+      to: { path: '^apps/[^/]+/(test|src/test)/' },
     },
     {
       name: 'src-does-not-import-scripts',
@@ -50,7 +53,7 @@ module.exports = {
         'Production code must not import packages that are only devDependencies.',
       from: {
         path: '^(apps|packages)/[^/]+/src/',
-        pathNot: '\\.(spec|test)\\.ts$',
+        pathNot: ['\\.(spec|test)\\.tsx?$', '^apps/[^/]+/src/test/'],
       },
       to: { dependencyTypes: ['npm-dev'], dependencyTypesNot: ['type-only'] },
     },
