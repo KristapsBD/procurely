@@ -20,7 +20,9 @@ services:
       context: .
       dockerfile: apps/api/Dockerfile
     environment:
-      DATABASE_URL: postgresql://procurely:procurely@db:5432/procurely
+      # Restricted role: cannot bypass RLS. Migrations and the seed use DIRECT_URL (owner).
+      DATABASE_URL: postgresql://procurely_api:procurely_api@db:5432/procurely
+      DIRECT_URL: postgresql://procurely:procurely@db:5432/procurely
     ports:
       - '${API_PORT:-3000}:3000'
     depends_on:

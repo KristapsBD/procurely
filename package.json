@@ -11,6 +11,7 @@
     "stack:up": "make up",
     "stack:down": "make down",
     "stack:reset": "make reset",
+    "db:reset": "make seed",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint ."

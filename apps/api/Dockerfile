@@ -9,4 +9,5 @@ RUN pnpm install --frozen-lockfile --filter @procurely/api...
 RUN pnpm --filter @procurely/api build
 WORKDIR /repo/apps/api
 EXPOSE 3000
-CMD ["node", "dist/main.js"]
+# Migrations run as the database owner (DIRECT_URL); the API itself connects as the restricted role.
+CMD ["sh", "-c", "node_modules/.bin/prisma migrate deploy && node dist/main.js"]

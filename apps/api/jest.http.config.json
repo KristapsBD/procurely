@@ -1,0 +1,6 @@
+{
+  "preset": "ts-jest",
+  "testEnvironment": "node",
+  "testRegex": "test/http/.*\\.spec\\.ts$",
+  "setupFiles": ["<rootDir>/test/http/env.ts"]
+}

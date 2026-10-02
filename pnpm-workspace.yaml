@@ -9,3 +9,4 @@ allowBuilds:
   prisma: true
   '@parcel/watcher': false
   unrs-resolver: false
+  esbuild: false

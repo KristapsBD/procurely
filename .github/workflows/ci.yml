@@ -71,6 +71,50 @@ jobs:
       - run: pnpm --filter @procurely/api exec prisma generate
       - run: pnpm test
 
+  api-tests:
+    name: api-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @procurely/api exec prisma generate
+      - name: Start Postgres
+        run: docker compose up -d --wait db
+      - name: API and RLS tests (resets and seeds the database first)
+        run: pnpm --filter @procurely/api test:http
+      - name: Postgres logs on failure
+        if: failure()
+        run: docker compose logs db
+
+  rls-audit:
+    name: rls-audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @procurely/api exec prisma generate
+      - name: Start Postgres
+        run: docker compose up -d --wait db
+      - name: Reset database and load the seed
+        run: pnpm --filter @procurely/api db:reset
+      - name: Audit RLS (enabled and forced everywhere, API role cannot bypass)
+        run: pnpm --filter @procurely/api rls:audit
+      - name: Postgres logs on failure
+        if: failure()
+        run: docker compose logs db
+
   docker-smoke:
     name: docker-smoke
     runs-on: ubuntu-latest
