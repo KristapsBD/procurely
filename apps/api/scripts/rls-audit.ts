@@ -4,10 +4,14 @@ import { PrismaClient } from '@prisma/client';
 //  1. every table in the public schema has RLS enabled and forced,
 //  2. every table with a company_id column has at least one policy,
 //  3. the API role cannot bypass RLS (not superuser, no BYPASSRLS, owns nothing, inherits nothing),
-//  4. connected as the API role with no identity set, every table is empty to it
+//  4. append-only tables (audit_log) have no update/delete/truncate privilege for the API role
+//     and no update, delete or catch-all policy,
+//  5. connected as the API role with no identity set, every table is empty to it
 //     even though the (seeded) tables hold rows.
 // DIRECT_URL is the database owner, DATABASE_URL the API role. Run after the seed is loaded.
 const NOT_AUDITED = ['_prisma_migrations'];
+// Tables the API may only insert into and select from, never change.
+const APPEND_ONLY = ['audit_log'];
 
 interface TableRow {
   table: string;
@@ -72,6 +76,34 @@ async function auditRole(owner: PrismaClient, role: string): Promise<string[]> {
   return failures;
 }
 
+async function auditAppendOnly(
+  owner: PrismaClient,
+  role: string,
+): Promise<string[]> {
+  const failures: string[] = [];
+  for (const table of APPEND_ONLY) {
+    const [grants] = await owner.$queryRaw<{ ok: boolean; found: boolean }[]>`
+      SELECT NOT (has_table_privilege(${role}, ${table}, 'UPDATE')
+                  OR has_table_privilege(${role}, ${table}, 'DELETE')
+                  OR has_table_privilege(${role}, ${table}, 'TRUNCATE')) AS ok,
+             true AS found
+      FROM pg_class WHERE relname = ${table} AND relnamespace = 'public'::regnamespace`;
+    if (!grants?.found) {
+      failures.push(`${table}: append-only table does not exist`);
+      continue;
+    }
+    if (!grants.ok)
+      failures.push(`${table}: ${role} can update, delete or truncate`);
+    const writers = await owner.$queryRaw<{ name: string }[]>`
+      SELECT p.polname AS name FROM pg_policy p
+      WHERE p.polrelid = ('public.' || ${table})::regclass AND p.polcmd IN ('w', 'd', '*')`;
+    for (const p of writers) {
+      failures.push(`${table}: policy ${p.name} allows update or delete`);
+    }
+  }
+  return failures;
+}
+
 async function tableNames(owner: PrismaClient): Promise<string[]> {
   const rows = await owner.$queryRaw<{ name: string }[]>`
     SELECT tablename AS name FROM pg_tables WHERE schemaname = 'public'`;
@@ -88,6 +120,7 @@ async function auditLiveAccess(
     { user: string }[]
   >`SELECT current_user AS user`;
   failures.push(...(await auditRole(owner, user)));
+  failures.push(...(await auditAppendOnly(owner, user)));
   for (const table of tables) {
     // Table names come from pg_tables, not user input; identifiers cannot be bound.
     const sql = `SELECT count(*)::int AS n FROM "${table}"`;

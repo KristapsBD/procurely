@@ -50,5 +50,42 @@ export interface UpdateCostCenterRequest {
   name: string;
 }
 
+/** A person's membership of the company they act in, as an admin sees it. */
+export interface Member {
+  /** The membership id (not the person id). */
+  id: string;
+  personId: string;
+  email: string;
+  name: string;
+  role: Role;
+  active: boolean;
+}
+
+/**
+ * Invites a person by email. The person record is created if the email is new, so a later
+ * Google sign-in with that email finds it. No email is sent.
+ */
+export interface InviteMemberRequest {
+  email: string;
+  /** Display name for a new person; defaults to the part of the email before the @. */
+  name?: string;
+  role: Role;
+}
+
+export interface UpdateMemberRequest {
+  role?: Role;
+  active?: boolean;
+}
+
+export interface AuditEntry {
+  id: string;
+  actorPersonId: string;
+  action: string;
+  entityType: string;
+  entityId: string | null;
+  details: unknown;
+  createdAt: string;
+}
+
 /** Request header naming the company the person is acting in. */
 export const COMPANY_HEADER = 'x-company-id';

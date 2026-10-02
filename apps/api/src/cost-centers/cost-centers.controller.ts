@@ -19,10 +19,12 @@ import type {
 } from '@procurely/shared-types';
 import { SessionGuard } from '../auth/session.guard';
 import { translateDbError } from '../tenancy/db-errors';
-import { CompanyScope, type RequestScope } from '../tenancy/request-scope';
+import {
+  CompanyScope,
+  type CompanyRequestScope,
+} from '../tenancy/request-scope';
+import { rejectUnmatchedWrite } from '../tenancy/roles';
 import { TenantDb } from '../tenancy/tenant-db.service';
-
-type CompanyRequestScope = RequestScope & { companyId: string };
 
 function requireString(value: unknown, field: string): string {
   if (typeof value !== 'string' || value.trim() === '') {
@@ -78,9 +80,14 @@ export class CostCentersController {
   ): Promise<CostCenter> {
     const name = requireString(body?.name, 'name');
     return this.db
-      .run(scope, (tx) =>
-        tx.costCenter.update({ where: { id }, data: { name } }),
-      )
+      .run(scope, async (tx) => {
+        const { count } = await tx.costCenter.updateMany({
+          where: { id },
+          data: { name },
+        });
+        if (count === 0) return rejectUnmatchedWrite(tx, scope);
+        return tx.costCenter.findUniqueOrThrow({ where: { id } });
+      })
       .catch(translateDbError);
   }
 
@@ -91,7 +98,10 @@ export class CostCentersController {
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<void> {
     await this.db
-      .run(scope, (tx) => tx.costCenter.delete({ where: { id } }))
+      .run(scope, async (tx) => {
+        const { count } = await tx.costCenter.deleteMany({ where: { id } });
+        if (count === 0) await rejectUnmatchedWrite(tx, scope);
+      })
       .catch(translateDbError);
   }
 }

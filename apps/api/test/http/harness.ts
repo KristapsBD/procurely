@@ -44,6 +44,24 @@ export class Actor {
   me() {
     return this.call('get', '/me');
   }
+  listCompanies() {
+    return this.call('get', '/companies');
+  }
+  activeCompany(companyId?: string) {
+    return this.call('get', '/companies/active', companyId);
+  }
+  listMembers(companyId: string) {
+    return this.call('get', '/members', companyId);
+  }
+  inviteMember(companyId: string, body: object) {
+    return this.call('post', '/members', companyId).send(body);
+  }
+  updateMember(companyId: string, membershipId: string, body: object) {
+    return this.call('patch', `/members/${membershipId}`, companyId).send(body);
+  }
+  auditLog(companyId: string) {
+    return this.call('get', '/audit-log', companyId);
+  }
   listCostCenters(companyId?: string) {
     return this.call('get', '/cost-centers', companyId);
   }

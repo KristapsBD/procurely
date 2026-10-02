@@ -24,6 +24,7 @@ model Company {
   currency    String       @db.Char(3)
   memberships Membership[]
   costCenters CostCenter[]
+  auditLog    AuditLog[]
 
   @@map("companies")
 }
@@ -33,6 +34,7 @@ model Person {
   email       String       @unique
   name        String
   memberships Membership[]
+  auditLog    AuditLog[]
 
   @@map("people")
 }
@@ -60,4 +62,22 @@ model CostCenter {
 
   @@unique([companyId, code])
   @@map("cost_centers")
+}
+
+/// Append-only: the API role can insert and select (admins only) but never update or delete.
+model AuditLog {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId     String   @map("company_id") @db.Uuid
+  actorPersonId String   @map("actor_person_id") @db.Uuid
+  /// Dotted verb, e.g. "member.invited".
+  action        String
+  entityType    String   @map("entity_type")
+  entityId      String?  @map("entity_id") @db.Uuid
+  details       Json?
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  company       Company  @relation(fields: [companyId], references: [id])
+  actor         Person   @relation(fields: [actorPersonId], references: [id])
+
+  @@index([companyId, createdAt])
+  @@map("audit_log")
 }

@@ -13,6 +13,9 @@ export interface RequestScope {
   companyId: string | null;
 }
 
+/** A scope whose company is known (a route that requires the company header). */
+export type CompanyRequestScope = RequestScope & { companyId: string };
+
 export interface AuthedRequest extends Request {
   personId?: string;
 }
