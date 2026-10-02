@@ -1,3 +1,5 @@
 dist
 node_modules
 pnpm-lock.yaml
+packages/shared-types/src/generated
+apps/api/openapi.json

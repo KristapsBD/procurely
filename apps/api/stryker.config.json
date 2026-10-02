@@ -1,0 +1,40 @@
+{
+  "$schema": "https://raw.githubusercontent.com/stryker-mutator/stryker/master/packages/core/schema/stryker-core.json",
+  "plugins": [
+    "@stryker-mutator/jest-runner",
+    "@stryker-mutator/typescript-checker"
+  ],
+  "testRunner": "jest",
+  "jest": {
+    "configFile": "jest.mutation.config.json"
+  },
+  "checkers": ["typescript"],
+  "tsconfigFile": "tsconfig.json",
+  "mutate": [
+    "src/members/member-input.ts",
+    "src/tenancy/uuid.ts",
+    "src/tenancy/db-errors.ts",
+    "src/tenancy/roles.ts",
+    "src/auth/session-tokens.ts"
+  ],
+  "coverageAnalysis": "off",
+  "concurrency": 1,
+  "timeoutMS": 60000,
+  "reporters": ["clear-text", "html", "json"],
+  "htmlReporter": {
+    "fileName": "reports/mutation/index.html"
+  },
+  "jsonReporter": {
+    "fileName": "reports/mutation/mutation.json"
+  },
+  "thresholds": {
+    "high": 80,
+    "low": 60,
+    "break": null
+  },
+  "cleanTempDir": true,
+  "clearTextReporter": {
+    "allowColor": false,
+    "logTests": false
+  }
+}

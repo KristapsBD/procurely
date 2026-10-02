@@ -1,0 +1,45 @@
+name: Mutation testing
+
+# Report only: scheduled (and manual), never run on pull requests, never a required check.
+# It publishes the Stryker report as a workflow artifact and a score in the run summary.
+on:
+  schedule:
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mutation:
+    name: mutation
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @procurely/api exec prisma generate
+      - name: Start Postgres
+        run: docker compose up -d --wait db
+      - name: Run Stryker against the HTTP test suite
+        run: pnpm --filter @procurely/api mutation
+      - name: Add the score to the run summary
+        if: always()
+        working-directory: apps/api
+        run: |
+          if [ -f reports/mutation/mutation.json ]; then
+            node scripts/mutation-summary.mjs >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Publish the mutation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mutation-report
+          path: apps/api/reports/mutation
+          if-no-files-found: warn
+          retention-days: 90

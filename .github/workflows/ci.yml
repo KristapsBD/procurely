@@ -115,6 +115,98 @@ jobs:
         if: failure()
         run: docker compose logs db
 
+  coverage:
+    name: coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @procurely/api exec prisma generate
+      - name: Start Postgres
+        run: docker compose up -d --wait db
+      - name: API coverage floor (HTTP tests; thresholds in apps/api/jest.http.config.json)
+        run: pnpm --filter @procurely/api test:coverage
+      - name: Postgres logs on failure
+        if: failure()
+        run: docker compose logs db
+
+  dependency-boundaries:
+    name: dependency-boundaries
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm deps:check
+
+  duplicate-code:
+    name: duplicate-code
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm dup:check
+
+  secret-scan:
+    name: secret-scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Scan the full git history with gitleaks
+        run: >
+          docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/repo" -w /repo
+          ghcr.io/gitleaks/gitleaks:v8.30.0 detect --source /repo --redact --no-banner --verbose
+
+  dependency-audit:
+    name: dependency-audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm audit:deps
+
+  api-contract:
+    name: api-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @procurely/api exec prisma generate
+      - name: Fail if the published contract or the generated shared types drifted from the API
+        run: pnpm contract:check
+
   docker-smoke:
     name: docker-smoke
     runs-on: ubuntu-latest

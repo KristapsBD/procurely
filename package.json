@@ -18,12 +18,19 @@
     "format:check": "prettier --check .",
     "lint": "eslint .",
     "mobile:web": "pnpm --filter @procurely/mobile web",
-    "mobile:start": "pnpm --filter @procurely/mobile start"
+    "mobile:start": "pnpm --filter @procurely/mobile start",
+    "contract:generate": "pnpm --filter @procurely/api contract:generate",
+    "contract:check": "pnpm --filter @procurely/api contract:check",
+    "deps:check": "depcruise apps packages --config .dependency-cruiser.cjs",
+    "dup:check": "jscpd",
+    "audit:deps": "pnpm audit --audit-level high --ignore GHSA-86w9-cpqp-85rv"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "dependency-cruiser": "^18.5.0",
     "eslint": "^10.11.0",
     "globals": "^17.13.0",
+    "jscpd": "^5.4.0",
     "prettier": "^3.9.9",
     "typescript-eslint": "^8.71.0"
   }

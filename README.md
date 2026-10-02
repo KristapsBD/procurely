@@ -102,9 +102,44 @@ The exact commands in step 2 and the whole phone path are unverified: they were 
 
 ## CI
 
-Every pull request runs `.github/workflows/ci.yml`: nine parallel jobs, each its own required check: `format`, `lint` (ESLint, cyclomatic complexity cap of 10), `typecheck`, `unit-tests` (no database), `api-tests` (HTTP tests as seeded users against a real Postgres), `rls-audit` (every table has RLS enabled and forced, the API role cannot bypass it, the audit log has no update or delete path), `docker-smoke` (builds the API image, starts it with Postgres, hits `/health`), `mobile-typecheck` and `mobile-unit-tests` (Expo app, no database; the other typecheck and unit-test jobs exclude it). Branch protection on `main` should require exactly those nine check names.
+Every pull request runs `.github/workflows/ci.yml`: fifteen parallel jobs, each its own required check with a three-minute timeout:
+
+| Check                   | What it enforces                                                                                                                                   |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `format`                | Prettier                                                                                                                                           |
+| `lint`                  | ESLint, cyclomatic complexity cap of 10, only the tenancy module touches the raw database client                                                   |
+| `typecheck`             | `tsc` in the API and shared types (the Expo app has its own job)                                                                                   |
+| `unit-tests`            | tests that need no database                                                                                                                        |
+| `api-tests`             | HTTP tests as seeded users against a real Postgres                                                                                                 |
+| `rls-audit`             | every table has RLS enabled and forced, the API role cannot bypass it, the audit log has no update or delete path                                  |
+| `docker-smoke`          | builds the API image, starts it with Postgres, hits `/health`                                                                                      |
+| `coverage`              | coverage floor on the API (statements and lines 80%, branches 75%, functions 80%; thresholds in `apps/api/jest.http.config.json`), HTTP tests only |
+| `dependency-boundaries` | [dependency-cruiser](https://github.com/sverweij/dependency-cruiser), rules in `.dependency-cruiser.cjs` (`pnpm deps:check`)                       |
+| `duplicate-code`        | [jscpd](https://github.com/kucherenko/jscpd), at most 3% duplicated lines, config in `.jscpd.json` (`pnpm dup:check`)                              |
+| `secret-scan`           | [gitleaks](https://github.com/gitleaks/gitleaks) over the full git history                                                                         |
+| `dependency-audit`      | `pnpm audit --audit-level high` (`pnpm audit:deps`), except GHSA-86w9-cpqp-85rv (see below)                                                        |
+| `api-contract`          | fails when the committed contract or shared client types differ from what the API generates (`pnpm contract:check`)                                |
+| `mobile-typecheck`      | `tsc` on the Expo app (`pnpm typecheck:mobile`; the `typecheck` job covers the API and shared types)                                               |
+| `mobile-unit-tests`     | Jest (jest-expo) unit tests of the Expo app, no database or device (`pnpm test:mobile`; `unit-tests` covers the API)                               |
+
+Branch protection on `main` should require exactly those fifteen check names.
+
+`audit:deps` ignores one advisory, GHSA-86w9-cpqp-85rv (high, `node-forge` up to 1.4.0, RSA PKCS#1 v1.5 signature verification). It comes in through `@expo/cli` (the Metro dev server and `expo export` on a developer machine; it is not in the API or in the app bundle), and no patched version exists (1.4.0 is the latest release). Remove the `--ignore` in the root `package.json` once `node-forge` or Expo ships a fix.
 
 Every push to `main` also runs `.github/workflows/publish-image.yml`, which builds the API image and pushes it to `ghcr.io/kristapsbd/procurely-api` tagged with the commit SHA and `latest`. It runs on `main` only and is not a required check.
+
+### API contract
+
+The API publishes its contract as OpenAPI at `GET /openapi.json`. The request and response shapes are the DTO classes in `apps/api/src/contract/api.dto.ts` (with the controllers' routes, the Swagger build plugin does the rest). The generated outputs are committed:
+
+- `apps/api/openapi.json` – the contract
+- `packages/shared-types/src/generated/api.ts` – TypeScript types generated from it with `openapi-typescript`; `@procurely/shared-types` re-exports them under their schema names (`Member`, `CostCenter`, ...), so the mobile app and the HTTP tests use exactly what the API declares
+
+After changing a route or a DTO, run `pnpm contract:generate` and commit the result. `pnpm contract:check` (the `api-contract` job) fails if either file differs from what the API would generate. Never edit the generated files or hand-write request or response types in `shared-types`.
+
+### Mutation testing
+
+`.github/workflows/mutation.yml` runs [Stryker](https://stryker-mutator.io) weekly (Monday 03:00 UTC) and on demand. It is report only: it never runs on pull requests and is not a required check. The HTML report is the `mutation-report` artifact of the run and the score is in the run summary. It mutates a few pure-logic files of the API (list in `apps/api/stryker.config.json`) against the HTTP test suite and resets the database before every test run, so it needs the compose Postgres and takes tens of minutes. Locally: `docker compose up -d --wait db && pnpm --filter @procurely/api mutation`.
 
 ## Development
 
@@ -118,6 +153,8 @@ pnpm test                                     # API unit tests, no database need
 pnpm test:mobile                              # mobile unit tests
 pnpm --filter @procurely/api test:http        # HTTP/RLS tests; resets and seeds the compose database first
 pnpm --filter @procurely/api rls:audit        # RLS audit against the seeded compose database
+pnpm --filter @procurely/api test:coverage    # HTTP tests with the coverage floor (same database needs)
+pnpm deps:check && pnpm dup:check && pnpm audit:deps && pnpm contract:check
 ```
 
-The last two need the Postgres container (`docker compose up -d --wait db`) and destroy its data. They read `apps/api/db.env` for local defaults; set `DATABASE_URL` and `DIRECT_URL` to override, e.g. when `DB_PORT` is not `5433`. The reset refuses to run against a non-local host.
+`test:http`, `rls:audit` and `test:coverage` need the Postgres container (`docker compose up -d --wait db`) and destroy its data. They read `apps/api/db.env` for local defaults; set `DATABASE_URL` and `DIRECT_URL` to override, e.g. when `DB_PORT` is not `5433`. The reset refuses to run against a non-local host.

@@ -8,11 +8,13 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import type {
+import { ApiBearerAuth } from '@nestjs/swagger';
+import {
   InviteMemberRequest,
   Member,
   UpdateMemberRequest,
-} from '@procurely/shared-types';
+} from '../contract/api.dto';
+import { ApiCompanyHeader } from '../contract/decorators';
 import { SessionGuard } from '../auth/session.guard';
 import { translateDbError } from '../tenancy/db-errors';
 import {
@@ -25,6 +27,8 @@ import { MembersService } from './members.service';
 
 @Controller('members')
 @UseGuards(SessionGuard)
+@ApiBearerAuth()
+@ApiCompanyHeader()
 export class MembersController {
   constructor(
     private readonly db: TenantDb,
@@ -40,7 +44,7 @@ export class MembersController {
   @Post()
   invite(
     @CompanyScope() scope: CompanyRequestScope,
-    @Body() body: Partial<InviteMemberRequest>,
+    @Body() body: InviteMemberRequest,
   ): Promise<Member> {
     const input = parseInvite(body);
     return this.db
@@ -52,7 +56,7 @@ export class MembersController {
   update(
     @CompanyScope() scope: CompanyRequestScope,
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() body: Partial<UpdateMemberRequest>,
+    @Body() body: UpdateMemberRequest,
   ): Promise<Member> {
     const input = parseUpdate(body);
     return this.db

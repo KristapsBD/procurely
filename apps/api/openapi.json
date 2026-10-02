@@ -1,0 +1,856 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/health": {
+      "get": {
+        "operationId": "HealthController_check",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Health"
+        ]
+      }
+    },
+    "/auth/dev-login": {
+      "post": {
+        "operationId": "AuthController_devLogin",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DevLoginRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionResponse"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Dev-only: sign in as any seeded person. Does not exist in production.",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/me": {
+      "get": {
+        "operationId": "MeController_me",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "Me"
+        ]
+      }
+    },
+    "/cost-centers": {
+      "get": {
+        "operationId": "CostCentersController_list",
+        "parameters": [
+          {
+            "name": "x-company-id",
+            "in": "header",
+            "description": "The company the person acts in (a company UUID).",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CostCenter"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "CostCenters"
+        ]
+      },
+      "post": {
+        "operationId": "CostCentersController_create",
+        "parameters": [
+          {
+            "name": "x-company-id",
+            "in": "header",
+            "description": "The company the person acts in (a company UUID).",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCostCenterRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CostCenter"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "CostCenters"
+        ]
+      }
+    },
+    "/cost-centers/{id}": {
+      "get": {
+        "operationId": "CostCentersController_get",
+        "parameters": [
+          {
+            "name": "x-company-id",
+            "in": "header",
+            "description": "The company the person acts in (a company UUID).",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CostCenter"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "CostCenters"
+        ]
+      },
+      "patch": {
+        "operationId": "CostCentersController_update",
+        "parameters": [
+          {
+            "name": "x-company-id",
+            "in": "header",
+            "description": "The company the person acts in (a company UUID).",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCostCenterRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CostCenter"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "CostCenters"
+        ]
+      },
+      "delete": {
+        "operationId": "CostCentersController_remove",
+        "parameters": [
+          {
+            "name": "x-company-id",
+            "in": "header",
+            "description": "The company the person acts in (a company UUID).",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "CostCenters"
+        ]
+      }
+    },
+    "/companies": {
+      "get": {
+        "operationId": "CompaniesController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CompanyMembership"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The companies the person actively belongs to, with their role in each.",
+        "tags": [
+          "Companies"
+        ]
+      }
+    },
+    "/companies/active": {
+      "get": {
+        "operationId": "CompaniesController_active",
+        "parameters": [
+          {
+            "name": "x-company-id",
+            "in": "header",
+            "description": "The company the person acts in (a company UUID).",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompanyMembership"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Confirms the company named in the header: the person's role in it, or 404.",
+        "tags": [
+          "Companies"
+        ]
+      }
+    },
+    "/members": {
+      "get": {
+        "operationId": "MembersController_list",
+        "parameters": [
+          {
+            "name": "x-company-id",
+            "in": "header",
+            "description": "The company the person acts in (a company UUID).",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Member"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "An admin sees the whole company roster; anyone else sees at most their own membership.",
+        "tags": [
+          "Members"
+        ]
+      },
+      "post": {
+        "operationId": "MembersController_invite",
+        "parameters": [
+          {
+            "name": "x-company-id",
+            "in": "header",
+            "description": "The company the person acts in (a company UUID).",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InviteMemberRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Member"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "Members"
+        ]
+      }
+    },
+    "/members/{id}": {
+      "patch": {
+        "operationId": "MembersController_update",
+        "parameters": [
+          {
+            "name": "x-company-id",
+            "in": "header",
+            "description": "The company the person acts in (a company UUID).",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMemberRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Member"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "Members"
+        ]
+      }
+    },
+    "/audit-log": {
+      "get": {
+        "operationId": "AuditLogController_list",
+        "parameters": [
+          {
+            "name": "x-company-id",
+            "in": "header",
+            "description": "The company the person acts in (a company UUID).",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AuditEntry"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Newest first. Only admins of the company get rows; the database decides.",
+        "tags": [
+          "AuditLog"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "Procurely API",
+    "description": "",
+    "version": "0.0.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      }
+    },
+    "schemas": {
+      "HealthResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok"
+            ]
+          },
+          "database": {
+            "type": "string",
+            "enum": [
+              "up"
+            ]
+          }
+        },
+        "required": [
+          "status",
+          "database"
+        ]
+      },
+      "DevLoginRequest": {
+        "type": "object",
+        "properties": {
+          "personId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "personId"
+        ]
+      },
+      "Person": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "name"
+        ]
+      },
+      "SessionResponse": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "Bearer token for the Authorization header."
+          },
+          "person": {
+            "$ref": "#/components/schemas/Person"
+          }
+        },
+        "required": [
+          "token",
+          "person"
+        ]
+      },
+      "Role": {
+        "type": "string",
+        "enum": [
+          "REQUESTER",
+          "APPROVER",
+          "BUYER",
+          "ADMIN"
+        ]
+      },
+      "CompanyMembership": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Role"
+              }
+            ]
+          },
+          "companyId": {
+            "type": "string"
+          },
+          "companyName": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "role",
+          "companyId",
+          "companyName",
+          "currency"
+        ]
+      },
+      "MeResponse": {
+        "type": "object",
+        "properties": {
+          "memberships": {
+            "description": "Active memberships only. Empty for a person who belongs to no company.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CompanyMembership"
+            }
+          },
+          "id": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "memberships",
+          "id",
+          "email",
+          "name"
+        ]
+      },
+      "CostCenter": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "companyId": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "companyId",
+          "code",
+          "name"
+        ]
+      },
+      "CreateCostCenterRequest": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "name"
+        ]
+      },
+      "UpdateCostCenterRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "Member": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Role"
+              }
+            ]
+          },
+          "id": {
+            "type": "string",
+            "description": "The membership id (not the person id)."
+          },
+          "personId": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "active": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "role",
+          "id",
+          "personId",
+          "email",
+          "name",
+          "active"
+        ]
+      },
+      "InviteMemberRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Display name for a new person; defaults to the part of the email before the @."
+          },
+          "role": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Role"
+              }
+            ]
+          },
+          "email": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "role",
+          "email"
+        ]
+      },
+      "UpdateMemberRequest": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Role"
+              }
+            ]
+          },
+          "active": {
+            "type": "boolean"
+          }
+        }
+      },
+      "AuditEntry": {
+        "type": "object",
+        "properties": {
+          "entityId": {
+            "type": "string",
+            "nullable": true
+          },
+          "details": {
+            "type": "object",
+            "additionalProperties": true,
+            "nullable": true,
+            "description": "Free-form details of the action; null when there are none."
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO 8601 timestamp.",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string"
+          },
+          "actorPersonId": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "entityType": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "entityId",
+          "details",
+          "createdAt",
+          "id",
+          "actorPersonId",
+          "action",
+          "entityType"
+        ]
+      }
+    }
+  }
+}
