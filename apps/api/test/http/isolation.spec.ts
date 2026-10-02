@@ -91,7 +91,7 @@ describe('company isolation of cost centers', () => {
 
     it('requires a valid company header for company-scoped routes', async () => {
       const dave = await as(PERSON.dave);
-      await dave.listCostCenters(undefined as unknown as string).expect(400);
+      await dave.listCostCenters().expect(400);
       await dave.listCostCenters('not-a-uuid').expect(400);
     });
   });
@@ -141,9 +141,31 @@ describe('company isolation of cost centers', () => {
       expect(after.name).toBe(victim.name);
     });
 
+    it('does not let a member of one company write into another', async () => {
+      const dave = await as(PERSON.dave);
+      const erik = await as(PERSON.erik);
+      const victim = (await erik.listCostCenters(COMPANY.sek).expect(200))
+        .body[0];
+      await dave
+        .createCostCenter(COMPANY.sek, { code: 'EVIL', name: 'x' })
+        .expect(403);
+      await dave.renameCostCenter(COMPANY.sek, victim.id, 'Hacked').expect(404);
+      await dave.deleteCostCenter(COMPANY.sek, victim.id).expect(404);
+      // Acting in his own company does not widen access to rows of another.
+      await dave
+        .renameCostCenter(COMPANY.main, victim.id, 'Hacked')
+        .expect(404);
+      await dave.deleteCostCenter(COMPANY.main, victim.id).expect(404);
+      const after = (await erik.listCostCenters(COMPANY.sek).expect(200)).body;
+      expect(codes(after)).toEqual(['OPS', 'SALES']);
+      expect(after[0].name).toBe(victim.name);
+    });
+
     it('leaves every other company’s data untouched', async () => {
       const mallory = await as(PERSON.mallory);
-      await mallory.createCostCenter(COMPANY.main, { code: 'EVIL', name: 'x' });
+      await mallory
+        .createCostCenter(COMPANY.main, { code: 'EVIL', name: 'x' })
+        .expect(403);
       const dave = await as(PERSON.dave);
       expect(
         codes((await dave.listCostCenters(COMPANY.main).expect(200)).body),

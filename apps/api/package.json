@@ -5,7 +5,7 @@
   "scripts": {
     "build": "prisma generate && nest build",
     "start": "node dist/main.js",
-    "start:dev": "nest start --watch",
+    "start:dev": "NODE_ENV=development nest start --watch",
     "typecheck": "tsc --noEmit",
     "test": "jest --testPathIgnorePatterns /test/http/",
     "test:http": "pnpm db:reset && jest --config jest.http.config.json --runInBand",

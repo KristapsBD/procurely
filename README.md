@@ -31,7 +31,7 @@ Postgres itself decides which rows a person sees. The API connects as the restri
 
 Every request that touches data runs through `TenantDb.run`: one transaction that first sets the transaction-local `app.current_user_id` and `app.current_company_id`. Policies check them against active memberships, so a company the person has no active membership in yields no rows. The person comes from the session token (`Authorization: Bearer ...`); the company is named per request in the `X-Company-Id` header.
 
-Seed and dev login (the dev login does not exist when `NODE_ENV=production`):
+Seed and dev login (the dev login exists only when `NODE_ENV` is `development` or `test`, as the compose stack sets; any other value, including unset, disables it and requires `SESSION_SECRET`):
 
 ```sh
 pnpm stack:up && pnpm db:reset      # reset the database schema and reload the seed (idempotent)

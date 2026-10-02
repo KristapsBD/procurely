@@ -40,8 +40,20 @@ describe('dev-only login and sessions', () => {
       .expect(401);
   });
 
+  it('expires the session after an hour', async () => {
+    const alice = await Actor.signIn(app, PERSON.alice);
+    const now = Date.now();
+    const clock = jest.spyOn(Date, 'now').mockReturnValue(now + 3601 * 1000);
+    try {
+      await alice.me().expect(401);
+    } finally {
+      clock.mockRestore();
+    }
+    await alice.me().expect(200);
+  });
+
   it('does not exist in a production configuration', async () => {
-    const previous = process.env.NODE_ENV;
+    const previous = { ...process.env };
     process.env.NODE_ENV = 'production';
     process.env.SESSION_SECRET = 'a-production-secret';
     const production = await startApp();
@@ -52,8 +64,10 @@ describe('dev-only login and sessions', () => {
         .expect(404);
     } finally {
       await production.close();
-      process.env.NODE_ENV = previous;
-      delete process.env.SESSION_SECRET;
+      process.env.NODE_ENV = previous.NODE_ENV;
+      process.env.SESSION_SECRET = previous.SESSION_SECRET;
+      if (previous.SESSION_SECRET === undefined)
+        delete process.env.SESSION_SECRET;
     }
   });
 });

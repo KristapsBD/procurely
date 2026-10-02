@@ -33,7 +33,7 @@ function requireString(value: unknown, field: string): string {
   return value.trim();
 }
 
-/** Turns database errors into HTTP errors. RLS rejections surface as Postgres 42501. */
+/** Turns database errors into HTTP errors. An RLS rejection is a Postgres 'new row violates row-level security policy' error. */
 function translateDbError(error: unknown): never {
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
     if (error.code === 'P2002')

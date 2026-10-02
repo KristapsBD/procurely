@@ -101,7 +101,10 @@ async function auditLiveAccess(
     // Without an identity the API role must see nothing; a table it has no grant on is also fine.
     const visible = await api.$queryRawUnsafe<{ n: number }[]>(sql).then(
       (rows) => rows[0].n,
-      () => 0,
+      (error: unknown) => {
+        if (String(error).includes('permission denied')) return 0;
+        throw error;
+      },
     );
     if (visible !== 0)
       failures.push(

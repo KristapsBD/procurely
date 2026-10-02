@@ -44,7 +44,7 @@ export class Actor {
   me() {
     return this.call('get', '/me');
   }
-  listCostCenters(companyId: string) {
+  listCostCenters(companyId?: string) {
     return this.call('get', '/cost-centers', companyId);
   }
   getCostCenter(companyId: string, id: string) {
