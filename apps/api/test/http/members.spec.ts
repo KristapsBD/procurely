@@ -257,6 +257,31 @@ describe('inviting and managing members', () => {
     await dave.listCostCenters(COMPANY.main).expect(200);
   });
 
+  it('lets an admin deactivate themselves when another admin remains, and records it', async () => {
+    const dave = await as(PERSON.dave);
+    const invited = await dave
+      .inviteMember(COMPANY.main, {
+        email: 'self.quit@procurely.test',
+        role: 'ADMIN',
+      })
+      .expect(201);
+    const quitter = await as(invited.body.personId);
+    await quitter
+      .updateMember(COMPANY.main, invited.body.id, { active: false })
+      .expect(200);
+    await quitter.activeCompany(COMPANY.main).expect(404);
+    const log = (await dave.auditLog(COMPANY.main).expect(200))
+      .body as AuditEntry[];
+    expect(
+      log.some(
+        (e) =>
+          e.entityId === invited.body.id &&
+          e.action === 'member.deactivated' &&
+          e.actorPersonId === invited.body.personId,
+      ),
+    ).toBe(true);
+  });
+
   describe('who may manage members', () => {
     it('refuses every non-admin role', async () => {
       const dave = await as(PERSON.dave);

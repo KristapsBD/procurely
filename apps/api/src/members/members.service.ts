@@ -92,13 +92,15 @@ export class MembersService {
       return toMember(current);
     }
     await this.requireAnotherAdmin(tx, current, role, active);
+    // Audit first: a deactivated admin could no longer append an entry afterwards. If the
+    // update below matches nothing, the whole transaction rolls back and so does the entry.
+    await this.auditChange(tx, scope, current, role, active);
     const { count } = await tx.membership.updateMany({
       where: { id },
       data: { role, active },
     });
     // A person can see their own membership but not change it: nothing matched.
     if (count === 0) return rejectUnmatchedWrite(tx, scope);
-    await this.auditChange(tx, scope, current, role, active);
     return toMember({ ...current, role, active });
   }
 
@@ -106,7 +108,7 @@ export class MembersService {
   private async requireAnotherAdmin(
     tx: Tx,
     current: MembershipWithPerson,
-    role: string,
+    role: MembershipWithPerson['role'],
     active: boolean,
   ): Promise<void> {
     const staysAdmin = role === 'ADMIN' && active;

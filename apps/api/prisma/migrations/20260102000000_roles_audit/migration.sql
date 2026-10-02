@@ -52,7 +52,12 @@ GRANT EXECUTE ON FUNCTION active_role_in(uuid) TO procurely_api;
 -- Find or create a person by email so an admin can invite someone who has no account yet
 -- (Google sign-in later matches the person by email). Reading people by email would let an
 -- admin enumerate other companies' people, so only this narrow function may do it, and only
--- for an admin of the current company. It returns the person id and nothing else.
+-- for an admin of the current company. It returns the person id and nothing else; once the
+-- membership exists the admin sees that person's name and email like any other member.
+--
+-- Both SECURITY DEFINER functions assume the migration owner is not itself bound by row-level
+-- security (a superuser or BYPASSRLS role, as the seed already requires, and as the local
+-- Postgres owner is). Under a plain owner, FORCE ROW LEVEL SECURITY would apply to it.
 CREATE FUNCTION invite_person(p_email text, p_name text) RETURNS uuid
   LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path = public, pg_temp
   AS $$
