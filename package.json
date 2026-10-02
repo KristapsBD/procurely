@@ -1,0 +1,13 @@
+{
+  "name": "procurely",
+  "private": true,
+  "packageManager": "pnpm@12.8.1",
+  "engines": { "node": ">=24" },
+  "scripts": {
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r --if-present test",
+    "stack:up": "make up",
+    "stack:down": "make down",
+    "stack:reset": "make reset"
+  }
+}
