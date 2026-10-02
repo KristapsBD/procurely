@@ -151,3 +151,39 @@ export const costCenters = [
   { companyId: COMPANY.large, code: 'IT', name: 'Group IT' },
   { companyId: COMPANY.large, code: 'HR', name: 'Human Resources' },
 ];
+
+// A few audit rows, enough for the audit log to have history in three companies.
+export const auditLog = [
+  {
+    id: '00000000-0000-4000-8000-0000000000c1',
+    companyId: COMPANY.main,
+    actorPersonId: PERSON.dave,
+    action: 'member.invited',
+    entityType: 'membership',
+    details: { email: 'alice@procurely.test', role: 'REQUESTER' },
+  },
+  {
+    id: '00000000-0000-4000-8000-0000000000c2',
+    companyId: COMPANY.main,
+    actorPersonId: PERSON.dave,
+    action: 'member.deactivated',
+    entityType: 'membership',
+    details: { email: 'oscar@procurely.test' },
+  },
+  {
+    id: '00000000-0000-4000-8000-0000000000c3',
+    companyId: COMPANY.sek,
+    actorPersonId: PERSON.erik,
+    action: 'member.invited',
+    entityType: 'membership',
+    details: { email: 'alice@procurely.test', role: 'APPROVER' },
+  },
+  {
+    id: '00000000-0000-4000-8000-0000000000c4',
+    companyId: COMPANY.large,
+    actorPersonId: PERSON.gustav,
+    action: 'member.invited',
+    entityType: 'membership',
+    details: { email: 'hanna@procurely.test', role: 'APPROVER' },
+  },
+];

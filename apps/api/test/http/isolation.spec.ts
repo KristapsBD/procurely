@@ -129,12 +129,17 @@ describe('company isolation of cost centers', () => {
       const mallory = await as(PERSON.mallory);
       const victim = (await dave.listCostCenters(COMPANY.main).expect(200))
         .body[0];
-      for (const company of [COMPANY.empty, ...OTHER_COMPANIES]) {
+      for (const company of OTHER_COMPANIES) {
         await mallory
           .renameCostCenter(company, victim.id, 'Hacked')
           .expect(404);
         await mallory.deleteCostCenter(company, victim.id).expect(404);
       }
+      // In her own company she is a requester: refused by role, and the row is not there anyway.
+      await mallory
+        .renameCostCenter(COMPANY.empty, victim.id, 'Hacked')
+        .expect(403);
+      await mallory.deleteCostCenter(COMPANY.empty, victim.id).expect(403);
       const after = (
         await dave.getCostCenter(COMPANY.main, victim.id).expect(200)
       ).body;

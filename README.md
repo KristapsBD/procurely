@@ -43,11 +43,27 @@ curl -s localhost:3000/cost-centers -H "Authorization: Bearer $TOKEN" -H 'X-Comp
 
 `pnpm db:reset` is `make seed` (runs inside the API container, so Docker is all you need). Seeded companies and people, with their stable ids, are in `apps/api/prisma/seed-data.ts`: four companies (main EUR, SEK, large, empty) and twelve people, including a person who is requester in one company and approver in another (alice), a person with no company (nomad), a deactivated membership (oscar) and the attacker who belongs only to the empty company (mallory).
 
+## Roles, members and the audit log
+
+Inside a company, row-level security also enforces the role of the person (requester, approver, buyer, admin):
+
+| Table          | Read                                                                                                | Write                                                                                                 |
+| -------------- | --------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `companies`    | active members of the company                                                                       | nobody (API role)                                                                                     |
+| `people`       | yourself; an admin also sees the people with a membership in the current company                    | only through `invite_person()` (admin of the current company)                                         |
+| `memberships`  | your own active memberships (your companies); an admin sees every membership of the current company | admin of the current company inserts and updates `role`/`active`; nobody deletes (deactivate instead) |
+| `cost_centers` | every active member                                                                                 | admins only                                                                                           |
+| `audit_log`    | admins of the company                                                                               | any active member appends entries as themselves; never updated or deleted                             |
+
+Routes (all need the session token; company-scoped ones also `X-Company-Id`): `GET /companies` lists your companies and roles, `GET /companies/active` confirms the company named in the header (the client holds the selection, there is no server-side session state), `GET|POST /members` and `PATCH /members/:id` (admins: invite by email with a role, change role, deactivate or reactivate; the last active admin cannot be removed), `GET /audit-log` (admins, newest first). Invitations add the person to the company right away, creating the person record if the email is new so a later Google sign-in with that email finds it; no email is sent. Deactivation applies from the next request, because every statement re-checks the active membership.
+
+Every membership change writes an audit entry in the same transaction: call `writeAudit(tx, scope, { action, entityType, entityId, details })` from `src/audit/audit-log.ts` inside `TenantDb.run` for any new workflow.
+
 Host ports default to `3000` (API) and `5433` (Postgres); override with `API_PORT` and `DB_PORT`, e.g. `API_PORT=3100 pnpm stack:up`.
 
 ## CI
 
-Every pull request runs `.github/workflows/ci.yml`: seven parallel jobs, each its own required check: `format`, `lint` (ESLint, cyclomatic complexity cap of 10), `typecheck`, `unit-tests` (no database), `api-tests` (HTTP tests as seeded users against a real Postgres), `rls-audit` (every table has RLS enabled and forced, the API role cannot bypass it) and `docker-smoke` (builds the API image, starts it with Postgres, hits `/health`). Branch protection on `main` should require exactly those seven check names.
+Every pull request runs `.github/workflows/ci.yml`: seven parallel jobs, each its own required check: `format`, `lint` (ESLint, cyclomatic complexity cap of 10), `typecheck`, `unit-tests` (no database), `api-tests` (HTTP tests as seeded users against a real Postgres), `rls-audit` (every table has RLS enabled and forced, the API role cannot bypass it, the audit log has no update or delete path) and `docker-smoke` (builds the API image, starts it with Postgres, hits `/health`). Branch protection on `main` should require exactly those seven check names.
 
 Every push to `main` also runs `.github/workflows/publish-image.yml`, which builds the API image and pushes it to `ghcr.io/kristapsbd/procurely-api` tagged with the commit SHA and `latest`. It runs on `main` only and is not a required check.
 
