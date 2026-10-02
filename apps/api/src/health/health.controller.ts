@@ -1,5 +1,5 @@
 import { Controller, Get, ServiceUnavailableException } from '@nestjs/common';
-import type { HealthResponse } from '@procurely/shared-types';
+import { HealthResponse } from '../contract/api.dto';
 import { PrismaService } from '../prisma.service';
 
 @Controller('health')

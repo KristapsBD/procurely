@@ -10,3 +10,8 @@ allowBuilds:
   '@parcel/watcher': false
   unrs-resolver: false
   esbuild: false
+  '@scarf/scarf': false
+overrides:
+  # prisma 6's @prisma/config pins deepmerge-ts 7.x, which has a high-severity advisory
+  # (GHSA-ggr8-5vv4-36mx, fixed in 8.0.0). Remove once prisma ships a patched dependency.
+  deepmerge-ts: '>=8.0.0'

@@ -1,5 +1,7 @@
 import { Controller, Get, NotFoundException, UseGuards } from '@nestjs/common';
-import type { CompanyMembership } from '@procurely/shared-types';
+import { ApiBearerAuth } from '@nestjs/swagger';
+import { CompanyMembership } from '../contract/api.dto';
+import { ApiCompanyHeader } from '../contract/decorators';
 import { SessionGuard } from '../auth/session.guard';
 import {
   CompanyScope,
@@ -31,6 +33,7 @@ function toCompanyMembership(m: MembershipWithCompany): CompanyMembership {
  */
 @Controller('companies')
 @UseGuards(SessionGuard)
+@ApiBearerAuth()
 export class CompaniesController {
   constructor(private readonly db: TenantDb) {}
 
@@ -49,6 +52,7 @@ export class CompaniesController {
 
   /** Confirms the company named in the header: the person's role in it, or 404. */
   @Get('active')
+  @ApiCompanyHeader()
   async active(
     @CompanyScope() scope: CompanyRequestScope,
   ): Promise<CompanyMembership> {

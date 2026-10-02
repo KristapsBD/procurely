@@ -6,7 +6,7 @@ import {
   NotFoundException,
   Post,
 } from '@nestjs/common';
-import type { DevLoginRequest, SessionResponse } from '@procurely/shared-types';
+import { DevLoginRequest, SessionResponse } from '../contract/api.dto';
 import { APP_CONFIG, type AppConfig } from '../config';
 import { TenantDb } from '../tenancy/tenant-db.service';
 import { isUuid } from '../tenancy/uuid';
@@ -22,9 +22,7 @@ export class AuthController {
 
   /** Dev-only: sign in as any seeded person. Does not exist in production. */
   @Post('dev-login')
-  async devLogin(
-    @Body() body: Partial<DevLoginRequest>,
-  ): Promise<SessionResponse> {
+  async devLogin(@Body() body: DevLoginRequest): Promise<SessionResponse> {
     if (!this.config.devLoginEnabled) throw new NotFoundException();
     if (!isUuid(body?.personId)) {
       throw new BadRequestException('personId must be a UUID');

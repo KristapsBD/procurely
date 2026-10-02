@@ -1,0 +1,18 @@
+{
+  "path": ["apps", "packages"],
+  "format": ["typescript", "tsx", "javascript", "jsx"],
+  "ignore": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/coverage/**",
+    "**/generated/**",
+    "**/test/**",
+    "**/*.spec.ts"
+  ],
+  "minLines": 6,
+  "minTokens": 60,
+  "threshold": 3,
+  "reporters": ["console"],
+  "gitignore": true,
+  "absolute": false
+}
