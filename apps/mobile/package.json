@@ -2,7 +2,13 @@
   "name": "@procurely/mobile",
   "version": "0.0.0",
   "private": true,
-  "scripts": { "typecheck": "tsc --noEmit" },
-  "dependencies": { "@procurely/shared-types": "workspace:*" },
-  "devDependencies": { "typescript": "~5.9.3" }
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@procurely/shared-types": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.3"
+  }
 }
