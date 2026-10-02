@@ -1,10 +1,8 @@
 import {
   BadRequestException,
   Body,
-  ConflictException,
   Controller,
   Delete,
-  ForbiddenException,
   Get,
   HttpCode,
   NotFoundException,
@@ -14,13 +12,13 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
 import type {
   CostCenter,
   CreateCostCenterRequest,
   UpdateCostCenterRequest,
 } from '@procurely/shared-types';
 import { SessionGuard } from '../auth/session.guard';
+import { translateDbError } from '../tenancy/db-errors';
 import { CompanyScope, type RequestScope } from '../tenancy/request-scope';
 import { TenantDb } from '../tenancy/tenant-db.service';
 
@@ -31,19 +29,6 @@ function requireString(value: unknown, field: string): string {
     throw new BadRequestException(`${field} is required`);
   }
   return value.trim();
-}
-
-/** Turns database errors into HTTP errors. An RLS rejection is a Postgres 'new row violates row-level security policy' error. */
-function translateDbError(error: unknown): never {
-  if (error instanceof Prisma.PrismaClientKnownRequestError) {
-    if (error.code === 'P2002')
-      throw new ConflictException('Code already used');
-    if (error.code === 'P2025') throw new NotFoundException();
-  }
-  if (String(error).includes('row-level security')) {
-    throw new ForbiddenException('Not allowed in this company');
-  }
-  throw error;
 }
 
 @Controller('cost-centers')
