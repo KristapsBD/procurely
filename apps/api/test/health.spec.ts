@@ -6,7 +6,11 @@ import { PrismaService } from '../src/prisma.service';
 
 describe('GET /health', () => {
   let app: INestApplication;
-  const prisma = { $queryRaw: jest.fn(), $connect: jest.fn(), $disconnect: jest.fn() };
+  const prisma = {
+    $queryRaw: jest.fn(),
+    $connect: jest.fn(),
+    $disconnect: jest.fn(),
+  };
 
   beforeAll(async () => {
     const mod = await Test.createTestingModule({ imports: [AppModule] })
