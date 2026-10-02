@@ -128,3 +128,31 @@ jobs:
       - name: Logs on failure
         if: failure()
         run: docker compose logs
+
+  mobile-typecheck:
+    name: mobile-typecheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --filter @procurely/mobile...
+      - run: pnpm typecheck:mobile
+
+  mobile-unit-tests:
+    name: mobile-unit-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --filter @procurely/mobile...
+      - run: pnpm test:mobile
