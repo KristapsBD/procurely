@@ -8,12 +8,13 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
+import { ApiBearerAuth } from '@nestjs/swagger';
 import {
   InviteMemberRequest,
   Member,
   UpdateMemberRequest,
 } from '../contract/api.dto';
-import { ApiCompanyHeader, ApiSession } from '../contract/decorators';
+import { ApiCompanyHeader } from '../contract/decorators';
 import { SessionGuard } from '../auth/session.guard';
 import { translateDbError } from '../tenancy/db-errors';
 import {
@@ -26,7 +27,7 @@ import { MembersService } from './members.service';
 
 @Controller('members')
 @UseGuards(SessionGuard)
-@ApiSession()
+@ApiBearerAuth()
 @ApiCompanyHeader()
 export class MembersController {
   constructor(

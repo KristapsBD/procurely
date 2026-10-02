@@ -4,15 +4,15 @@ import {
   UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
+import { ApiBearerAuth } from '@nestjs/swagger';
 import { MeResponse } from '../contract/api.dto';
-import { ApiSession } from '../contract/decorators';
 import { SessionGuard } from '../auth/session.guard';
 import { Scope, type RequestScope } from '../tenancy/request-scope';
 import { TenantDb } from '../tenancy/tenant-db.service';
 
 @Controller('me')
 @UseGuards(SessionGuard)
-@ApiSession()
+@ApiBearerAuth()
 export class MeController {
   constructor(private readonly db: TenantDb) {}
 

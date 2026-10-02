@@ -1,6 +1,7 @@
 import { Controller, Get, NotFoundException, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth } from '@nestjs/swagger';
 import { CompanyMembership } from '../contract/api.dto';
-import { ApiCompanyHeader, ApiSession } from '../contract/decorators';
+import { ApiCompanyHeader } from '../contract/decorators';
 import { SessionGuard } from '../auth/session.guard';
 import {
   CompanyScope,
@@ -32,7 +33,7 @@ function toCompanyMembership(m: MembershipWithCompany): CompanyMembership {
  */
 @Controller('companies')
 @UseGuards(SessionGuard)
-@ApiSession()
+@ApiBearerAuth()
 export class CompaniesController {
   constructor(private readonly db: TenantDb) {}
 

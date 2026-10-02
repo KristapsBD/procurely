@@ -12,13 +12,13 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { ApiNoContentResponse } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiNoContentResponse } from '@nestjs/swagger';
 import {
   CostCenter,
   CreateCostCenterRequest,
   UpdateCostCenterRequest,
 } from '../contract/api.dto';
-import { ApiCompanyHeader, ApiSession } from '../contract/decorators';
+import { ApiCompanyHeader } from '../contract/decorators';
 import { SessionGuard } from '../auth/session.guard';
 import { translateDbError } from '../tenancy/db-errors';
 import {
@@ -37,7 +37,7 @@ function requireString(value: unknown, field: string): string {
 
 @Controller('cost-centers')
 @UseGuards(SessionGuard)
-@ApiSession()
+@ApiBearerAuth()
 @ApiCompanyHeader()
 export class CostCentersController {
   constructor(private readonly db: TenantDb) {}

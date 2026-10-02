@@ -585,3 +585,18 @@ export interface operations {
         };
     };
 }
+
+export type AuditEntry = components['schemas']['AuditEntry'];
+export type CompanyMembership = components['schemas']['CompanyMembership'];
+export type CostCenter = components['schemas']['CostCenter'];
+export type CreateCostCenterRequest = components['schemas']['CreateCostCenterRequest'];
+export type DevLoginRequest = components['schemas']['DevLoginRequest'];
+export type HealthResponse = components['schemas']['HealthResponse'];
+export type InviteMemberRequest = components['schemas']['InviteMemberRequest'];
+export type MeResponse = components['schemas']['MeResponse'];
+export type Member = components['schemas']['Member'];
+export type Person = components['schemas']['Person'];
+export type Role = components['schemas']['Role'];
+export type SessionResponse = components['schemas']['SessionResponse'];
+export type UpdateCostCenterRequest = components['schemas']['UpdateCostCenterRequest'];
+export type UpdateMemberRequest = components['schemas']['UpdateMemberRequest'];

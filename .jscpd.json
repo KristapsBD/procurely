@@ -1,6 +1,6 @@
 {
   "path": ["apps", "packages"],
-  "format": ["typescript"],
+  "format": ["typescript", "tsx", "javascript", "jsx"],
   "ignore": [
     "**/node_modules/**",
     "**/dist/**",

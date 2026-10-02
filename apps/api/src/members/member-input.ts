@@ -1,11 +1,11 @@
 import { BadRequestException } from '@nestjs/common';
-import type {
-  InviteMemberRequest,
-  Role,
-  UpdateMemberRequest,
+import {
+  ROLES,
+  type InviteMemberRequest,
+  type Role,
+  type UpdateMemberRequest,
 } from '../contract/api.dto';
 
-const ROLES: readonly Role[] = ['REQUESTER', 'APPROVER', 'BUYER', 'ADMIN'];
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function parseRole(value: unknown): Role {

@@ -1,6 +1,7 @@
 import { Controller, Get, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth } from '@nestjs/swagger';
 import { AuditEntry } from '../contract/api.dto';
-import { ApiCompanyHeader, ApiSession } from '../contract/decorators';
+import { ApiCompanyHeader } from '../contract/decorators';
 import { SessionGuard } from '../auth/session.guard';
 import {
   CompanyScope,
@@ -12,7 +13,7 @@ const PAGE_SIZE = 200;
 
 @Controller('audit-log')
 @UseGuards(SessionGuard)
-@ApiSession()
+@ApiBearerAuth()
 @ApiCompanyHeader()
 export class AuditLogController {
   constructor(private readonly db: TenantDb) {}
