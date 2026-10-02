@@ -1,0 +1,8 @@
+{
+  "compilerOptions": {
+    "module": "commonjs", "target": "ES2022", "strict": true, "outDir": "dist",
+    "experimentalDecorators": true, "emitDecoratorMetadata": true,
+    "esModuleInterop": true, "skipLibCheck": true, "incremental": false
+  },
+  "include": ["src", "test"]
+}

@@ -1,3 +1,34 @@
 # procurely
 
 A small multi-tenant procure-to-pay product built to learn Postgres row-level security, NestJS and Expo (React Native).
+
+## Layout
+
+pnpm monorepo:
+
+- `apps/api` – NestJS API (Prisma for schema and queries)
+- `apps/mobile` – Expo app (placeholder; real setup comes in a later ticket)
+- `packages/shared-types` – TypeScript types shared by API and mobile
+
+Tooling choices: pnpm workspaces (no extra monorepo tool), Node 24 (`.nvmrc`), Nest 11, Prisma 6, TypeScript 5.9, Postgres 17. Health endpoint: `GET /health`.
+
+## Backend stack (Docker)
+
+Requires Docker with Compose and, for local installs, Node 24 and pnpm.
+
+```sh
+pnpm stack:up      # build and start Postgres + API, waits until both are healthy
+curl localhost:3000/health   # {"status":"ok","database":"up"}
+pnpm stack:down    # stop the stack, keep the database data
+pnpm stack:reset   # wipe the database volume and start fresh
+```
+
+Host ports default to `3000` (API) and `5433` (Postgres); override with `API_PORT` and `DB_PORT`, e.g. `API_PORT=3100 pnpm stack:up`.
+
+## Development
+
+```sh
+pnpm install
+pnpm typecheck
+pnpm test
+```
