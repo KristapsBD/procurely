@@ -1,4 +1,5 @@
 import { Stack } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 import { useMemo } from 'react';
 import { Text, View } from 'react-native';
 import { createApi } from '../api/client';
@@ -7,6 +8,10 @@ import { Loading, styles } from '../components/ui';
 import { API_URL } from '../config';
 import { useSession } from '../session/session';
 import { tokenStore } from '../session/token-store';
+
+// Web target: when this page is the Google sign-in popup coming back, hand its address to the
+// window that opened it, which closes the popup. Does nothing anywhere else (and on a phone).
+WebBrowser.maybeCompleteAuthSession();
 
 export default function RootLayout() {
   const api = useMemo(() => (API_URL ? createApi(API_URL) : null), []);

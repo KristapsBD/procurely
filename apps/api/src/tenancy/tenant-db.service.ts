@@ -24,4 +24,14 @@ export class TenantDb {
       return work(tx);
     });
   }
+
+  /**
+   * For signing in, before any person is known: no identity is set, so every table is empty to
+   * the work; it can only call the narrow SECURITY DEFINER functions made for it.
+   */
+  runWithoutIdentity<T>(
+    work: (tx: Prisma.TransactionClient) => Promise<T>,
+  ): Promise<T> {
+    return this.prisma.$transaction((tx) => work(tx));
+  }
 }

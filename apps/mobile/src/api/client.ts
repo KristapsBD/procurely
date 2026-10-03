@@ -1,5 +1,6 @@
 import {
   COMPANY_HEADER,
+  type AuthOptions,
   type CatalogItem,
   type CompanyMembership,
   type CostCenter,
@@ -7,6 +8,7 @@ import {
   type CreateCostCenterRequest,
   type CreateSupplierRequest,
   type DevLoginRequest,
+  type GoogleSessionRequest,
   type MeResponse,
   type SessionResponse,
   type Supplier,
@@ -21,7 +23,12 @@ import {
  * another company.
  */
 export interface Api {
+  authOptions(): Promise<AuthOptions>;
   devLogin(personId: string): Promise<SessionResponse>;
+  /** Where the browser starts a Google sign-in; the API sends it on to Google. */
+  googleStartUrl(returnUrl: string, codeChallenge: string): string;
+  /** Redeems the code the browser came back with, using the verifier only this app holds. */
+  googleSession(code: string, codeVerifier: string): Promise<SessionResponse>;
   me(token: string): Promise<MeResponse>;
   companies(token: string): Promise<CompanyMembership[]>;
   costCenters(token: string, companyId: string): Promise<CostCenter[]>;
@@ -101,13 +108,15 @@ async function serverMessage(response: Response): Promise<string | null> {
 }
 
 export function createApi(baseUrl: string, fetchFn: typeof fetch = fetch): Api {
+  const base = baseUrl.replace(/\/+$/, '');
+
   async function request<T>(path: string, opts: RequestOptions = {}) {
     const method = opts.method ?? 'GET';
     const headers: Record<string, string> = {};
     if (opts.body !== undefined) headers['content-type'] = 'application/json';
     if (opts.token) headers.authorization = `Bearer ${opts.token}`;
     if (opts.companyId) headers[COMPANY_HEADER] = opts.companyId;
-    const response = await fetchFn(`${baseUrl.replace(/\/+$/, '')}${path}`, {
+    const response = await fetchFn(`${base}${path}`, {
       method,
       headers,
       body: opts.body === undefined ? undefined : JSON.stringify(opts.body),
@@ -134,10 +143,19 @@ export function createApi(baseUrl: string, fetchFn: typeof fetch = fetch): Api {
   const del = scoped('DELETE');
 
   return {
+    authOptions: () => request<AuthOptions>('/auth/options'),
     devLogin: (personId) =>
       request<SessionResponse>('/auth/dev-login', {
         method: 'POST',
         body: { personId } satisfies DevLoginRequest,
+      }),
+    googleStartUrl: (returnUrl, codeChallenge) =>
+      `${base}/auth/google/start?return_to=${encodeURIComponent(returnUrl)}` +
+      `&code_challenge=${encodeURIComponent(codeChallenge)}`,
+    googleSession: (code, codeVerifier) =>
+      request<SessionResponse>('/auth/google/session', {
+        method: 'POST',
+        body: { code, codeVerifier } satisfies GoogleSessionRequest,
       }),
     me: (token) => request<MeResponse>('/me', { token }),
     companies: (token) => request<CompanyMembership[]>('/companies', { token }),

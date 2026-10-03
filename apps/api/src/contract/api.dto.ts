@@ -29,6 +29,20 @@ export class DevLoginRequest {
   personId!: string;
 }
 
+/** The ways of signing in this API offers. */
+export class AuthOptions {
+  /** The dev-only login (development and test configurations only). */
+  devLogin!: boolean;
+  /** Google sign-in, when it is configured. */
+  google!: boolean;
+}
+
+/** Redeems the handoff code from the Google callback with the app's PKCE code verifier. */
+export class GoogleSessionRequest {
+  code!: string;
+  codeVerifier!: string;
+}
+
 export class SessionResponse {
   /** Bearer token for the Authorization header. */
   token!: string;
@@ -78,8 +92,9 @@ export class Member {
 }
 
 /**
- * Invites a person by email. The person record is created if the email is new, so a later
- * Google sign-in with that email finds it. No email is sent.
+ * Invites a person by email. The person record is created if the email is new. A later Google
+ * sign-in with that email links to it when Google is authoritative for the address (Gmail or
+ * Google Workspace). No email is sent.
  */
 export class InviteMemberRequest {
   email!: string;

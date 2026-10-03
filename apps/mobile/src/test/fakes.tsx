@@ -78,7 +78,11 @@ export function fakeApi(overrides: Partial<Api> = {}): Api {
     throw new Error('not faked in this test');
   };
   return {
+    authOptions: async () => ({ devLogin: true, google: false }),
     devLogin: async () => session,
+    googleStartUrl: (returnUrl, challenge) =>
+      `http://api.test/auth/google/start?return_to=${returnUrl}&code_challenge=${challenge}`,
+    googleSession: async () => session,
     me: async () => me,
     companies: async () => [],
     costCenters: async () => [],

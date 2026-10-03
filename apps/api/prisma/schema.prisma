@@ -35,6 +35,8 @@ model Person {
   id          String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   email       String       @unique
   name        String
+  /// Google's stable subject identifier, set at the first Google sign-in. Null until then.
+  googleSub   String?      @unique @map("google_sub")
   memberships Membership[]
   auditLog    AuditLog[]
 

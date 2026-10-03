@@ -2,23 +2,35 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Get,
   Inject,
   NotFoundException,
   Post,
 } from '@nestjs/common';
-import { DevLoginRequest, SessionResponse } from '../contract/api.dto';
+import {
+  AuthOptions,
+  DevLoginRequest,
+  SessionResponse,
+} from '../contract/api.dto';
 import { APP_CONFIG, type AppConfig } from '../config';
-import { TenantDb } from '../tenancy/tenant-db.service';
 import { isUuid } from '../tenancy/uuid';
-import { SessionTokens } from './session-tokens';
+import { Sessions } from './sessions';
 
 @Controller('auth')
 export class AuthController {
   constructor(
     @Inject(APP_CONFIG) private readonly config: AppConfig,
-    private readonly db: TenantDb,
-    private readonly tokens: SessionTokens,
+    private readonly sessions: Sessions,
   ) {}
+
+  /** Which ways of signing in this API offers, so the app shows only those. */
+  @Get('options')
+  options(): AuthOptions {
+    return {
+      devLogin: this.config.devLoginEnabled,
+      google: this.config.google !== null,
+    };
+  }
 
   /** Dev-only: sign in as any seeded person. Does not exist in production. */
   @Post('dev-login')
@@ -27,15 +39,8 @@ export class AuthController {
     if (!isUuid(body?.personId)) {
       throw new BadRequestException('personId must be a UUID');
     }
-    const personId = body.personId;
-    // Under RLS a person can read only their own row, so this doubles as an existence check.
-    const person = await this.db.run({ personId, companyId: null }, (tx) =>
-      tx.person.findUnique({ where: { id: personId } }),
-    );
-    if (!person) throw new NotFoundException('Unknown person');
-    return {
-      token: this.tokens.issue(person.id),
-      person: { id: person.id, email: person.email, name: person.name },
-    };
+    const session = await this.sessions.start(body.personId);
+    if (!session) throw new NotFoundException('Unknown person');
+    return session;
   }
 }
