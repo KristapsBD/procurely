@@ -4,13 +4,13 @@ The Expo app has a web target. An agent starts the stack and Metro, opens the we
 
 ## 1. Start the stack and Metro
 
-Check first what already runs on your machine: other worktrees may hold ports 3000 and 5433. If so, give yours its own project name and ports instead of taking theirs over.
+Each checkout runs its own stack with its own project name and ports (see "One stack per checkout" in the README), so other worktrees' stacks are not in the way. Stop yours with `make down` when you finish.
 
 ```sh
-export COMPOSE_PROJECT_NAME=procurely-mine API_PORT=3100 DB_PORT=5434   # only if 3000/5433 are taken
-pnpm stack:up && pnpm db:reset                                         # seeded database, dev login enabled
+pnpm stack:up && pnpm db:reset          # seeded database, dev login enabled
+eval "$(make -s env)"                   # this checkout's API_PORT and DB_PORT
 cd apps/mobile
-EXPO_PUBLIC_API_URL=http://localhost:3100 CI=1 pnpm exec expo start --web --port 8091 --clear
+EXPO_PUBLIC_API_URL=http://localhost:$API_PORT CI=1 pnpm exec expo start --web --port 8091 --clear
 ```
 
 `EXPO_PUBLIC_API_URL` must match the API port. It is baked in at bundle time, so change it only together with `--clear`, and note that a value in an `.env*` file can win over the shell, so keep the address out of committed env files. `CI=1` turns off file watching (fine for a one-shot run; drop it to get reloads). The first bundle takes about 30 seconds.
