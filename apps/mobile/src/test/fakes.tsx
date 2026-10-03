@@ -35,7 +35,11 @@ export function fakeApi(overrides: Partial<Api> = {}): Api {
   const session: SessionResponse = { token: 'token-alice', person: alice };
   const me: MeResponse = { ...alice, memberships: [] };
   return {
+    authOptions: async () => ({ devLogin: true, google: false }),
     devLogin: async () => session,
+    googleStartUrl: (returnUrl, challenge) =>
+      `http://api.test/auth/google/start?return_to=${returnUrl}&code_challenge=${challenge}`,
+    googleSession: async () => session,
     me: async () => me,
     companies: async () => [],
     costCenters: async () => [],

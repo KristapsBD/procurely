@@ -22,6 +22,28 @@
         ]
       }
     },
+    "/auth/options": {
+      "get": {
+        "operationId": "AuthController_options",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthOptions"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Which ways of signing in this API offers, so the app shows only those.",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
     "/auth/dev-login": {
       "post": {
         "operationId": "AuthController_devLogin",
@@ -51,6 +73,103 @@
         "summary": "Dev-only: sign in as any seeded person. Does not exist in production.",
         "tags": [
           "Auth"
+        ]
+      }
+    },
+    "/auth/google/start": {
+      "get": {
+        "operationId": "GoogleAuthController_start",
+        "parameters": [
+          {
+            "name": "return_to",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "code_challenge",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Redirect to Google's sign-in page."
+          }
+        },
+        "summary": "Opened in a browser by the app: redirects to Google's sign-in page.",
+        "tags": [
+          "GoogleAuth"
+        ]
+      }
+    },
+    "/auth/google/callback": {
+      "get": {
+        "operationId": "GoogleAuthController_callback",
+        "parameters": [
+          {
+            "name": "code",
+            "required": false,
+            "in": "query",
+            "description": "Absent when the person cancelled.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Redirect back to the app."
+          }
+        },
+        "summary": "Google's redirect URI: redirects back to the app's return address with `?code=` (a\nhandoff code for POST /auth/google/session) or `?error=` (cancelled, rejected, conflict,\nfailed).",
+        "tags": [
+          "GoogleAuth"
+        ]
+      }
+    },
+    "/auth/google/session": {
+      "post": {
+        "operationId": "GoogleAuthController_session",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GoogleSessionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionResponse"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Redeems the handoff code from the callback for a session.",
+        "tags": [
+          "GoogleAuth"
         ]
       }
     },
@@ -578,6 +697,23 @@
           "database"
         ]
       },
+      "AuthOptions": {
+        "type": "object",
+        "properties": {
+          "devLogin": {
+            "type": "boolean",
+            "description": "The dev-only login (development and test configurations only)."
+          },
+          "google": {
+            "type": "boolean",
+            "description": "Google sign-in, when it is configured."
+          }
+        },
+        "required": [
+          "devLogin",
+          "google"
+        ]
+      },
       "DevLoginRequest": {
         "type": "object",
         "properties": {
@@ -622,6 +758,21 @@
         "required": [
           "token",
           "person"
+        ]
+      },
+      "GoogleSessionRequest": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "codeVerifier": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "codeVerifier"
         ]
       },
       "Role": {

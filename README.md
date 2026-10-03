@@ -41,6 +41,8 @@ curl -s localhost:3000/me -H "Authorization: Bearer $TOKEN"
 curl -s localhost:3000/cost-centers -H "Authorization: Bearer $TOKEN" -H 'X-Company-Id: 00000000-0000-4000-8000-0000000000a1'
 ```
 
+People sign in with Google (`GET /auth/google/start`, a browser flow; see [docs/google-sign-in.md](docs/google-sign-in.md) for how it works, why Expo Go is enough and the Google Cloud Console setup). Google is optional: its four `GOOGLE_*` values come from a gitignored `.env` at the repository root (template: `.env.example`), and without them the API runs as before. `GET /auth/options` tells the app which sign-ins exist. Automated tests never use Google: they sign in through the dev login, and the Google tests use a local stand-in with its own signing keys.
+
 `pnpm db:reset` is `make seed` (runs inside the API container, so Docker is all you need). Seeded companies and people, with their stable ids, are in `apps/api/prisma/seed-data.ts`: four companies (main EUR, SEK, large, empty) and twelve people, including a person who is requester in one company and approver in another (alice), a person with no company (nomad), a deactivated membership (oscar) and the attacker who belongs only to the empty company (mallory).
 
 ## Roles, members and the audit log
@@ -55,7 +57,7 @@ Inside a company, row-level security also enforces the role of the person (reque
 | `cost_centers` | every active member                                                                                 | admins only                                                                                           |
 | `audit_log`    | admins of the company                                                                               | any active member appends entries as themselves; never updated or deleted                             |
 
-Routes (all need the session token; company-scoped ones also `X-Company-Id`): `GET /companies` lists your companies and roles, `GET /companies/active` confirms the company named in the header (the client holds the selection, there is no server-side session state), `GET|POST /members` and `PATCH /members/:id` (admins: invite by email with a role, change role, deactivate or reactivate; the last active admin cannot be removed), `GET /audit-log` (admins, newest first). Invitations add the person to the company right away, creating the person record if the email is new so a later Google sign-in with that email finds it; no email is sent. Deactivation applies from the next request, because every statement re-checks the active membership.
+Routes (all need the session token; company-scoped ones also `X-Company-Id`): `GET /companies` lists your companies and roles, `GET /companies/active` confirms the company named in the header (the client holds the selection, there is no server-side session state), `GET|POST /members` and `PATCH /members/:id` (admins: invite by email with a role, change role, deactivate or reactivate; the last active admin cannot be removed), `GET /audit-log` (admins, newest first). Invitations add the person to the company right away, creating the person record if the email is new; no email is sent. A later Google sign-in with that email links to the invited person when Google is authoritative for the address (Gmail or Google Workspace); see [docs/google-sign-in.md](docs/google-sign-in.md#who-a-google-sign-in-becomes). Deactivation applies from the next request, because every statement re-checks the active membership.
 
 Every membership change writes an audit entry in the same transaction: call `writeAudit(tx, scope, { action, entityType, entityId, details })` from `src/audit/audit-log.ts` inside `TenantDb.run` for any new workflow.
 
@@ -63,7 +65,7 @@ Host ports default to `3000` (API) and `5433` (Postgres); override with `API_POR
 
 ## Mobile app
 
-Expo SDK 57 (TypeScript, Expo Router, TanStack Query). The dev login screen signs in as a seeded person, shows their companies with a switcher and lists the cost centers of the selected company. The API address is one value, `EXPO_PUBLIC_API_URL`, read when Metro bundles; nothing in the code names a host. Copy `apps/mobile/.env.example` to `apps/mobile/.env.local` (gitignored) or export it in the shell, then restart Metro (`--clear` after changing it).
+Expo SDK 57 (TypeScript, Expo Router, TanStack Query). The sign-in screen offers Google sign-in when the API has it configured (otherwise it says so) and, in development bundles, the dev login as a seeded person. Signed in, the app shows the person's companies with a switcher and lists the cost centers of the selected company, or says they have no access to any company yet. The API address is one value, `EXPO_PUBLIC_API_URL`, read when Metro bundles; nothing in the code names a host. Copy `apps/mobile/.env.example` to `apps/mobile/.env.local` (gitignored) or export it in the shell, then restart Metro (`--clear` after changing it).
 
 In the browser (the fast loop, and how an agent drives the app, see [docs/agent-browser-verification.md](docs/agent-browser-verification.md)):
 
@@ -91,7 +93,7 @@ TS_IP=$(tailscale ip -4)                          # the WSL address on the tailn
 EXPO_PUBLIC_API_URL=http://$TS_IP:3000 REACT_NATIVE_PACKAGER_HOSTNAME=$TS_IP pnpm mobile:start
 ```
 
-Then open Expo Go on the iPhone and enter `exp://<TS_IP>:8081` (or scan the QR code Metro prints). Sign in with a dev-login quick pick.
+Then open Expo Go on the iPhone and enter `exp://<TS_IP>:8081` (or scan the QR code Metro prints). Sign in with a dev-login quick pick. Google sign-in on the phone also needs `tailscale serve` (an https name for the API, still tailnet only) and a Google OAuth client: follow [docs/google-sign-in.md](docs/google-sign-in.md#setup-done-by-hand).
 
 Keep the tailnet private to your own devices: do not share the node, and do not use `tailscale funnel` (it publishes a port to the internet). Compose also publishes Postgres on 5433, which is reachable on the tailnet the same way.
 

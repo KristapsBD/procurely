@@ -11,9 +11,56 @@ export interface AppConfig {
   corsAnyOrigin: boolean;
   sessionSecret: string;
   sessionTtlSeconds: number;
+  /** Google sign-in; null when it is not configured (the API still starts, without it). */
+  google: GoogleConfig | null;
+}
+
+/** A Google OAuth client of type "Web application" (see docs/google-sign-in.md). */
+export interface GoogleConfig {
+  clientId: string;
+  clientSecret: string;
+  /** This API's callback, exactly as registered with Google: https, or http://localhost. */
+  redirectUri: string;
+  /**
+   * Where the API may send the browser back to the app after Google: each entry is a URL
+   * prefix such as exp://100.64.0.1:8081 (Expo Go) or http://localhost:8081 (web target).
+   * Anything else is refused, so a crafted sign-in link cannot hand a session to someone else.
+   */
+  appReturnUrls: string[];
 }
 
 const DEV_SESSION_SECRET = 'dev-only-session-secret-do-not-use-in-production';
+
+const GOOGLE_REQUIRED = [
+  'GOOGLE_CLIENT_ID',
+  'GOOGLE_CLIENT_SECRET',
+  'GOOGLE_REDIRECT_URI',
+  'GOOGLE_APP_RETURN_URLS',
+] as const;
+
+/** Unset and empty are the same (compose passes empty strings for unset variables). */
+function value(env: NodeJS.ProcessEnv, name: string): string | undefined {
+  return env[name]?.trim() || undefined;
+}
+
+function loadGoogleConfig(env: NodeJS.ProcessEnv): GoogleConfig | null {
+  const missing = GOOGLE_REQUIRED.filter((name) => !value(env, name));
+  if (missing.length === GOOGLE_REQUIRED.length) return null;
+  if (missing.length > 0) {
+    throw new Error(
+      `Google sign-in is partly configured; also set ${missing.join(', ')}`,
+    );
+  }
+  return {
+    clientId: value(env, 'GOOGLE_CLIENT_ID') as string,
+    clientSecret: value(env, 'GOOGLE_CLIENT_SECRET') as string,
+    redirectUri: new URL(value(env, 'GOOGLE_REDIRECT_URI') as string).href,
+    appReturnUrls: (value(env, 'GOOGLE_APP_RETURN_URLS') as string)
+      .split(',')
+      .map((url) => url.trim())
+      .filter(Boolean),
+  };
+}
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   const devMode = env.NODE_ENV === 'development' || env.NODE_ENV === 'test';
@@ -29,5 +76,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     corsAnyOrigin: devMode,
     sessionSecret,
     sessionTtlSeconds: 60 * 60,
+    google: loadGoogleConfig(env),
   };
 }

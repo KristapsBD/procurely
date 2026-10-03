@@ -1,9 +1,13 @@
 import { Module } from '@nestjs/common';
 import { AuditLogController } from './audit/audit-log.controller';
 import { AuthController } from './auth/auth.controller';
+import { GoogleAuthController } from './auth/google-auth.controller';
+import { GOOGLE_ENDPOINTS, googleEndpoints } from './auth/google-endpoints';
+import { GoogleSignIn } from './auth/google-sign-in.service';
 import { SessionGuard } from './auth/session.guard';
 import { SessionTokens } from './auth/session-tokens';
-import { APP_CONFIG, loadConfig } from './config';
+import { Sessions } from './auth/sessions';
+import { APP_CONFIG, loadConfig, type AppConfig } from './config';
 import { CompaniesController } from './companies/companies.controller';
 import { CostCentersController } from './cost-centers/cost-centers.controller';
 import { HealthController } from './health/health.controller';
@@ -17,6 +21,7 @@ import { TenantDb } from './tenancy/tenant-db.service';
   controllers: [
     HealthController,
     AuthController,
+    GoogleAuthController,
     MeController,
     CostCentersController,
     CompaniesController,
@@ -28,8 +33,16 @@ import { TenantDb } from './tenancy/tenant-db.service';
     TenantDb,
     MembersService,
     SessionTokens,
+    Sessions,
     SessionGuard,
+    GoogleSignIn,
     { provide: APP_CONFIG, useFactory: () => loadConfig() },
+    {
+      provide: GOOGLE_ENDPOINTS,
+      inject: [APP_CONFIG],
+      useFactory: (config: AppConfig) =>
+        config.google ? googleEndpoints(config.google) : null,
+    },
   ],
 })
 export class AppModule {}

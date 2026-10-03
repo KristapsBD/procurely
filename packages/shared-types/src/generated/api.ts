@@ -36,6 +36,78 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/google/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Google's redirect URI: redirects back to the app's return address with `?code=` (a
+         *     handoff code for POST /auth/google/session) or `?error=` (cancelled, rejected, conflict,
+         *     failed).
+         */
+        get: operations["GoogleAuthController_callback"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/google/session": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Redeems the handoff code from the callback for a session. */
+        post: operations["GoogleAuthController_session"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/google/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Opened in a browser by the app: redirects to Google's sign-in page. */
+        get: operations["GoogleAuthController_start"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Which ways of signing in this API offers, so the app shows only those. */
+        get: operations["AuthController_options"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/companies": {
         parameters: {
             query?: never;
@@ -187,6 +259,12 @@ export interface components {
             entityType: string;
             id: string;
         };
+        AuthOptions: {
+            /** @description The dev-only login (development and test configurations only). */
+            devLogin: boolean;
+            /** @description Google sign-in, when it is configured. */
+            google: boolean;
+        };
         CompanyMembership: {
             companyId: string;
             companyName: string;
@@ -205,6 +283,10 @@ export interface components {
         };
         DevLoginRequest: {
             personId: string;
+        };
+        GoogleSessionRequest: {
+            code: string;
+            codeVerifier: string;
         };
         HealthResponse: {
             /** @enum {string} */
@@ -303,6 +385,91 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SessionResponse"];
+                };
+            };
+        };
+    };
+    GoogleAuthController_callback: {
+        parameters: {
+            query: {
+                /** @description Absent when the person cancelled. */
+                code?: string;
+                state: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Redirect back to the app. */
+            302: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    GoogleAuthController_session: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GoogleSessionRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionResponse"];
+                };
+            };
+        };
+    };
+    GoogleAuthController_start: {
+        parameters: {
+            query: {
+                code_challenge: string;
+                return_to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Redirect to Google's sign-in page. */
+            302: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AuthController_options: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthOptions"];
                 };
             };
         };
@@ -587,10 +754,12 @@ export interface operations {
 }
 
 export type AuditEntry = components['schemas']['AuditEntry'];
+export type AuthOptions = components['schemas']['AuthOptions'];
 export type CompanyMembership = components['schemas']['CompanyMembership'];
 export type CostCenter = components['schemas']['CostCenter'];
 export type CreateCostCenterRequest = components['schemas']['CreateCostCenterRequest'];
 export type DevLoginRequest = components['schemas']['DevLoginRequest'];
+export type GoogleSessionRequest = components['schemas']['GoogleSessionRequest'];
 export type HealthResponse = components['schemas']['HealthResponse'];
 export type InviteMemberRequest = components['schemas']['InviteMemberRequest'];
 export type MeResponse = components['schemas']['MeResponse'];

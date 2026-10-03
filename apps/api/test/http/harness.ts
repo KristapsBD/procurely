@@ -1,14 +1,17 @@
-import { Test } from '@nestjs/testing';
+import { Test, type TestingModuleBuilder } from '@nestjs/testing';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { COMPANY_HEADER, type SessionResponse } from '@procurely/shared-types';
 import { AppModule } from '../../src/app.module';
 import { configureApp } from '../../src/configure-app';
 
-export async function startApp(): Promise<INestApplication> {
-  const mod = await Test.createTestingModule({
-    imports: [AppModule],
-  }).compile();
+/** The real app; `override` can swap providers (e.g. a fake Google) before it starts. */
+export async function startApp(
+  override: (builder: TestingModuleBuilder) => TestingModuleBuilder = (b) => b,
+): Promise<INestApplication> {
+  const mod = await override(
+    Test.createTestingModule({ imports: [AppModule] }),
+  ).compile();
   const app = mod.createNestApplication();
   configureApp(app);
   await app.init();

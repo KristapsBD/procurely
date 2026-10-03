@@ -1,4 +1,4 @@
-import type { Person } from '@procurely/shared-types';
+import type { Person, SessionResponse } from '@procurely/shared-types';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   createContext,
@@ -23,7 +23,10 @@ interface Session {
   state: SessionState;
   /** The company the person picked; null until they pick one (the first is used meanwhile). */
   selectedCompanyId: string | null;
+  /** Dev login as a seeded person. */
   signIn(personId: string): Promise<void>;
+  /** Adopts a session the API issued (Google sign-in). */
+  startSession(session: SessionResponse): Promise<void>;
   signOut(): Promise<void>;
   selectCompany(companyId: string): void;
 }
@@ -81,9 +84,8 @@ export function SessionProvider(props: {
     };
   }, [api, store]);
 
-  const signIn = useCallback(
-    async (personId: string) => {
-      const { token, person } = await api.devLogin(personId);
+  const startSession = useCallback(
+    async ({ token, person }: SessionResponse) => {
       await store.save(token);
       // A new person never inherits what the previous one fetched, nor a late response for it.
       await queryClient.cancelQueries();
@@ -91,7 +93,12 @@ export function SessionProvider(props: {
       setSelectedCompanyId(null);
       setState({ status: 'signedIn', token, person });
     },
-    [api, store, queryClient],
+    [store, queryClient],
+  );
+
+  const signIn = useCallback(
+    async (personId: string) => startSession(await api.devLogin(personId)),
+    [api, startSession],
   );
 
   const signOut = useCallback(async () => {
@@ -115,8 +122,15 @@ export function SessionProvider(props: {
   );
 
   const session = useMemo(
-    () => ({ state, selectedCompanyId, signIn, signOut, selectCompany }),
-    [state, selectedCompanyId, signIn, signOut, selectCompany],
+    () => ({
+      state,
+      selectedCompanyId,
+      signIn,
+      startSession,
+      signOut,
+      selectCompany,
+    }),
+    [state, selectedCompanyId, signIn, startSession, signOut, selectCompany],
   );
 
   return (
