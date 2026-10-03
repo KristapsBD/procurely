@@ -1,4 +1,11 @@
-import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
+import {
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 
 export const colors = {
   text: '#111827',
@@ -12,6 +19,8 @@ export const colors = {
 
 export function Button(props: {
   label: string;
+  /** What a screen reader (and an agent driving the app) hears; defaults to the label. */
+  accessibilityLabel?: string;
   onPress: () => void;
   selected?: boolean;
   disabled?: boolean;
@@ -20,7 +29,7 @@ export function Button(props: {
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={props.label}
+      accessibilityLabel={props.accessibilityLabel ?? props.label}
       accessibilityState={{
         selected: props.selected ?? false,
         disabled: props.disabled ?? false,
@@ -34,6 +43,31 @@ export function Button(props: {
         {props.label}
       </Text>
     </Pressable>
+  );
+}
+
+/** A labelled single-line text input. */
+export function TextField(props: {
+  label: string;
+  value: string;
+  onChangeText: (text: string) => void;
+  placeholder?: string;
+  keyboardType?: 'default' | 'decimal-pad';
+}) {
+  return (
+    <View style={{ gap: 4 }}>
+      <Text style={styles.muted}>{props.label}</Text>
+      <TextInput
+        accessibilityLabel={props.label}
+        placeholder={props.placeholder}
+        placeholderTextColor={colors.muted}
+        autoCorrect={false}
+        keyboardType={props.keyboardType ?? 'default'}
+        value={props.value}
+        onChangeText={props.onChangeText}
+        style={styles.input}
+      />
+    </View>
   );
 }
 
@@ -53,6 +87,31 @@ export function ErrorNote(props: { message: string; onRetry?: () => void }) {
         {props.message}
       </Text>
       {props.onRetry && <Button label="Retry" onPress={props.onRetry} />}
+    </>
+  );
+}
+
+/** Save and Cancel for an inline form, with the reason the last save failed. */
+export function FormActions(props: {
+  saveLabel: string;
+  saveAccessibilityLabel?: string;
+  canSave: boolean;
+  onSave: () => void;
+  onCancel: () => void;
+  error: string | null;
+}) {
+  return (
+    <>
+      <View style={styles.row}>
+        <Button
+          label={props.saveLabel}
+          accessibilityLabel={props.saveAccessibilityLabel}
+          disabled={!props.canSave}
+          onPress={props.onSave}
+        />
+        <Button label="Cancel" onPress={props.onCancel} />
+      </View>
+      {props.error && <ErrorNote message={props.error} />}
     </>
   );
 }

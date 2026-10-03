@@ -1,7 +1,12 @@
-import type { CompanyMembership, CostCenter } from '@procurely/shared-types';
-import { useQuery } from '@tanstack/react-query';
+import type {
+  CatalogItem,
+  CompanyMembership,
+  CostCenter,
+  Supplier,
+} from '@procurely/shared-types';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
-import { ApiError } from '../api/client';
+import { ApiError, type Api } from '../api/client';
 import { queryKeys } from '../api/query-keys';
 import { useApi, useSession } from '../session/session';
 
@@ -59,4 +64,51 @@ export function useCostCenters(companyId: string) {
     queryFn: () => api.costCenters(required(token), companyId),
     enabled: token !== null,
   });
+}
+
+export function useSuppliers(companyId: string, opts: { selectable: boolean }) {
+  const api = useApi();
+  const token = useToken();
+  return useQuery<Supplier[]>({
+    queryKey: queryKeys.suppliers(companyId, opts.selectable),
+    queryFn: () => api.suppliers(required(token), companyId, opts),
+    enabled: token !== null,
+  });
+}
+
+export function useCatalogItems(companyId: string) {
+  const api = useApi();
+  const token = useToken();
+  return useQuery<CatalogItem[]>({
+    queryKey: queryKeys.catalogItems(companyId),
+    queryFn: () => api.catalogItems(required(token), companyId),
+    enabled: token !== null,
+  });
+}
+
+/**
+ * A change to a record of one company. On success every query of that company refetches,
+ * because one change can show in several lists (a renamed supplier also names catalog items).
+ */
+export function useCompanyMutation<TInput, TResult = unknown>(
+  companyId: string,
+  write: (api: Api, token: string, input: TInput) => Promise<TResult>,
+) {
+  const api = useApi();
+  const token = useToken();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: TInput) => write(api, required(token), input),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: queryKeys.company(companyId) }),
+  });
+}
+
+/** What to tell the person when a change failed: the API's reason when it gave one. */
+export function writeErrorMessage(error: unknown): string {
+  if (error instanceof ApiError && error.status === 403) {
+    return 'Your role in this company does not allow this change.';
+  }
+  if (error instanceof ApiError && error.status < 500) return error.message;
+  return 'Could not save the change. Try again.';
 }

@@ -108,6 +108,39 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/catalog-items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Every item of the company with its supplier and agreed price. */
+        get: operations["CatalogItemsController_list"];
+        put?: never;
+        post: operations["CatalogItemsController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/catalog-items/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CatalogItemsController_get"];
+        put?: never;
+        post?: never;
+        delete: operations["CatalogItemsController_remove"];
+        options?: never;
+        head?: never;
+        patch: operations["CatalogItemsController_update"];
+        trace?: never;
+    };
     "/companies": {
         parameters: {
             query?: never;
@@ -239,6 +272,39 @@ export interface paths {
         patch: operations["MembersController_update"];
         trace?: never;
     };
+    "/suppliers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Every supplier of the company, inactive ones included unless `selectable=true`. */
+        get: operations["SuppliersController_list"];
+        put?: never;
+        post: operations["SuppliersController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/suppliers/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SuppliersController_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["SuppliersController_update"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -265,6 +331,17 @@ export interface components {
             /** @description Google sign-in, when it is configured. */
             google: boolean;
         };
+        CatalogItem: {
+            companyId: string;
+            id: string;
+            name: string;
+            /** @description False when the supplier was deactivated: the item cannot be chosen for new work. */
+            supplierActive: boolean;
+            supplierId: string;
+            supplierName: string;
+            /** @description Agreed unit price in integer minor units of the company currency (cents, öre). */
+            unitPriceMinor: number;
+        };
         CompanyMembership: {
             companyId: string;
             companyName: string;
@@ -277,8 +354,18 @@ export interface components {
             id: string;
             name: string;
         };
+        CreateCatalogItemRequest: {
+            name: string;
+            /** @description An active supplier of the same company. */
+            supplierId: string;
+            /** @description Integer minor units of the company currency, zero or more. */
+            unitPriceMinor: number;
+        };
         CreateCostCenterRequest: {
             code: string;
+            name: string;
+        };
+        CreateSupplierRequest: {
             name: string;
         };
         DevLoginRequest: {
@@ -328,12 +415,28 @@ export interface components {
             /** @description Bearer token for the Authorization header. */
             token: string;
         };
+        Supplier: {
+            active: boolean;
+            companyId: string;
+            id: string;
+            name: string;
+        };
+        UpdateCatalogItemRequest: {
+            name?: string;
+            /** @description Moving an item to another supplier requires that supplier to be active. */
+            supplierId?: string;
+            unitPriceMinor?: number;
+        };
         UpdateCostCenterRequest: {
             name: string;
         };
         UpdateMemberRequest: {
             active?: boolean;
             role?: components["schemas"]["Role"];
+        };
+        UpdateSupplierRequest: {
+            active?: boolean;
+            name?: string;
         };
     };
     responses: never;
@@ -470,6 +573,131 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AuthOptions"];
+                };
+            };
+        };
+    };
+    CatalogItemsController_list: {
+        parameters: {
+            query?: {
+                /** @description Only items of active suppliers that may be chosen for new work. */
+                selectable?: "true";
+            };
+            header: {
+                /** @description The company the person acts in (a company UUID). */
+                "x-company-id": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogItem"][];
+                };
+            };
+        };
+    };
+    CatalogItemsController_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The company the person acts in (a company UUID). */
+                "x-company-id": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateCatalogItemRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogItem"];
+                };
+            };
+        };
+    };
+    CatalogItemsController_get: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The company the person acts in (a company UUID). */
+                "x-company-id": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogItem"];
+                };
+            };
+        };
+    };
+    CatalogItemsController_remove: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The company the person acts in (a company UUID). */
+                "x-company-id": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CatalogItemsController_update: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The company the person acts in (a company UUID). */
+                "x-company-id": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateCatalogItemRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogItem"];
                 };
             };
         };
@@ -751,13 +979,119 @@ export interface operations {
             };
         };
     };
+    SuppliersController_list: {
+        parameters: {
+            query?: {
+                /** @description Only active suppliers that may be chosen for new work. */
+                selectable?: "true";
+            };
+            header: {
+                /** @description The company the person acts in (a company UUID). */
+                "x-company-id": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Supplier"][];
+                };
+            };
+        };
+    };
+    SuppliersController_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The company the person acts in (a company UUID). */
+                "x-company-id": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateSupplierRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Supplier"];
+                };
+            };
+        };
+    };
+    SuppliersController_get: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The company the person acts in (a company UUID). */
+                "x-company-id": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Supplier"];
+                };
+            };
+        };
+    };
+    SuppliersController_update: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The company the person acts in (a company UUID). */
+                "x-company-id": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateSupplierRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Supplier"];
+                };
+            };
+        };
+    };
 }
 
 export type AuditEntry = components['schemas']['AuditEntry'];
 export type AuthOptions = components['schemas']['AuthOptions'];
+export type CatalogItem = components['schemas']['CatalogItem'];
 export type CompanyMembership = components['schemas']['CompanyMembership'];
 export type CostCenter = components['schemas']['CostCenter'];
+export type CreateCatalogItemRequest = components['schemas']['CreateCatalogItemRequest'];
 export type CreateCostCenterRequest = components['schemas']['CreateCostCenterRequest'];
+export type CreateSupplierRequest = components['schemas']['CreateSupplierRequest'];
 export type DevLoginRequest = components['schemas']['DevLoginRequest'];
 export type GoogleSessionRequest = components['schemas']['GoogleSessionRequest'];
 export type HealthResponse = components['schemas']['HealthResponse'];
@@ -767,5 +1101,8 @@ export type Member = components['schemas']['Member'];
 export type Person = components['schemas']['Person'];
 export type Role = components['schemas']['Role'];
 export type SessionResponse = components['schemas']['SessionResponse'];
+export type Supplier = components['schemas']['Supplier'];
+export type UpdateCatalogItemRequest = components['schemas']['UpdateCatalogItemRequest'];
 export type UpdateCostCenterRequest = components['schemas']['UpdateCostCenterRequest'];
 export type UpdateMemberRequest = components['schemas']['UpdateMemberRequest'];
+export type UpdateSupplierRequest = components['schemas']['UpdateSupplierRequest'];

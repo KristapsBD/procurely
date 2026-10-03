@@ -82,4 +82,34 @@ export class Actor {
   deleteCostCenter(companyId: string, id: string) {
     return this.call('delete', `/cost-centers/${id}`, companyId);
   }
+  /** `selectable` lists only what may be chosen for new work (active suppliers). */
+  listSuppliers(companyId: string, opts: { selectable?: boolean } = {}) {
+    const query = opts.selectable ? '?selectable=true' : '';
+    return this.call('get', `/suppliers${query}`, companyId);
+  }
+  getSupplier(companyId: string, id: string) {
+    return this.call('get', `/suppliers/${id}`, companyId);
+  }
+  createSupplier(companyId: string, body: object) {
+    return this.call('post', '/suppliers', companyId).send(body);
+  }
+  updateSupplier(companyId: string, id: string, body: object) {
+    return this.call('patch', `/suppliers/${id}`, companyId).send(body);
+  }
+  listCatalogItems(companyId: string, opts: { selectable?: boolean } = {}) {
+    const query = opts.selectable ? '?selectable=true' : '';
+    return this.call('get', `/catalog-items${query}`, companyId);
+  }
+  getCatalogItem(companyId: string, id: string) {
+    return this.call('get', `/catalog-items/${id}`, companyId);
+  }
+  createCatalogItem(companyId: string, body: object) {
+    return this.call('post', '/catalog-items', companyId).send(body);
+  }
+  updateCatalogItem(companyId: string, id: string, body: object) {
+    return this.call('patch', `/catalog-items/${id}`, companyId).send(body);
+  }
+  deleteCatalogItem(companyId: string, id: string) {
+    return this.call('delete', `/catalog-items/${id}`, companyId);
+  }
 }

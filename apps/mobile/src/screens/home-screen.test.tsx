@@ -12,6 +12,7 @@ import {
   deferred,
   fakeApi,
   membership,
+  pressToWrite,
 } from '../test/fakes';
 import { ApiError } from '../api/client';
 import { memoryStore } from '../test/fakes';
@@ -128,5 +129,93 @@ describe('HomeScreen company switching', () => {
       </TestApp>,
     );
     await waitFor(async () => expect(await store.load()).toBeNull());
+  });
+});
+
+describe('HomeScreen cost centers', () => {
+  it('offers cost-center management to an admin only', async () => {
+    render(
+      <TestApp api={fakeApi({ companies: async () => [acme] })}>
+        <HomeScreen />
+      </TestApp>,
+    );
+    expect(await screen.findByText('Cost centers')).toBeTruthy();
+    expect(
+      screen.queryByRole('button', { name: 'Add cost center' }),
+    ).toBeNull();
+  });
+
+  function renderAsAdmin() {
+    const admin = membership('company-acme', 'Acme Trading', 'ADMIN');
+    let rows: CostCenter[] = [costCenter(admin.companyId, 'OPS')];
+    const api = fakeApi({
+      companies: async () => [admin],
+      costCenters: async () => rows,
+      createCostCenter: jest.fn(async (_t, companyId, body) => {
+        const created = { ...costCenter(companyId, body.code), ...body };
+        rows = [...rows, created];
+        return created;
+      }),
+      renameCostCenter: jest.fn(async (_t, _c, id, body) => {
+        rows = rows.map((r) => (r.id === id ? { ...r, ...body } : r));
+        return rows.find((r) => r.id === id)!;
+      }),
+      deleteCostCenter: jest.fn(async (_t, _c, id) => {
+        rows = rows.filter((r) => r.id !== id);
+      }),
+    });
+    render(
+      <TestApp api={api}>
+        <HomeScreen />
+      </TestApp>,
+    );
+    return { api, companyId: admin.companyId };
+  }
+
+  it('lets an admin add a cost center', async () => {
+    const { api, companyId } = renderAsAdmin();
+    fireEvent.press(
+      await screen.findByRole('button', { name: 'Add cost center' }),
+    );
+    fireEvent.changeText(screen.getByLabelText('Cost center code'), 'HR');
+    fireEvent.changeText(screen.getByLabelText('Cost center name'), 'People');
+    await pressToWrite(
+      screen.getByRole('button', { name: 'Save cost center' }),
+    );
+    expect(await screen.findByText('HR')).toBeTruthy();
+    expect(api.createCostCenter).toHaveBeenCalledWith(
+      'token-alice',
+      companyId,
+      {
+        code: 'HR',
+        name: 'People',
+      },
+    );
+  });
+
+  it('lets an admin rename a cost center', async () => {
+    renderAsAdmin();
+    fireEvent.press(await screen.findByRole('button', { name: 'Rename OPS' }));
+    fireEvent.changeText(
+      screen.getByLabelText('New name for OPS'),
+      'Operations',
+    );
+    await pressToWrite(
+      screen.getByRole('button', { name: 'Save name of OPS' }),
+    );
+    expect(await screen.findByText('Operations')).toBeTruthy();
+  });
+
+  it('lets an admin delete a cost center', async () => {
+    const { api, companyId } = renderAsAdmin();
+    await pressToWrite(
+      await screen.findByRole('button', { name: 'Delete OPS' }),
+    );
+    await waitFor(() => expect(screen.queryByText('OPS')).toBeNull());
+    expect(api.deleteCostCenter).toHaveBeenCalledWith(
+      'token-alice',
+      companyId,
+      `${companyId}-OPS`,
+    );
   });
 });

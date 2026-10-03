@@ -187,3 +187,78 @@ export const auditLog = [
     details: { email: 'hanna@procurely.test', role: 'APPROVER' },
   },
 ];
+
+export const SUPPLIER = {
+  // The same supplier name in two companies, each with its own agreed prices.
+  mainOffice: '00000000-0000-4000-8000-0000000000d1',
+  sekOffice: '00000000-0000-4000-8000-0000000000d2',
+  mainTech: '00000000-0000-4000-8000-0000000000d3',
+  // Inactive: keeps its catalog item, but cannot be chosen for new work.
+  mainInactive: '00000000-0000-4000-8000-0000000000d4',
+} as const;
+
+export const suppliers = [
+  {
+    id: SUPPLIER.mainOffice,
+    companyId: COMPANY.main,
+    name: 'Office Depot',
+    active: true,
+  },
+  {
+    id: SUPPLIER.sekOffice,
+    companyId: COMPANY.sek,
+    name: 'Office Depot',
+    active: true,
+  },
+  {
+    id: SUPPLIER.mainTech,
+    companyId: COMPANY.main,
+    name: 'TechWorld',
+    active: true,
+  },
+  {
+    id: SUPPLIER.mainInactive,
+    companyId: COMPANY.main,
+    name: 'Old Paper Mill',
+    active: false,
+  },
+];
+
+export const CATALOG_ITEM = {
+  mainPaper: '00000000-0000-4000-8000-0000000000e1',
+  sekPaper: '00000000-0000-4000-8000-0000000000e2',
+  mainLaptop: '00000000-0000-4000-8000-0000000000e3',
+  mainOldPaper: '00000000-0000-4000-8000-0000000000e4',
+} as const;
+
+// Prices are integer minor units of the company currency (EUR cents, SEK öre).
+export const catalogItems = [
+  {
+    id: CATALOG_ITEM.mainPaper,
+    companyId: COMPANY.main,
+    supplierId: SUPPLIER.mainOffice,
+    name: 'A4 copy paper, box of 5 reams',
+    unitPriceMinor: 2499,
+  },
+  {
+    id: CATALOG_ITEM.sekPaper,
+    companyId: COMPANY.sek,
+    supplierId: SUPPLIER.sekOffice,
+    name: 'A4 copy paper, box of 5 reams',
+    unitPriceMinor: 27900,
+  },
+  {
+    id: CATALOG_ITEM.mainLaptop,
+    companyId: COMPANY.main,
+    supplierId: SUPPLIER.mainTech,
+    name: 'Laptop 14"',
+    unitPriceMinor: 119900,
+  },
+  {
+    id: CATALOG_ITEM.mainOldPaper,
+    companyId: COMPANY.main,
+    supplierId: SUPPLIER.mainInactive,
+    name: 'Recycled paper, box of 5 reams',
+    unitPriceMinor: 1999,
+  },
+];

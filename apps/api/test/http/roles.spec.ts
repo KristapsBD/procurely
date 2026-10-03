@@ -47,12 +47,44 @@ describe('role rules inside a company', () => {
       expect(after.find((c) => c.id === target.id)?.name).toBe(target.name);
     });
 
-    it('lets an admin write', async () => {
+    it('lets an admin write, with an audit entry for every change', async () => {
       const dave = await as(PERSON.dave);
       const created = await dave
         .createCostCenter(COMPANY.main, { code: 'ROLE', name: 'Role test' })
         .expect(201);
-      await dave.deleteCostCenter(COMPANY.main, created.body.id).expect(204);
+      const id = created.body.id as string;
+      await dave.renameCostCenter(COMPANY.main, id, 'Role test 2').expect(200);
+      await dave.deleteCostCenter(COMPANY.main, id).expect(204);
+
+      const log = (await dave.auditLog(COMPANY.main).expect(200))
+        .body as AuditEntry[];
+      const entries = log.filter((e) => e.entityId === id).reverse();
+      expect(entries.map((e) => [e.action, e.actorPersonId])).toEqual([
+        ['cost_center.created', PERSON.dave],
+        ['cost_center.renamed', PERSON.dave],
+        ['cost_center.deleted', PERSON.dave],
+      ]);
+      expect(entries.map((e) => e.details)).toEqual([
+        { code: 'ROLE', name: 'Role test' },
+        { code: 'ROLE', from: 'Role test', to: 'Role test 2' },
+        { code: 'ROLE', name: 'Role test 2' },
+      ]);
+    });
+
+    it('writes no audit entry for a refused change', async () => {
+      const dave = await as(PERSON.dave);
+      const before = (await dave.auditLog(COMPANY.main).expect(200)).body
+        .length as number;
+      const carol = await as(PERSON.carol);
+      await carol
+        .createCostCenter(COMPANY.main, { code: 'NOPE', name: 'x' })
+        .expect(403);
+      await dave
+        .createCostCenter(COMPANY.main, { code: 'IT', name: 'Duplicate' })
+        .expect(409);
+      expect((await dave.auditLog(COMPANY.main).expect(200)).body).toHaveLength(
+        before,
+      );
     });
 
     it('reports a missing cost center as 404 to an admin', async () => {

@@ -64,7 +64,7 @@ You need the Tailscale setup from the README (Tailscale in WSL and on the iPhone
 ### 1. An https name for the API on your tailnet
 
 1. In the [Tailscale admin console](https://login.tailscale.com/admin/dns), on the DNS page, make sure MagicDNS is on and enable HTTPS Certificates.
-2. In WSL, with the stack running (`pnpm stack:up`, API on port 3000):
+2. In WSL, with the stack running on the fixed port of the phone setup in the README (`export API_PORT=3000`, then `pnpm stack:up`):
 
    ```sh
    tailscale serve --bg 3000     # tailnet only; prints https://<machine>.<tailnet>.ts.net
@@ -98,7 +98,7 @@ GOOGLE_REDIRECT_URI=https://<machine>.<tailnet>.ts.net/auth/google/callback
 GOOGLE_APP_RETURN_URLS=exp://<tailscale ip>:8081
 ```
 
-`<tailscale ip>` is `tailscale ip -4`, the address Metro advertises to Expo Go. Add `http://localhost:8081` to `GOOGLE_APP_RETURN_URLS` (comma separated) for the browser target. `GOOGLE_REDIRECT_URI` holds one address: for the browser target alone you can use `http://localhost:3000/auth/google/callback` instead. Set all four or none; with only some the API refuses to start and names the missing ones. Then restart the stack (`pnpm stack:up`) and check `curl -s localhost:3000/auth/options` shows `"google":true`.
+`<tailscale ip>` is `tailscale ip -4`, the address Metro advertises to Expo Go. Add `http://localhost:8081` to `GOOGLE_APP_RETURN_URLS` (comma separated) for the browser target. `GOOGLE_REDIRECT_URI` holds one address: for the browser target alone you can use `http://localhost:3000/auth/google/callback` instead. Set all four or none; with only some the API refuses to start and names the missing ones. Then restart the stack (`pnpm stack:up`) and check `curl -s localhost:$API_PORT/auth/options` shows `"google":true`.
 
 ### 4. Sign in on the iPhone
 
