@@ -4,6 +4,9 @@ import { COMPANY, PERSON, SUPPLIER } from '../../prisma/seed-data';
 import { Actor, startApp } from './harness';
 
 const names = (rows: Supplier[]) => rows.map((r) => r.name);
+// Other specs add suppliers too and the file order is not fixed: look at the seeded ones.
+const SEEDED: string[] = Object.values(SUPPLIER);
+const seeded = (rows: Supplier[]) => rows.filter((r) => SEEDED.includes(r.id));
 
 // Main company: alice requester, bob approver, carol buyer, dave admin.
 describe('suppliers', () => {
@@ -31,7 +34,7 @@ describe('suppliers', () => {
       ]) {
         const actor = await as(person);
         const res = await actor.listSuppliers(COMPANY.main).expect(200);
-        expect(names(res.body)).toEqual([
+        expect(names(seeded(res.body))).toEqual([
           'Office Depot',
           'Old Paper Mill',
           'TechWorld',
@@ -48,8 +51,11 @@ describe('suppliers', () => {
       const res = await carol
         .listSuppliers(COMPANY.main, { selectable: true })
         .expect(200);
-      expect(names(res.body)).toEqual(['Office Depot', 'TechWorld']);
+      expect(names(seeded(res.body))).toEqual(['Office Depot', 'TechWorld']);
       expect((res.body as Supplier[]).every((s) => s.active)).toBe(true);
+      expect(
+        (res.body as Supplier[]).every((s) => s.companyId === COMPANY.main),
+      ).toBe(true);
     });
 
     it('fetches one supplier by id, and 404s an unknown one', async () => {
