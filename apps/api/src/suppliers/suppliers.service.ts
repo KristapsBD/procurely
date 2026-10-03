@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import type { Prisma } from '@prisma/client';
+import type { Prisma, Supplier as SupplierRow } from '@prisma/client';
 import type {
   CreateSupplierRequest,
   Supplier,
@@ -11,7 +11,7 @@ import { PURCHASING_ROLES, rejectUnmatchedWrite } from '../tenancy/roles';
 
 type Tx = Prisma.TransactionClient;
 
-function toSupplier(s: Supplier): Supplier {
+function toSupplier(s: SupplierRow): Supplier {
   return { id: s.id, companyId: s.companyId, name: s.name, active: s.active };
 }
 
@@ -81,8 +81,8 @@ export class SuppliersService {
   private async auditChange(
     tx: Tx,
     scope: CompanyRequestScope,
-    before: Supplier,
-    after: Supplier,
+    before: SupplierRow,
+    after: SupplierRow,
   ): Promise<void> {
     const base = { entityType: 'supplier', entityId: before.id };
     if (after.name !== before.name) {

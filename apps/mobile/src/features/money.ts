@@ -3,9 +3,14 @@
  * strings, never floats, keeps 4.35 at 435 instead of 434.99999.
  */
 export function formatMoney(minor: number, currency: string): string {
+  return `${formatAmount(minor)} ${currency}`;
+}
+
+/** The amount alone ("24.99"), as a price field shows it for editing. */
+export function formatAmount(minor: number): string {
   const major = Math.floor(minor / 100);
   const cents = String(minor % 100).padStart(2, '0');
-  return `${major}.${cents} ${currency}`;
+  return `${major}.${cents}`;
 }
 
 /** Up to 7 digits, so the result always fits the API's integer price column. */

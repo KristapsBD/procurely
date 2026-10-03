@@ -1,4 +1,8 @@
-import type { CompanyMembership, CostCenter } from '@procurely/shared-types';
+import type {
+  CompanyMembership,
+  CostCenter,
+  CreateCostCenterRequest,
+} from '@procurely/shared-types';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
@@ -114,7 +118,7 @@ function NewCostCenterForm(props: { companyId: string; onDone: () => void }) {
   const [name, setName] = useState('');
   const create = useCompanyMutation(
     props.companyId,
-    (api, token, body: { code: string; name: string }) =>
+    (api, token, body: CreateCostCenterRequest) =>
       api.createCostCenter(token, props.companyId, body),
   );
   return (

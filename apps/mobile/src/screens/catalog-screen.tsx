@@ -20,7 +20,7 @@ import {
   useSuppliers,
   writeErrorMessage,
 } from '../features/data';
-import { formatMoney, parseMoney } from '../features/money';
+import { formatAmount, formatMoney, parseMoney } from '../features/money';
 import { canManagePurchasing } from '../features/permissions';
 import { CompanyLine, WithActiveCompany } from './with-active-company';
 
@@ -110,7 +110,7 @@ function CatalogItemForm(props: {
   const [supplierId, setSupplierId] = useState(item?.supplierId ?? null);
   const [name, setName] = useState(item?.name ?? '');
   const [price, setPrice] = useState(
-    item ? formatMoney(item.unitPriceMinor, '').trim() : '',
+    item ? formatAmount(item.unitPriceMinor) : '',
   );
   const save = useSaveCatalogItem(companyId, item);
   const request = toRequest(supplierId, name, price);

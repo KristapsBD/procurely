@@ -3,9 +3,9 @@ import type {
   UpdateSupplierRequest,
 } from '../contract/api.dto';
 import {
-  optionalBoolean,
-  optionalString,
+  optional,
   requireAnyField,
+  requireBoolean,
   requireString,
 } from '../contract/input';
 
@@ -20,8 +20,8 @@ export function parseUpdateSupplier(
 ): UpdateSupplierRequest {
   return requireAnyField(
     {
-      name: optionalString(body?.name, 'name'),
-      active: optionalBoolean(body?.active, 'active'),
+      name: optional(body?.name, 'name', requireString),
+      active: optional(body?.active, 'active', requireBoolean),
     },
     'name or active',
   );

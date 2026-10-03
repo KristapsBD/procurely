@@ -33,11 +33,20 @@ function toCatalogItem(i: ItemWithSupplier): CatalogItem {
   };
 }
 
-/** An inactive supplier cannot be chosen for new work, which includes new catalog entries. */
-function requireActiveSupplier(item: ItemWithSupplier): void {
-  if (!item.supplier.active) {
+/**
+ * An inactive supplier cannot be chosen for new work, which includes new catalog entries.
+ * FOR SHARE holds the supplier row until the transaction ends, so a concurrent deactivation
+ * either commits first (and is seen here) or waits until this write has committed.
+ */
+async function requireActiveSupplier(
+  tx: Tx,
+  supplierId: string,
+): Promise<void> {
+  const [supplier] = await tx.$queryRaw<{ name: string; active: boolean }[]>`
+    SELECT name, active FROM suppliers WHERE id = ${supplierId}::uuid FOR SHARE`;
+  if (!supplier?.active) {
     throw new ConflictException(
-      `Supplier ${item.supplier.name} is inactive and cannot be chosen`,
+      `Supplier ${supplier?.name ?? supplierId} is inactive and cannot be chosen`,
     );
   }
 }
@@ -79,7 +88,7 @@ export class CatalogItemsService {
       data: { ...input, companyId: scope.companyId },
       include: withSupplier,
     });
-    requireActiveSupplier(row);
+    await requireActiveSupplier(tx, row.supplierId);
     await writeAudit(tx, scope, {
       action: 'catalog_item.created',
       entityType: 'catalog_item',
@@ -107,7 +116,9 @@ export class CatalogItemsService {
       where: { id },
       include: withSupplier,
     });
-    if (after.supplierId !== before.supplierId) requireActiveSupplier(after);
+    if (after.supplierId !== before.supplierId) {
+      await requireActiveSupplier(tx, after.supplierId);
+    }
     const details = Object.fromEntries(
       EDITABLE.filter((f) => after[f] !== before[f]).map((f) => [
         f,

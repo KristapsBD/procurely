@@ -3,7 +3,7 @@ import type {
   UpdateCatalogItemRequest,
 } from '../contract/api.dto';
 import {
-  optionalString,
+  optional,
   requireAnyField,
   requireMinorAmount,
   requireString,
@@ -23,18 +23,15 @@ export function parseCreateCatalogItem(
 export function parseUpdateCatalogItem(
   body: Partial<UpdateCatalogItemRequest>,
 ): UpdateCatalogItemRequest {
-  const price = body?.unitPriceMinor;
   return requireAnyField(
     {
-      supplierId:
-        body?.supplierId === undefined
-          ? undefined
-          : requireUuid(body.supplierId, 'supplierId'),
-      name: optionalString(body?.name, 'name'),
-      unitPriceMinor:
-        price === undefined
-          ? undefined
-          : requireMinorAmount(price, 'unitPriceMinor'),
+      supplierId: optional(body?.supplierId, 'supplierId', requireUuid),
+      name: optional(body?.name, 'name', requireString),
+      unitPriceMinor: optional(
+        body?.unitPriceMinor,
+        'unitPriceMinor',
+        requireMinorAmount,
+      ),
     },
     'supplierId, name or unitPriceMinor',
   );

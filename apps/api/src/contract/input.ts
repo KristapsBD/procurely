@@ -12,19 +12,16 @@ export function requireString(value: unknown, field: string): string {
   return value.trim();
 }
 
-/** Undefined when absent, otherwise like requireString. */
-export function optionalString(
+/** Undefined when the field is absent, otherwise whatever `parse` makes of it. */
+export function optional<T>(
   value: unknown,
   field: string,
-): string | undefined {
-  return value === undefined ? undefined : requireString(value, field);
+  parse: (value: unknown, field: string) => T,
+): T | undefined {
+  return value === undefined ? undefined : parse(value, field);
 }
 
-export function optionalBoolean(
-  value: unknown,
-  field: string,
-): boolean | undefined {
-  if (value === undefined) return undefined;
+export function requireBoolean(value: unknown, field: string): boolean {
   if (typeof value !== 'boolean') {
     throw new BadRequestException(`${field} must be a boolean`);
   }
