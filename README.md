@@ -28,12 +28,12 @@ With only Docker and make installed, the same commands exist as `make up`, `make
 
 ### One stack per checkout
 
-Every checkout (a clone, an agent worktree) runs its own stack, so several can run at once and none can wipe another's database. The Makefile derives the Compose project name and both host ports from a checksum of the checkout's absolute path: project `procurely-<checksum>`, API port `10000 + n`, Postgres port `20000 + n` (`n` is the checksum modulo 10000). The values are stable: the same folder gets the same name and ports on every run, and a folder elsewhere with the same name gets different ones. Containers, the database volume (`<project>_pgdata`) and the image are all named after the project.
+Every checkout (a clone, an agent worktree) runs its own stack, so several can run at once and none can wipe another's database. The Makefile derives the Compose project name and both host ports from a checksum of the checkout's absolute path: project `procurely-<checksum>`, API port `10000 + n`, Postgres port `20000 + n` (`n` is the checksum modulo 10000). The values are stable: the same folder gets the same name and ports on every run, and a folder elsewhere with the same name gets a different project name and, almost always, different ports (two checkouts share ports with a chance of about 1 in 10,000; then the second `make up` fails on the port binding, never on the other's data). Containers, the database volume (`<project>_pgdata`) and the image are all named after the project.
 
 - **See the current stack:** `make env` prints the name, ports and database URLs; `make ps` shows its containers; `make up` ends by printing the API and Postgres addresses.
-- **Plain `docker compose` and host-side scripts:** run `eval "$(make -s env)"` in the shell first. Without it, `docker compose` falls back to its defaults (project named after the folder, usually `procurely`, ports 3000 and 5433), which is the stack every un-isolated checkout shares, and `test:http`, `rls:audit` and the API package's `db:reset` connect to port 5433. CI uses those defaults on purpose: each job has a machine to itself.
-- **Fixed ports** (for example the phone test over Tailscale, or a bookmarked URL): set them in the environment, and they win over the derived values: `export API_PORT=3000 DB_PORT=5433` before the stack commands, or per command, `API_PORT=3000 pnpm stack:up`. `COMPOSE_PROJECT_NAME` can be pinned the same way. Use the same values for every command against that stack, and do not pin two checkouts to the same name or ports. If a derived port happens to be taken, `make up` fails on the port binding; pin a free one.
-- **Stop your stack when you finish**, agents and developers alike: `make down` (keeps the data), or `eval "$(make -s env)" && docker compose down -v` to remove the volume too. Do it before deleting a worktree or clone: Docker keeps a deleted folder's containers and volume, and no other checkout's commands will ever reach them.
+- **Plain `docker compose` and host-side scripts:** run `eval "$(make -s env)"` in the shell first. The exports belong to that checkout: `make` refuses to run in another checkout from the same shell (open a new shell there), but plain `docker compose` cannot check, so do not `cd` to another checkout with them loaded. Without it, `docker compose` falls back to its defaults (project named after the folder, usually `procurely`, ports 3000 and 5433), which is the stack every un-isolated checkout shares, and `test:http`, `rls:audit` and the API package's `db:reset` connect to port 5433. CI uses those defaults on purpose: each job has a machine to itself.
+- **Fixed ports** (for example the phone test over Tailscale, or a bookmarked URL): set them in the environment, and they win over the derived values: `export API_PORT=3000` before the stack commands, or per command, `API_PORT=3000 pnpm stack:up`. Prefer not to pin `DB_PORT` to 5433: that is the port the host-side test scripts fall back to without the `make env` exports, and they wipe the database they reach. `COMPOSE_PROJECT_NAME` can be pinned the same way. Use the same values for every command against that stack, and do not pin two checkouts to the same name or ports. If a derived port happens to be taken, `make up` fails on the port binding; pin a free one.
+- **Stop your stack when you finish**, agents and developers alike: `make down` (keeps the data), or `eval "$(make -s env)" && docker compose down -v` to remove the volume too. Do it before deleting a worktree or clone: Docker keeps a deleted folder's containers and volume, and no other checkout's commands will ever reach them. Stacks started before this scheme used the shared project `procurely` (volume `procurely_pgdata`); stop it from the checkout that started it with `COMPOSE_PROJECT_NAME=procurely docker compose down` once nothing uses it.
 
 Check that two checkouts are isolated (copies of the repo in two folders that are both named `procurely`, such as `/tmp/a/procurely` and `/tmp/b/procurely`):
 
@@ -108,7 +108,7 @@ One-time setup, on your machine and phone:
 Each session:
 
 ```sh
-export API_PORT=3000 DB_PORT=5433                 # fixed ports instead of the derived ones; keep them for every stack command
+export API_PORT=3000                              # fixed API port instead of the derived one; keep it for every stack command
 pnpm stack:up && pnpm db:reset                    # compose publishes the API on port 3000
 TS_IP=$(tailscale ip -4)                          # the WSL address on the tailnet, 100.x.y.z
 EXPO_PUBLIC_API_URL=http://$TS_IP:3000 REACT_NATIVE_PACKAGER_HOSTNAME=$TS_IP pnpm mobile:start
@@ -116,7 +116,7 @@ EXPO_PUBLIC_API_URL=http://$TS_IP:3000 REACT_NATIVE_PACKAGER_HOSTNAME=$TS_IP pnp
 
 Then open Expo Go on the iPhone and enter `exp://<TS_IP>:8081` (or scan the QR code Metro prints). Sign in with a dev-login quick pick.
 
-Keep the tailnet private to your own devices: do not share the node, and do not use `tailscale funnel` (it publishes a port to the internet). Compose also publishes Postgres (5433 above), which is reachable on the tailnet the same way.
+Keep the tailnet private to your own devices: do not share the node, and do not use `tailscale funnel` (it publishes a port to the internet). Compose also publishes Postgres (`make env` shows the port), which is reachable on the tailnet the same way.
 
 Expo's built-in tunnel (`expo start --tunnel`) is a fallback for Metro only: it does not carry the app's API calls, so sign-in would fail unless the API is reachable some other way. Do not expose the API to get around this.
 
