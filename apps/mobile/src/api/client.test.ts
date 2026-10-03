@@ -47,3 +47,63 @@ describe('createApi', () => {
     );
   });
 });
+
+describe('createApi writes', () => {
+  it('patches a supplier in the named company', async () => {
+    const fetchFn = jest.fn(async () => jsonResponse({}));
+    await createApi('http://api.test', fetchFn).updateSupplier(
+      'tok',
+      'company-1',
+      'supplier-1',
+      { active: false },
+    );
+
+    expect(fetchFn).toHaveBeenCalledWith(
+      'http://api.test/suppliers/supplier-1',
+      expect.objectContaining({
+        method: 'PATCH',
+        headers: {
+          'content-type': 'application/json',
+          authorization: 'Bearer tok',
+          [COMPANY_HEADER]: 'company-1',
+        },
+        body: JSON.stringify({ active: false }),
+      }),
+    );
+  });
+
+  it('asks only for selectable suppliers when told to', async () => {
+    const fetchFn = jest.fn(async () => jsonResponse([]));
+    await createApi('http://api.test', fetchFn).suppliers('tok', 'c', {
+      selectable: true,
+    });
+    expect(fetchFn).toHaveBeenCalledWith(
+      'http://api.test/suppliers?selectable=true',
+      expect.anything(),
+    );
+  });
+
+  it('accepts an empty 204 response to a delete', async () => {
+    const fetchFn = jest.fn(async () => new Response(null, { status: 204 }));
+    await expect(
+      createApi('http://api.test', fetchFn).deleteCatalogItem('tok', 'c', 'i'),
+    ).resolves.toBeUndefined();
+    expect(fetchFn).toHaveBeenCalledWith(
+      'http://api.test/catalog-items/i',
+      expect.objectContaining({ method: 'DELETE' }),
+    );
+  });
+
+  it('carries the API’s explanation of a refusal', async () => {
+    const fetchFn = jest.fn(async () =>
+      jsonResponse({ message: 'Already exists', statusCode: 409 }, 409),
+    );
+    await expect(
+      createApi('http://api.test', fetchFn).createSupplier('tok', 'c', {
+        name: 'x',
+      }),
+    ).rejects.toEqual(
+      expect.objectContaining({ status: 409, message: 'Already exists' }),
+    );
+  });
+});

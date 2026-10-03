@@ -6,8 +6,14 @@ import type { Query, QueryKey } from '@tanstack/react-query';
  */
 export const queryKeys = {
   companies: ['companies'] as const,
+  /** Everything of one company: a write invalidates it all (a renamed supplier shows in the catalog). */
+  company: (companyId: string) => ['company', companyId] as const,
   costCenters: (companyId: string) =>
     ['company', companyId, 'cost-centers'] as const,
+  suppliers: (companyId: string, selectable: boolean) =>
+    ['company', companyId, 'suppliers', { selectable }] as const,
+  catalogItems: (companyId: string) =>
+    ['company', companyId, 'catalog-items'] as const,
 };
 
 export function isOtherCompanyQuery(query: Query, companyId: string) {
