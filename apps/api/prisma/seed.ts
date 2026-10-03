@@ -1,10 +1,12 @@
 import { PrismaClient } from '@prisma/client';
 import {
   auditLog,
+  catalogItems,
   companies,
   costCenters,
   memberships,
   people,
+  suppliers,
 } from './seed-data';
 
 // Runs as the database owner (DIRECT_URL): the API role cannot write these tables.
@@ -21,6 +23,11 @@ async function main() {
     });
     await prisma.costCenter.createMany({
       data: costCenters,
+      skipDuplicates: true,
+    });
+    await prisma.supplier.createMany({ data: suppliers, skipDuplicates: true });
+    await prisma.catalogItem.createMany({
+      data: catalogItems,
       skipDuplicates: true,
     });
     await prisma.auditLog.createMany({ data: auditLog, skipDuplicates: true });

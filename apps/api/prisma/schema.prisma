@@ -18,13 +18,15 @@ enum Role {
 }
 
 model Company {
-  id          String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name        String
+  id           String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name         String
   /// ISO 4217 code. One currency per company; amounts are integer minor units.
-  currency    String       @db.Char(3)
-  memberships Membership[]
-  costCenters CostCenter[]
-  auditLog    AuditLog[]
+  currency     String        @db.Char(3)
+  memberships  Membership[]
+  costCenters  CostCenter[]
+  suppliers    Supplier[]
+  catalogItems CatalogItem[]
+  auditLog     AuditLog[]
 
   @@map("companies")
 }
@@ -62,6 +64,38 @@ model CostCenter {
 
   @@unique([companyId, code])
   @@map("cost_centers")
+}
+
+/// A company the business buys from. Suppliers do not log in. Never deleted: an inactive
+/// supplier keeps its history but cannot be chosen for new work.
+model Supplier {
+  id           String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId    String        @map("company_id") @db.Uuid
+  name         String
+  active       Boolean       @default(true)
+  company      Company       @relation(fields: [companyId], references: [id])
+  catalogItems CatalogItem[]
+
+  @@unique([companyId, name])
+  // Target of the company-matching foreign key from catalog_items.
+  @@unique([companyId, id])
+  @@map("suppliers")
+}
+
+/// Something the company buys from one supplier at an agreed price.
+model CatalogItem {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId      String   @map("company_id") @db.Uuid
+  supplierId     String   @map("supplier_id") @db.Uuid
+  name           String
+  /// Agreed unit price in integer minor units of the company currency (cents, öre).
+  unitPriceMinor Int      @map("unit_price_minor")
+  company        Company  @relation(fields: [companyId], references: [id])
+  // Composite key: the supplier must belong to the same company as the item.
+  supplier       Supplier @relation(fields: [companyId, supplierId], references: [companyId, id])
+
+  @@unique([companyId, supplierId, name])
+  @@map("catalog_items")
 }
 
 /// Append-only: the API role can insert and select (admins only) but never update or delete.

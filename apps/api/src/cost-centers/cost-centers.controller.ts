@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -18,7 +17,9 @@ import {
   CreateCostCenterRequest,
   UpdateCostCenterRequest,
 } from '../contract/api.dto';
+import { writeAudit } from '../audit/audit-log';
 import { ApiCompanyHeader } from '../contract/decorators';
+import { requireString } from '../contract/input';
 import { SessionGuard } from '../auth/session.guard';
 import { translateDbError } from '../tenancy/db-errors';
 import {
@@ -27,13 +28,6 @@ import {
 } from '../tenancy/request-scope';
 import { rejectUnmatchedWrite } from '../tenancy/roles';
 import { TenantDb } from '../tenancy/tenant-db.service';
-
-function requireString(value: unknown, field: string): string {
-  if (typeof value !== 'string' || value.trim() === '') {
-    throw new BadRequestException(`${field} is required`);
-  }
-  return value.trim();
-}
 
 @Controller('cost-centers')
 @UseGuards(SessionGuard)
@@ -72,7 +66,16 @@ export class CostCentersController {
       companyId: scope.companyId,
     };
     return this.db
-      .run(scope, (tx) => tx.costCenter.create({ data }))
+      .run(scope, async (tx) => {
+        const row = await tx.costCenter.create({ data });
+        await writeAudit(tx, scope, {
+          action: 'cost_center.created',
+          entityType: 'cost_center',
+          entityId: row.id,
+          details: { code: row.code, name: row.name },
+        });
+        return row;
+      })
       .catch(translateDbError);
   }
 
@@ -85,12 +88,21 @@ export class CostCentersController {
     const name = requireString(body?.name, 'name');
     return this.db
       .run(scope, async (tx) => {
+        const before = await tx.costCenter.findUnique({ where: { id } });
         const { count } = await tx.costCenter.updateMany({
           where: { id },
           data: { name },
         });
-        if (count === 0) return rejectUnmatchedWrite(tx, scope);
-        return tx.costCenter.findUniqueOrThrow({ where: { id } });
+        if (!before || count === 0) return rejectUnmatchedWrite(tx, scope);
+        if (name !== before.name) {
+          await writeAudit(tx, scope, {
+            action: 'cost_center.renamed',
+            entityType: 'cost_center',
+            entityId: id,
+            details: { code: before.code, from: before.name, to: name },
+          });
+        }
+        return { ...before, name };
       })
       .catch(translateDbError);
   }
@@ -104,8 +116,15 @@ export class CostCentersController {
   ): Promise<void> {
     await this.db
       .run(scope, async (tx) => {
+        const before = await tx.costCenter.findUnique({ where: { id } });
         const { count } = await tx.costCenter.deleteMany({ where: { id } });
-        if (count === 0) await rejectUnmatchedWrite(tx, scope);
+        if (!before || count === 0) return rejectUnmatchedWrite(tx, scope);
+        await writeAudit(tx, scope, {
+          action: 'cost_center.deleted',
+          entityType: 'cost_center',
+          entityId: id,
+          details: { code: before.code, name: before.name },
+        });
       })
       .catch(translateDbError);
   }

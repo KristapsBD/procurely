@@ -48,9 +48,21 @@ The login screen has quick picks: Alice (requester in Acme Trading, approver in 
 Dev login, company switch, cost centers of the selected company, driven as above against the seeded database:
 
 1. `snapshot` of `/login` showed the "Sign in as Alice" button; `click` on it.
-2. The home screen showed "Signed in as Alice Requester", the company buttons "Acme Trading" and "Nordic Supplies", and under "Cost centers" the line "Acme Trading (EUR), you are requester" with IT, MKT and OPS.
+2. The home screen showed "Signed in as Alice Requester", the company buttons "Acme Trading" and "Nordic Supplies", the line "Acme Trading (EUR), you are requester" and under "Cost centers" IT, MKT and OPS.
 3. `click` on "Nordic Supplies": the line became "Nordic Supplies (SEK), you are approver" with OPS (Drift) and SALES (Försäljning). None of Acme's IT or MKT appeared.
 4. `network` showed `GET /companies` and then two `GET /cost-centers` (one per company, none for Nomad), all `200`, each preceded by a `204` CORS preflight.
 5. "Sign out", then "Sign in as Nomad" showed "You do not have access to any company yet. Ask an admin to invite you."
+
+## Suppliers, catalog and cost centers (ticket #8)
+
+Driven against a freshly seeded database. Buttons that act on one record carry the record in their accessible name ("Deactivate Office Depot", "Edit Laptop 14\"", "Rename HR"), so a snapshot line is enough to pick the right one.
+
+1. Carol (buyer), home screen: the cost centers of Acme Trading are listed without "Add cost center", "Rename" or "Delete" (only admins manage them).
+2. "Suppliers": Office Depot and TechWorld "Active", Old Paper Mill "Inactive: cannot be chosen for new orders", each with "Rename …" and "Deactivate …"/"Reactivate …". "Add supplier", fill "New supplier name" with Paper Partners, "Save supplier": it appears as Active. "Rename Paper Partners" to Paper Partners AB, then "Deactivate Paper Partners AB": it shows Inactive.
+3. "Catalog": A4 copy paper "Office Depot · 24.99 EUR", Laptop 14" "TechWorld · 1199.00 EUR", Recycled paper "Old Paper Mill · 19.99 EUR" with "Supplier inactive: cannot be ordered". "Add item" offered only "Supplier Office Depot" and "Supplier TechWorld" (neither inactive supplier). A price of 12.345 showed "Enter a price like 24.99" with "Save item" disabled; 89.90 saved "USB-C dock", "TechWorld · 89.90 EUR". Editing it to Office Depot at 94.50 showed "Office Depot · 94.50 EUR"; editing Recycled paper offered "Supplier Old Paper Mill (inactive)" as the current choice and repricing it to 20.99 saved; "Delete USB-C dock" removed it.
+4. Alice (requester): "Catalog" for Acme Trading listed the same items at the EUR prices with no "Add item", "Edit" or "Delete". After switching to Nordic Supplies: "Nordic Supplies (SEK), you are approver" and only A4 copy paper, "Office Depot · 279.00 SEK"; "Suppliers" listed only Nordic's Office Depot.
+5. Dave (admin, by person id `…0b4`): "Add cost center" HR / People, "Rename HR" to Human Resources, "Delete HR"; each step showed in the list.
+6. Mallory: "Catalog" and "Suppliers" of Fresh Start Ltd showed "No catalog items yet." and "No suppliers yet."
+7. `GET /audit-log` as Dave listed, in order: `supplier.created`, `supplier.renamed`, `supplier.deactivated`, `catalog_item.created`, two `catalog_item.updated` (with from/to of the changed fields), `catalog_item.deleted` (all by Carol), then `cost_center.created`, `cost_center.renamed`, `cost_center.deleted` (by Dave).
 
 When a flow like this is stable it becomes a Maestro script (ticket #17).
