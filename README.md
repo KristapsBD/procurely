@@ -17,13 +17,34 @@ Tooling choices: Expo SDK 57 with Expo Router, pnpm workspaces (no extra monorep
 Requires Docker with Compose and, for local installs, Node 24 and pnpm.
 
 ```sh
-pnpm stack:up      # build and start Postgres + API, waits until both are healthy
-curl localhost:3000/health   # {"status":"ok","database":"up"}
+pnpm stack:up      # build and start Postgres + API, waits until both are healthy, prints the ports
+eval "$(make -s env)"                # this checkout's COMPOSE_PROJECT_NAME, API_PORT, DB_PORT, database URLs
+curl localhost:$API_PORT/health      # {"status":"ok","database":"up"}
 pnpm stack:down    # stop the stack, keep the database data
 pnpm stack:reset   # wipe the database volume and start fresh
 ```
 
-With only Docker and make installed, the same commands exist as `make up`, `make down`, `make reset`, plus `make logs`, `make ps` and `make psql`; `make help` lists them. The `pnpm stack:*` scripts just call these targets.
+With only Docker and make installed, the same commands exist as `make up`, `make down`, `make reset`, plus `make logs`, `make ps`, `make psql` and `make env`; `make help` lists them. The `pnpm stack:*` scripts and `pnpm db:reset` just call these targets.
+
+### One stack per checkout
+
+Every checkout (a clone, an agent worktree) runs its own stack, so several can run at once and none can wipe another's database. The Makefile derives the Compose project name and both host ports from a checksum of the checkout's absolute path: project `procurely-<checksum>`, API port `10000 + n`, Postgres port `20000 + n` (`n` is the checksum modulo 10000). The values are stable: the same folder gets the same name and ports on every run, and a folder elsewhere with the same name gets different ones. Containers, the database volume (`<project>_pgdata`) and the image are all named after the project.
+
+- **See the current stack:** `make env` prints the name, ports and database URLs; `make ps` shows its containers; `make up` ends by printing the API and Postgres addresses.
+- **Plain `docker compose` and host-side scripts:** run `eval "$(make -s env)"` in the shell first. Without it, `docker compose` falls back to its defaults (project named after the folder, usually `procurely`, ports 3000 and 5433), which is the stack every un-isolated checkout shares, and `test:http`, `rls:audit` and the API package's `db:reset` connect to port 5433. CI uses those defaults on purpose: each job has a machine to itself.
+- **Fixed ports** (for example the phone test over Tailscale, or a bookmarked URL): set them in the environment, and they win over the derived values: `export API_PORT=3000 DB_PORT=5433` before the stack commands, or per command, `API_PORT=3000 pnpm stack:up`. `COMPOSE_PROJECT_NAME` can be pinned the same way. Use the same values for every command against that stack, and do not pin two checkouts to the same name or ports. If a derived port happens to be taken, `make up` fails on the port binding; pin a free one.
+- **Stop your stack when you finish**, agents and developers alike: `make down` (keeps the data), or `eval "$(make -s env)" && docker compose down -v` to remove the volume too. Do it before deleting a worktree or clone: Docker keeps a deleted folder's containers and volume, and no other checkout's commands will ever reach them.
+
+Check that two checkouts are isolated (copies of the repo in two folders that are both named `procurely`, such as `/tmp/a/procurely` and `/tmp/b/procurely`):
+
+```sh
+(cd /tmp/a/procurely && make up) && (cd /tmp/b/procurely && make up)   # two names, two pairs of ports
+(cd /tmp/b/procurely && eval "$(make -s env)" && docker compose exec -T db psql -U procurely -d procurely \
+  -c "create table marker(v text); insert into marker values ('b')")
+(cd /tmp/a/procurely && make reset)                                    # wipes a's volume only
+(cd /tmp/b/procurely && eval "$(make -s env)" && curl -s localhost:$API_PORT/health && \
+  docker compose exec -T db psql -U procurely -d procurely -tAc "select v from marker")   # still 'b'
+```
 
 ## Company isolation (RLS)
 
@@ -35,10 +56,11 @@ Seed and dev login (the dev login exists only when `NODE_ENV` is `development` o
 
 ```sh
 pnpm stack:up && pnpm db:reset      # reset the database schema and reload the seed (idempotent)
-curl -s -XPOST localhost:3000/auth/dev-login -H 'content-type: application/json' \
+eval "$(make -s env)"
+curl -s -XPOST localhost:$API_PORT/auth/dev-login -H 'content-type: application/json' \
   -d '{"personId":"00000000-0000-4000-8000-0000000000b1"}'      # alice -> {token, person}
-curl -s localhost:3000/me -H "Authorization: Bearer $TOKEN"
-curl -s localhost:3000/cost-centers -H "Authorization: Bearer $TOKEN" -H 'X-Company-Id: 00000000-0000-4000-8000-0000000000a1'
+curl -s localhost:$API_PORT/me -H "Authorization: Bearer $TOKEN"
+curl -s localhost:$API_PORT/cost-centers -H "Authorization: Bearer $TOKEN" -H 'X-Company-Id: 00000000-0000-4000-8000-0000000000a1'
 ```
 
 `pnpm db:reset` is `make seed` (runs inside the API container, so Docker is all you need). Seeded companies and people, with their stable ids, are in `apps/api/prisma/seed-data.ts`: four companies (main EUR, SEK, large, empty) and twelve people, including a person who is requester in one company and approver in another (alice), a person with no company (nomad), a deactivated membership (oscar) and the attacker who belongs only to the empty company (mallory).
@@ -59,7 +81,7 @@ Routes (all need the session token; company-scoped ones also `X-Company-Id`): `G
 
 Every membership change writes an audit entry in the same transaction: call `writeAudit(tx, scope, { action, entityType, entityId, details })` from `src/audit/audit-log.ts` inside `TenantDb.run` for any new workflow.
 
-Host ports default to `3000` (API) and `5433` (Postgres); override with `API_PORT` and `DB_PORT`, e.g. `API_PORT=3100 pnpm stack:up`.
+Host ports are derived per checkout (see [One stack per checkout](#one-stack-per-checkout)); `make env` prints them, and `API_PORT` and `DB_PORT` override them, e.g. `API_PORT=3100 pnpm stack:up`.
 
 ## Mobile app
 
@@ -68,15 +90,15 @@ Expo SDK 57 (TypeScript, Expo Router, TanStack Query). The dev login screen sign
 In the browser (the fast loop, and how an agent drives the app, see [docs/agent-browser-verification.md](docs/agent-browser-verification.md)):
 
 ```sh
-pnpm stack:up && pnpm db:reset
-EXPO_PUBLIC_API_URL=http://localhost:3000 pnpm mobile:web      # Metro on http://localhost:8081
+pnpm stack:up && pnpm db:reset && eval "$(make -s env)"
+EXPO_PUBLIC_API_URL=http://localhost:$API_PORT pnpm mobile:web      # Metro on http://localhost:8081
 ```
 
 The API allows cross-origin browser calls only when `NODE_ENV` is `development` or `test` (the same fail-closed switch as the dev login), because the web target runs on a different port than the API.
 
 ### On a physical iPhone with Expo Go
 
-The phone must reach two things on your machine: Metro (port 8081, serves the JavaScript) and the API (port 3000). The dev login signs in as any seeded user and the compose stack runs in development mode, so the API must **never** be put on a public tunnel or otherwise exposed to the internet. The setup below uses [Tailscale](https://tailscale.com): the phone reaches WSL directly over a private tailnet that contains only your own devices, and nothing is opened on the home network, the Windows firewall or the internet (no `.wslconfig` or firewall changes).
+The phone must reach two things on your machine: Metro (port 8081, serves the JavaScript) and the API (pinned to port 3000 below). The dev login signs in as any seeded user and the compose stack runs in development mode, so the API must **never** be put on a public tunnel or otherwise exposed to the internet. The setup below uses [Tailscale](https://tailscale.com): the phone reaches WSL directly over a private tailnet that contains only your own devices, and nothing is opened on the home network, the Windows firewall or the internet (no `.wslconfig` or firewall changes).
 
 One-time setup, on your machine and phone:
 
@@ -86,6 +108,7 @@ One-time setup, on your machine and phone:
 Each session:
 
 ```sh
+export API_PORT=3000 DB_PORT=5433                 # fixed ports instead of the derived ones; keep them for every stack command
 pnpm stack:up && pnpm db:reset                    # compose publishes the API on port 3000
 TS_IP=$(tailscale ip -4)                          # the WSL address on the tailnet, 100.x.y.z
 EXPO_PUBLIC_API_URL=http://$TS_IP:3000 REACT_NATIVE_PACKAGER_HOSTNAME=$TS_IP pnpm mobile:start
@@ -93,7 +116,7 @@ EXPO_PUBLIC_API_URL=http://$TS_IP:3000 REACT_NATIVE_PACKAGER_HOSTNAME=$TS_IP pnp
 
 Then open Expo Go on the iPhone and enter `exp://<TS_IP>:8081` (or scan the QR code Metro prints). Sign in with a dev-login quick pick.
 
-Keep the tailnet private to your own devices: do not share the node, and do not use `tailscale funnel` (it publishes a port to the internet). Compose also publishes Postgres on 5433, which is reachable on the tailnet the same way.
+Keep the tailnet private to your own devices: do not share the node, and do not use `tailscale funnel` (it publishes a port to the internet). Compose also publishes Postgres (5433 above), which is reachable on the tailnet the same way.
 
 Expo's built-in tunnel (`expo start --tunnel`) is a fallback for Metro only: it does not carry the app's API calls, so sign-in would fail unless the API is reachable some other way. Do not expose the API to get around this.
 
@@ -138,7 +161,7 @@ After changing a route or a DTO, run `pnpm contract:generate` and commit the res
 
 ### Mutation testing
 
-`.github/workflows/mutation.yml` runs [Stryker](https://stryker-mutator.io) weekly (Monday 03:00 UTC) and on demand. It is report only: it never runs on pull requests and is not a required check. The HTML report is the `mutation-report` artifact of the run and the score is in the run summary. It mutates a few pure-logic files of the API (list in `apps/api/stryker.config.json`) against the HTTP test suite and resets the database before every test run, so it needs the compose Postgres and takes tens of minutes. Locally: `docker compose up -d --wait db && pnpm --filter @procurely/api mutation`.
+`.github/workflows/mutation.yml` runs [Stryker](https://stryker-mutator.io) weekly (Monday 03:00 UTC) and on demand. It is report only: it never runs on pull requests and is not a required check. The HTML report is the `mutation-report` artifact of the run and the score is in the run summary. It mutates a few pure-logic files of the API (list in `apps/api/stryker.config.json`) against the HTTP test suite and resets the database before every test run, so it needs the compose Postgres and takes tens of minutes. Locally: `eval "$(make -s env)" && docker compose up -d --wait db && pnpm --filter @procurely/api mutation`.
 
 ## Development
 
@@ -156,4 +179,4 @@ pnpm --filter @procurely/api test:coverage    # HTTP tests with the coverage flo
 pnpm deps:check && pnpm dup:check && pnpm audit:deps && pnpm contract:check
 ```
 
-`test:http`, `rls:audit` and `test:coverage` need the Postgres container (`docker compose up -d --wait db`) and destroy its data. They read `apps/api/db.env` for local defaults; set `DATABASE_URL` and `DIRECT_URL` to override, e.g. when `DB_PORT` is not `5433`. The reset refuses to run against a non-local host.
+`test:http`, `rls:audit` and `test:coverage` need the Postgres container and destroy its data. Run `eval "$(make -s env)"` first, then `docker compose up -d --wait db` (or `pnpm stack:up`), so both the container and the tests use this checkout's stack: the exports set `DATABASE_URL` and `DIRECT_URL`, which win over the defaults in `apps/api/db.env` (port 5433, the un-isolated default stack). The reset refuses to run against a non-local host.
