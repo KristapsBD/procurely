@@ -58,12 +58,15 @@ describe('signInWithGoogle', () => {
     );
   });
 
-  it('treats a return without code or error as a failure', async () => {
-    const { browser } = browserReturning(RETURN_URL);
-    await expect(
-      signInWithGoogle(fakeApi(), pkce, browser),
-    ).rejects.toMatchObject({ reason: 'failed' });
-  });
+  it.each([RETURN_URL, `${RETURN_URL}?error=something-new`])(
+    'treats any other return as a failure (%s)',
+    async (backToApp) => {
+      const { browser } = browserReturning(backToApp);
+      await expect(
+        signInWithGoogle(fakeApi(), pkce, browser),
+      ).rejects.toMatchObject({ reason: 'failed' });
+    },
+  );
 });
 
 describe('createPkcePair', () => {

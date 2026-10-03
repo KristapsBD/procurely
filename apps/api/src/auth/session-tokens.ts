@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { APP_CONFIG, type AppConfig } from '../config';
-import { SignedPayload } from './signed-payload';
+import { SignedPayload, stringClaims } from './signed-payload';
 
 /**
  * Short-lived signed session token. The token only says who the person is, however they
@@ -12,7 +12,11 @@ export class SessionTokens {
   private readonly signed: SignedPayload<{ sub: string }>;
 
   constructor(@Inject(APP_CONFIG) private readonly config: AppConfig) {
-    this.signed = new SignedPayload(config.sessionSecret, 'session');
+    this.signed = new SignedPayload(
+      config.sessionSecret,
+      'session',
+      stringClaims('sub'),
+    );
   }
 
   issue(personId: string): string {
@@ -21,7 +25,6 @@ export class SessionTokens {
 
   /** Returns the person id, or null when the token is malformed, forged or expired. */
   verify(token: string): string | null {
-    const sub = this.signed.verify(token)?.sub;
-    return typeof sub === 'string' ? sub : null;
+    return this.signed.verify(token)?.sub ?? null;
   }
 }

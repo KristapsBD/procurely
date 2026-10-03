@@ -8,11 +8,17 @@ export interface GoogleIdentity {
   name: string;
   /**
    * Google is authoritative for the email address (a Gmail address, or a Google Workspace
-   * account), so the address may be used to link a person who was invited before signing in.
-   * Otherwise Google verified the address only when the account was created, and it may have
-   * changed hands since.
+   * account), so the address really belongs to this account. Otherwise Google verified it only
+   * when the account was created, and it may have changed hands since.
    */
-  mayLinkByEmail: boolean;
+  emailAuthoritative: boolean;
+}
+
+/** What a token must match: our client, Google's current keys and this attempt's nonce. */
+export interface ExpectedIdToken {
+  clientId: string;
+  certs: Record<string, string>;
+  nonce: string;
 }
 
 export class GoogleTokenRejected extends Error {}
@@ -39,7 +45,7 @@ interface IdTokenPayload {
  */
 export async function verifyGoogleIdToken(
   idToken: string,
-  expected: { clientId: string; nonce: string; certs: Record<string, string> },
+  expected: ExpectedIdToken,
 ): Promise<GoogleIdentity> {
   const payload = await checkedPayload(idToken, expected);
   if (payload.nonce !== expected.nonce) {
@@ -53,13 +59,13 @@ export async function verifyGoogleIdToken(
     sub: payload.sub,
     email,
     name: payload.name?.trim() || email.split('@')[0],
-    mayLinkByEmail: email.endsWith('@gmail.com') || Boolean(payload.hd),
+    emailAuthoritative: email.endsWith('@gmail.com') || Boolean(payload.hd),
   };
 }
 
 async function checkedPayload(
   idToken: string,
-  expected: { clientId: string; certs: Record<string, string> },
+  expected: ExpectedIdToken,
 ): Promise<IdTokenPayload> {
   try {
     const ticket = await new OAuth2Client().verifySignedJwtWithCertsAsync(
@@ -71,9 +77,8 @@ async function checkedPayload(
     const payload = ticket.getPayload();
     if (!payload?.sub) throw new Error('ID token has no subject');
     return payload;
-  } catch (error) {
-    throw new GoogleTokenRejected(
-      error instanceof Error ? error.message : 'Invalid ID token',
-    );
+  } catch {
+    // The library's messages can quote the token itself, so they are not passed on.
+    throw new GoogleTokenRejected('ID token failed verification');
   }
 }

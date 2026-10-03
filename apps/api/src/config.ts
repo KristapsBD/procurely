@@ -38,13 +38,11 @@ const GOOGLE_REQUIRED = [
   'GOOGLE_APP_RETURN_URLS',
 ] as const;
 
-/** Unset and empty are the same (compose passes empty strings for unset variables). */
-function value(env: NodeJS.ProcessEnv, name: string): string | undefined {
-  return env[name]?.trim() || undefined;
-}
-
 function loadGoogleConfig(env: NodeJS.ProcessEnv): GoogleConfig | null {
-  const missing = GOOGLE_REQUIRED.filter((name) => !value(env, name));
+  // Unset and empty are the same (compose passes empty strings for unset variables).
+  const [clientId, clientSecret, redirectUri, appReturnUrls] =
+    GOOGLE_REQUIRED.map((name) => env[name]?.trim() ?? '');
+  const missing = GOOGLE_REQUIRED.filter((name) => !env[name]?.trim());
   if (missing.length === GOOGLE_REQUIRED.length) return null;
   if (missing.length > 0) {
     throw new Error(
@@ -52,10 +50,10 @@ function loadGoogleConfig(env: NodeJS.ProcessEnv): GoogleConfig | null {
     );
   }
   return {
-    clientId: value(env, 'GOOGLE_CLIENT_ID') as string,
-    clientSecret: value(env, 'GOOGLE_CLIENT_SECRET') as string,
-    redirectUri: new URL(value(env, 'GOOGLE_REDIRECT_URI') as string).href,
-    appReturnUrls: (value(env, 'GOOGLE_APP_RETURN_URLS') as string)
+    clientId,
+    clientSecret,
+    redirectUri: new URL(redirectUri).href,
+    appReturnUrls: appReturnUrls
       .split(',')
       .map((url) => url.trim())
       .filter(Boolean),

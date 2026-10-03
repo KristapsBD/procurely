@@ -1,4 +1,8 @@
-import type { SessionResponse } from '@procurely/shared-types';
+import {
+  GOOGLE_SIGN_IN_ERRORS,
+  type GoogleSignInErrorReason,
+  type SessionResponse,
+} from '@procurely/shared-types';
 import * as Crypto from 'expo-crypto';
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
@@ -27,7 +31,7 @@ export interface AuthBrowser {
 
 /** Why Google sign-in did not finish (the API's `?error=`, or `failed` for anything else). */
 export class GoogleSignInError extends Error {
-  constructor(readonly reason: string) {
+  constructor(readonly reason: GoogleSignInErrorReason) {
     super(`Google sign-in did not finish: ${reason}`);
     this.name = 'GoogleSignInError';
   }
@@ -80,7 +84,8 @@ export async function signInWithGoogle(
   if (!backToApp) return null;
   const params = queryParams(backToApp);
   if (params.code) return api.googleSession(params.code, pkce.verifier);
-  throw new GoogleSignInError(params.error || 'failed');
+  const reason = GOOGLE_SIGN_IN_ERRORS.find((r) => r === params.error);
+  throw new GoogleSignInError(reason ?? 'failed');
 }
 
 /** The query of a URL, decoded (React Native has no complete URL implementation). */

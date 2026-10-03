@@ -54,7 +54,7 @@ export class FakeGoogleKeys {
  */
 export class FakeGoogle implements GoogleEndpoints {
   readonly keys = new FakeGoogleKeys();
-  private readonly accounts = new Map<string, Record<string, unknown>>();
+  private readonly tokens = new Map<string, () => string>();
 
   authorizationUrl(params: { state: string; nonce: string }): string {
     const url = new URL('https://accounts.google.test/o/oauth2/v2/auth');
@@ -63,16 +63,24 @@ export class FakeGoogle implements GoogleEndpoints {
     return url.href;
   }
 
-  /** The next exchange of `code` returns an ID token with these claims. */
-  willSignIn(code: string, claims: Record<string, unknown>): void {
-    this.accounts.set(code, claims);
+  /**
+   * The next exchange of `code` returns an ID token with these claims, signed with Google's
+   * (fake) key, or with `signer` to stand in for a forger. `tamper` edits the finished token.
+   */
+  willSignIn(
+    code: string,
+    claims: Record<string, unknown>,
+    opts: { signer?: FakeGoogleKeys; tamper?: (token: string) => string } = {},
+  ): void {
+    const token = () => (opts.signer ?? this.keys).idToken(claims);
+    this.tokens.set(code, () => (opts.tamper ?? ((t) => t))(token()));
   }
 
   async exchangeCode(code: string): Promise<string> {
-    const claims = this.accounts.get(code);
-    if (!claims) throw new Error('invalid_grant');
-    this.accounts.delete(code);
-    return this.keys.idToken(claims);
+    const token = this.tokens.get(code);
+    if (!token) throw new Error('invalid_grant');
+    this.tokens.delete(code);
+    return token();
   }
 
   async signingCerts(): Promise<Record<string, string>> {

@@ -1,3 +1,4 @@
+import type { GoogleSignInErrorReason } from '@procurely/shared-types';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { ScrollView, Text, TextInput, View } from 'react-native';
@@ -24,19 +25,21 @@ export function LoginScreen() {
 }
 
 const GOOGLE_FAILED = `Could not complete Google sign-in. Is the API reachable at ${API_URL}?`;
-const GOOGLE_ERRORS: Record<string, string> = {
+const GOOGLE_ERRORS: Record<GoogleSignInErrorReason, string> = {
   cancelled: 'Google sign-in was cancelled.',
   rejected:
     'Google could not confirm this account. Its email address must be verified. Try again.',
+  unsupported:
+    'Sign in with a Gmail address or a Google Workspace account: Google cannot confirm that the email address of this account is yours.',
   conflict:
     'This Google account cannot sign in here: its email address already belongs to another account. Ask an admin of your company.',
+  failed: GOOGLE_FAILED,
 };
 
 function googleErrorMessage(error: unknown): string {
-  return (
-    (error instanceof GoogleSignInError && GOOGLE_ERRORS[error.reason]) ||
-    GOOGLE_FAILED
-  );
+  return error instanceof GoogleSignInError
+    ? GOOGLE_ERRORS[error.reason]
+    : GOOGLE_FAILED;
 }
 
 /** A fresh PKCE pair per attempt, made before the tap (see createPkcePair). */

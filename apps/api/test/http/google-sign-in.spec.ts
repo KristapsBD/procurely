@@ -4,11 +4,20 @@ import request from 'supertest';
 import type { AuthOptions, SessionResponse } from '@procurely/shared-types';
 import { COMPANY, PERSON } from '../../prisma/seed-data';
 import { GOOGLE_ENDPOINTS } from '../../src/auth/google-endpoints';
-import { APP_CONFIG, loadConfig } from '../../src/config';
-import { FakeGoogle, TEST_CLIENT_ID } from '../support/fake-google';
+import {
+  FakeGoogle,
+  FakeGoogleKeys,
+  TEST_CLIENT_ID,
+} from '../support/fake-google';
 import { Actor, startApp } from './harness';
 
 const RETURN_TO = 'exp://100.64.0.1:8081/--/auth/google';
+const GOOGLE_ENV = {
+  GOOGLE_CLIENT_ID: TEST_CLIENT_ID,
+  GOOGLE_CLIENT_SECRET: 'test-secret',
+  GOOGLE_REDIRECT_URI: 'https://dev.example.ts.net/auth/google/callback',
+  GOOGLE_APP_RETURN_URLS: ' exp://100.64.0.1:8081, http://localhost:8081/app',
+};
 
 function pkcePair() {
   const verifier = randomBytes(32).toString('base64url');
@@ -20,6 +29,25 @@ function queryOf(location: string): URLSearchParams {
   return new URL(location).searchParams;
 }
 
+/** Runs `work` with these environment variables set, then puts the old values back. */
+async function withEnv<T>(
+  vars: Record<string, string>,
+  work: () => Promise<T>,
+): Promise<T> {
+  const previous = Object.fromEntries(
+    Object.keys(vars).map((name) => [name, process.env[name]]),
+  );
+  Object.assign(process.env, vars);
+  try {
+    return await work();
+  } finally {
+    for (const [name, value] of Object.entries(previous)) {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
+  }
+}
+
 describe('Google sign-in', () => {
   let app: INestApplication;
   let google: FakeGoogle;
@@ -27,19 +55,11 @@ describe('Google sign-in', () => {
 
   beforeAll(async () => {
     google = new FakeGoogle();
-    const config = loadConfig({
-      ...process.env,
-      GOOGLE_CLIENT_ID: TEST_CLIENT_ID,
-      GOOGLE_CLIENT_SECRET: 'test-secret',
-      GOOGLE_REDIRECT_URI: 'https://dev.example.ts.net/auth/google/callback',
-      GOOGLE_APP_RETURN_URLS: 'exp://100.64.0.1:8081',
-    });
-    app = await startApp((builder) =>
-      builder
-        .overrideProvider(APP_CONFIG)
-        .useValue(config)
-        .overrideProvider(GOOGLE_ENDPOINTS)
-        .useValue(google),
+    // The real configuration path (environment), with only Google itself faked.
+    app = await withEnv(GOOGLE_ENV, () =>
+      startApp((builder) =>
+        builder.overrideProvider(GOOGLE_ENDPOINTS).useValue(google),
+      ),
     );
   });
   afterAll(() => app.close());
@@ -63,9 +83,10 @@ describe('Google sign-in', () => {
   async function callback(
     attempt: { state: string; nonce: string },
     account: Record<string, unknown>,
+    opts?: Parameters<FakeGoogle['willSignIn']>[2],
   ) {
     const code = `code-${++codes}`;
-    google.willSignIn(code, { nonce: attempt.nonce, ...account });
+    google.willSignIn(code, { nonce: attempt.nonce, ...account }, opts);
     const res = await http()
       .get('/auth/google/callback')
       .query({ code, state: attempt.state })
@@ -74,10 +95,22 @@ describe('Google sign-in', () => {
   }
 
   /** The whole flow as the app runs it; returns the app URL Google's round trip ends on. */
-  async function signInAs(account: Record<string, unknown>) {
+  async function signInAs(
+    account: Record<string, unknown>,
+    opts?: Parameters<FakeGoogle['willSignIn']>[2],
+  ) {
     const { verifier, challenge } = pkcePair();
-    const backToApp = await callback(await start(challenge), account);
+    const backToApp = await callback(await start(challenge), account, opts);
     return { backToApp, verifier };
+  }
+
+  async function errorFor(
+    account: Record<string, unknown>,
+    opts?: Parameters<FakeGoogle['willSignIn']>[2],
+  ) {
+    const { backToApp } = await signInAs(account, opts);
+    expect(queryOf(backToApp).get('code')).toBeNull();
+    return queryOf(backToApp).get('error');
   }
 
   async function redeem(backToApp: string, verifier: string) {
@@ -104,7 +137,7 @@ describe('Google sign-in', () => {
   it('sends the browser to Google, then back to the app with a code the app redeems for a session', async () => {
     const { backToApp, verifier } = await signInAs({
       sub: 'google-new-1',
-      email: 'newcomer@gmail.com',
+      email: 'NewComer@gmail.com',
       name: 'New Comer',
     });
     expect(backToApp.startsWith(`${RETURN_TO}?code=`)).toBe(true);
@@ -118,6 +151,14 @@ describe('Google sign-in', () => {
       id: session.person.id,
       memberships: [],
     });
+  });
+
+  it('names a person by their email when Google sends no name', async () => {
+    const { backToApp, verifier } = await signInAs({
+      sub: 'google-nameless',
+      email: 'nameless@gmail.com',
+    });
+    expect((await redeem(backToApp, verifier)).person.name).toBe('nameless');
   });
 
   it('finds the same person again by the Google subject, even after the email changed', async () => {
@@ -167,14 +208,27 @@ describe('Google sign-in', () => {
     expect((await me(session)).memberships).toHaveLength(1);
   });
 
-  it('does not link an existing person by an address Google is not authoritative for', async () => {
+  it('refuses an account whose email Google is not authoritative for, without linking or creating anyone', async () => {
     // Seeded people use @procurely.test: not Gmail, and no Workspace can host a .test domain.
-    const { backToApp } = await signInAs({
-      sub: 'google-alice-lookalike',
-      email: 'alice@procurely.test',
-    });
-    expect(queryOf(backToApp).get('error')).toBe('conflict');
-    expect(queryOf(backToApp).get('code')).toBeNull();
+    expect(
+      await errorFor({
+        sub: 'google-lookalike',
+        email: 'alice@procurely.test',
+      }),
+    ).toBe('unsupported');
+    // Not even a new person: one made from this address would receive an admin's invitation
+    // meant for the address's real owner.
+    expect(
+      await errorFor({ sub: 'google-outlook', email: 'ann@outlook.example' }),
+    ).toBe('unsupported');
+    const dave = await Actor.signIn(app, PERSON.dave);
+    const invited = await dave
+      .inviteMember(COMPANY.main, {
+        email: 'ann@outlook.example',
+        role: 'REQUESTER',
+      })
+      .expect(201);
+    expect(invited.body).toMatchObject({ name: 'ann' });
   });
 
   it('does not let a second Google account take over an email already linked to another', async () => {
@@ -183,38 +237,58 @@ describe('Google sign-in', () => {
       email: 'owned@gmail.com',
     });
     await redeem(owner.backToApp, owner.verifier);
-    const { backToApp } = await signInAs({
-      sub: 'google-intruder',
-      email: 'owned@gmail.com',
-    });
-    expect(queryOf(backToApp).get('error')).toBe('conflict');
+    expect(
+      await errorFor({ sub: 'google-intruder', email: 'owned@gmail.com' }),
+    ).toBe('conflict');
   });
 
-  it('refuses a Google account whose email is not verified', async () => {
-    const { backToApp } = await signInAs({
-      sub: 'google-unverified',
-      email: 'unverified@gmail.com',
-      email_verified: false,
+  it('accepts the issuer with or without the scheme', async () => {
+    const { backToApp, verifier } = await signInAs({
+      sub: 'google-bare-issuer',
+      email: 'bare@gmail.com',
+      iss: 'accounts.google.com',
     });
-    expect(queryOf(backToApp).get('error')).toBe('rejected');
+    await redeem(backToApp, verifier);
   });
 
-  it('refuses an ID token issued for another client', async () => {
-    const { backToApp } = await signInAs({
-      sub: 'google-other-client',
-      email: 'other@gmail.com',
-      aud: 'another-app.apps.googleusercontent.com',
-    });
-    expect(queryOf(backToApp).get('error')).toBe('rejected');
+  it.each([
+    ['an unverified email', { email_verified: false }],
+    ['a token without email', { email: undefined }],
+    ['a token for another client', { aud: 'other.apps.googleusercontent.com' }],
+    ['another issuer', { iss: 'https://accounts.evil.test' }],
+    ['an expired token', { exp: Math.floor(Date.now() / 1000) - 3600 }],
+    ['a token from another attempt (nonce)', { nonce: 'another-attempt' }],
+  ])('rejects %s', async (_case, claims) => {
+    expect(
+      await errorFor({ sub: 'google-bad', email: 'bad@gmail.com', ...claims }),
+    ).toBe('rejected');
   });
 
-  it('refuses an ID token from another sign-in attempt (nonce)', async () => {
-    const { backToApp } = await signInAs({
-      sub: 'google-replay',
-      email: 'replay@gmail.com',
-      nonce: 'another-attempt',
-    });
-    expect(queryOf(backToApp).get('error')).toBe('rejected');
+  it('rejects a token signed with a key that is not Google’s, or whose key Google does not publish', async () => {
+    const account = { sub: 'google-forged', email: 'forged@gmail.com' };
+    const forger = new FakeGoogleKeys(google.keys.kid);
+    expect(await errorFor(account, { signer: forger })).toBe('rejected');
+    const unknown = new FakeGoogleKeys('unknown-key');
+    expect(await errorFor(account, { signer: unknown })).toBe('rejected');
+  });
+
+  it('rejects a token whose payload was changed after signing', async () => {
+    const tamper = (token: string) => {
+      const [header, payload, signature] = token.split('.');
+      const claims = JSON.parse(
+        Buffer.from(payload, 'base64url').toString(),
+      ) as object;
+      const changed = Buffer.from(
+        JSON.stringify({ ...claims, sub: 'google-victim' }),
+      ).toString('base64url');
+      return `${header}.${changed}.${signature}`;
+    };
+    expect(
+      await errorFor(
+        { sub: 'google-tamper', email: 'tamper@gmail.com' },
+        { tamper },
+      ),
+    ).toBe('rejected');
   });
 
   it('tells the app when the person cancels at Google', async () => {
@@ -235,17 +309,34 @@ describe('Google sign-in', () => {
     expect(res.headers.location).toBe(`${RETURN_TO}?error=failed`);
   });
 
-  it('refuses to send a sign-in to an app address that is not allowed', async () => {
-    const { challenge } = pkcePair();
-    for (const returnTo of [
-      'exp://203.0.113.9:8081/--/auth/google',
-      'https://evil.example/collect',
-    ]) {
-      await http()
-        .get('/auth/google/start')
-        .query({ return_to: returnTo, code_challenge: challenge })
-        .expect(400);
-    }
+  it.each([
+    RETURN_TO,
+    'exp://100.64.0.1:8081',
+    'http://localhost:8081/app',
+    'http://localhost:8081/app/auth/google',
+  ])('starts a sign-in that returns to the allowed address %s', async (url) => {
+    await start(pkcePair().challenge, url);
+  });
+
+  it.each([
+    'exp://100.64.0.2:8081/--/auth/google', // another host
+    'exp://100.64.0.1:9999/--/auth/google', // another port
+    'exps://100.64.0.1:8081/--/auth/google', // another scheme
+    'https://localhost:8081/app', // another scheme
+    'http://localhost:8081/application', // only looks like the allowed path
+    'http://localhost:8081/', // outside the allowed path
+    'exp://user@100.64.0.1:8081/--/auth/google', // userinfo
+    'exp://100.64.0.1:8081/--/auth/google#x', // fragment
+    'https://evil.example/collect',
+    'not a url',
+  ])('refuses to send a sign-in back to %s', async (returnTo) => {
+    await http()
+      .get('/auth/google/start')
+      .query({ return_to: returnTo, code_challenge: pkcePair().challenge })
+      .expect(400);
+  });
+
+  it('refuses a start without a proper PKCE challenge', async () => {
     await http()
       .get('/auth/google/start')
       .query({ return_to: RETURN_TO, code_challenge: 'too-short' })
@@ -321,25 +412,37 @@ describe('Google sign-in', () => {
 });
 
 describe('Google sign-in when it is not configured', () => {
-  let app: INestApplication;
-  beforeAll(async () => {
-    app = await startApp();
-  });
-  afterAll(() => app.close());
-
   it('is not offered, its routes do not exist, and the dev login still works', async () => {
-    const http = () => request(app.getHttpServer());
-    const options = await http().get('/auth/options').expect(200);
-    expect(options.body as AuthOptions).toEqual({
-      devLogin: true,
-      google: false,
-    });
-    await http()
-      .get('/auth/google/start')
-      .query({ return_to: RETURN_TO, code_challenge: pkcePair().challenge })
-      .expect(404);
-    await http().get('/auth/google/callback').query({ state: 'x' }).expect(404);
-    await http().post('/auth/google/session').send({}).expect(404);
-    await Actor.signIn(app, PERSON.alice);
+    // Compose passes unset variables as empty strings: the same as not configured.
+    const empty = Object.fromEntries(
+      Object.keys(GOOGLE_ENV).map((name) => [name, '']),
+    );
+    const app = await withEnv(empty, () => startApp());
+    try {
+      const http = () => request(app.getHttpServer());
+      const options = await http().get('/auth/options').expect(200);
+      expect(options.body as AuthOptions).toEqual({
+        devLogin: true,
+        google: false,
+      });
+      await http()
+        .get('/auth/google/start')
+        .query({ return_to: RETURN_TO, code_challenge: pkcePair().challenge })
+        .expect(404);
+      await http()
+        .get('/auth/google/callback')
+        .query({ state: 'x' })
+        .expect(404);
+      await http().post('/auth/google/session').send({}).expect(404);
+      await Actor.signIn(app, PERSON.alice);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('refuses to start with Google only partly configured, naming what is missing', async () => {
+    await expect(
+      withEnv({ ...GOOGLE_ENV, GOOGLE_CLIENT_SECRET: '' }, () => startApp()),
+    ).rejects.toThrow(/GOOGLE_CLIENT_SECRET/);
   });
 });

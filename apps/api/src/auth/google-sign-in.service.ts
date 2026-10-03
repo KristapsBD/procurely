@@ -7,6 +7,7 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
+import type { GoogleSignInErrorReason } from '@procurely/shared-types';
 import type { SessionResponse } from '../contract/api.dto';
 import { APP_CONFIG, type AppConfig, type GoogleConfig } from '../config';
 import { TenantDb } from '../tenancy/tenant-db.service';
@@ -18,24 +19,17 @@ import {
   type GoogleIdentity,
 } from './google-id-token';
 import { Sessions } from './sessions';
-import { SignedPayload } from './signed-payload';
+import { SignedPayload, stringClaims } from './signed-payload';
 
 /** One sign-in attempt, carried through Google in the OAuth `state` parameter. */
-interface AttemptClaims {
-  returnTo: string;
-  challenge: string;
-  nonce: string;
-}
+const attemptClaims = stringClaims('returnTo', 'challenge', 'nonce');
+type AttemptClaims = NonNullable<ReturnType<typeof attemptClaims>>;
 
 /** What the app redeems for a session: who signed in, for the attempt with this challenge. */
-interface HandoffClaims {
-  personId: string;
-  challenge: string;
-}
+const handoffClaims = stringClaims('personId', 'challenge');
+type HandoffClaims = NonNullable<ReturnType<typeof handoffClaims>>;
 
-/** Why a sign-in did not finish, as the app receives it (`?error=`). */
-export type GoogleSignInError =
-  'cancelled' | 'rejected' | 'conflict' | 'failed';
+type Outcome = { code: string } | { error: GoogleSignInErrorReason };
 
 /** An S256 PKCE challenge: base64url of a SHA-256 digest, no padding. */
 const CHALLENGE = /^[A-Za-z0-9_-]{43}$/;
@@ -70,8 +64,9 @@ export class GoogleSignIn {
     private readonly db: TenantDb,
     private readonly sessions: Sessions,
   ) {
-    this.attempts = new SignedPayload(config.sessionSecret, 'google-attempt');
-    this.handoffs = new SignedPayload(config.sessionSecret, 'google-handoff');
+    const secret = config.sessionSecret;
+    this.attempts = new SignedPayload(secret, 'google-attempt', attemptClaims);
+    this.handoffs = new SignedPayload(secret, 'google-handoff', handoffClaims);
   }
 
   /** Step 1: Google's sign-in page for a new attempt. */
@@ -94,15 +89,8 @@ export class GoogleSignIn {
   /** Step 2: where to send the browser after Google: back to the app, with a code or an error. */
   async callback(query: { code?: unknown; state?: unknown }): Promise<string> {
     const { config } = this.configured();
-    const attempt =
-      typeof query.state === 'string'
-        ? this.attempts.verify(query.state)
-        : null;
-    if (
-      !attempt?.challenge ||
-      !attempt.nonce ||
-      !this.isAllowedReturn(attempt.returnTo, config)
-    ) {
+    const attempt = this.attempts.verify(query.state);
+    if (!attempt || !this.isAllowedReturn(attempt.returnTo, config)) {
       throw new BadRequestException(
         'This sign-in link is invalid or expired. Start again from the app.',
       );
@@ -116,13 +104,8 @@ export class GoogleSignIn {
   /** Step 3: the app redeems the handoff code with the verifier only it holds. */
   async session(code: unknown, verifier: unknown): Promise<SessionResponse> {
     this.configured();
-    const handoff =
-      typeof code === 'string' ? this.handoffs.verify(code) : null;
-    if (
-      !handoff?.personId ||
-      !handoff.challenge ||
-      !matchesChallenge(verifier, handoff.challenge)
-    ) {
+    const handoff = this.handoffs.verify(code);
+    if (!handoff || !matchesChallenge(verifier, handoff.challenge)) {
       throw new UnauthorizedException('Sign-in code is invalid or expired');
     }
     const session = await this.sessions.start(handoff.personId);
@@ -132,22 +115,26 @@ export class GoogleSignIn {
 
   private async finish(
     code: unknown,
-    attempt: Partial<AttemptClaims>,
-  ): Promise<{ code: string } | { error: GoogleSignInError }> {
+    attempt: AttemptClaims,
+  ): Promise<Outcome> {
     // No code: the person cancelled or Google refused (`?error=access_denied` and the like).
     if (typeof code !== 'string' || code === '') return { error: 'cancelled' };
     const { config, google } = this.configured();
     const idToken = await google.exchangeCode(code);
     const identity = await verifyGoogleIdToken(idToken, {
       clientId: config.clientId,
-      nonce: attempt.nonce as string,
+      nonce: attempt.nonce,
       certs: await google.signingCerts(),
     });
     const personId = await this.findOrCreatePerson(identity);
-    if (!personId) return { error: 'conflict' };
+    if (!personId) {
+      return {
+        error: identity.emailAuthoritative ? 'conflict' : 'unsupported',
+      };
+    }
     return {
       code: this.handoffs.sign(
-        { personId, challenge: attempt.challenge as string },
+        { personId, challenge: attempt.challenge },
         HANDOFF_TTL_SECONDS,
       ),
     };
@@ -159,15 +146,14 @@ export class GoogleSignIn {
     const [row] = await this.db.runWithoutIdentity(
       (tx) => tx.$queryRaw<{ id: string | null }[]>`
         SELECT google_sign_in(${identity.sub}, ${identity.email}, ${identity.name},
-                              ${identity.mayLinkByEmail}) AS id`,
+                              ${identity.emailAuthoritative}) AS id`,
     );
     return row?.id ?? null;
   }
 
-  private failure(error: unknown): GoogleSignInError {
-    // The rejection message can quote the token itself, so it is not logged.
+  private failure(error: unknown): GoogleSignInErrorReason {
     if (error instanceof GoogleTokenRejected) {
-      this.logger.warn('Google ID token rejected');
+      this.logger.warn(`Google sign-in rejected: ${error.message}`);
       return 'rejected';
     }
     this.logger.error(

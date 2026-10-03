@@ -45,12 +45,15 @@ App (Expo Go)              API                                   Google
 
 ## Who a Google sign-in becomes
 
-A person is matched on Google's stable subject identifier (`sub`), never on email alone ([Google: "Always use the sub field"](https://developers.google.com/identity/openid-connect/openid-connect)):
+A person is matched on Google's stable subject identifier (`sub`), never on email alone ([Google: "Always use the sub field"](https://developers.google.com/identity/openid-connect/openid-connect)). The email is used only when Google is authoritative for it: a `@gmail.com` address, or a Google Workspace account (the token carries `hd`). For any other address Google's guidance applies: "the email_verified flag can be true as Google initially verified the user when the Google account was created, however ownership of the third-party email account may have since changed" ([Google: Streamlined linking](https://developers.google.com/identity/account-linking/oauth-with-sign-in-linking)).
 
 1. A person already linked to this Google account: that person, even if their email at Google changed since.
-2. No person with this email: a new person with no memberships. The app shows "You do not have access to any company yet. Ask an admin to invite you."
-3. A person with this email who has never signed in with Google (an admin invited them, or the seed made them): linked to this Google account only when Google is authoritative for the address, that is a `@gmail.com` address or a Google Workspace account (the token carries `hd`). Google's guidance: otherwise "the email_verified flag can be true as Google initially verified the user when the Google account was created, however ownership of the third-party email account may have since changed" ([Google: Streamlined linking](https://developers.google.com/identity/account-linking/oauth-with-sign-in-linking)).
-4. Anything else is refused: the email belongs to a person linked to another Google account, or Google is not authoritative for it. The app says the email already belongs to another account and to ask an admin.
+2. Google is not authoritative for the email (say a Google account made with an Outlook address): refused, and nobody is linked or created. Creating a person from such an address would not be safe either: an admin's later invitation to that address finds the person by email, so it would go to whoever holds this Google account rather than to the address's real owner. The app asks to sign in with a Gmail address or a Google Workspace account.
+3. No person with this email: a new person with no memberships. The app shows "You do not have access to any company yet. Ask an admin to invite you."
+4. A person with this email who has never signed in with Google (an admin invited them): linked to this Google account from now on.
+5. A person with this email already linked to another Google account: refused. The app says the email already belongs to another account and to ask an admin.
+
+So every email in `people` is one an admin typed in or one Google vouches for, and an invitation can only ever reach the owner of the address. Allowing other Google accounts later would need a decision on how to confirm such an address (for example an emailed link).
 
 The seeded people use `@procurely.test` addresses. They are not Gmail, and no Google Workspace can host a `.test` domain, so no Google account can ever become a seeded person; they remain dev-login only.
 

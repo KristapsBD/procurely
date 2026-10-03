@@ -13,16 +13,21 @@ CREATE UNIQUE INDEX "people_google_sub_key" ON "people"("google_sub");
 -- The API calls it only after verifying the ID token (signature, issuer, audience, expiry,
 -- verified email).
 --
+-- The email is used only when Google is authoritative for it (p_email_authoritative: a Gmail
+-- address or a Google Workspace account). Otherwise Google verified the address only when the
+-- account was created and it may have changed hands since, so it neither links to an existing
+-- person nor creates one: a person created from it would later receive an admin's invitation
+-- meant for the address's real owner (invite_person matches by email). Every email in people is
+-- therefore one an admin entered or one Google is authoritative for.
+--
 --   1. A person already linked to this subject: that person (their email at Google may differ).
---   2. No person with this email: a new person linked to the subject, with no memberships.
---   3. A person with this email and no linked subject (invited by an admin, or seeded): linked
---      to the subject only when p_link_by_email is true, which the API passes only when Google
---      is authoritative for the address (a Gmail address, or a Google Workspace account).
---   4. Anything else (the email belongs to a person linked to another subject, or Google is not
---      authoritative for it): NULL, and the API refuses the sign-in.
+--   2. Google is not authoritative for the email: NULL, refused.
+--   3. No person with this email: a new person linked to the subject, with no memberships.
+--   4. A person with this email and no linked subject (invited by an admin, or seeded): linked.
+--   5. A person with this email linked to another subject: NULL, refused.
 --
 -- Like invite_person, this assumes the migration owner is not itself bound by row-level security.
-CREATE FUNCTION google_sign_in(p_sub text, p_email text, p_name text, p_link_by_email boolean)
+CREATE FUNCTION google_sign_in(p_sub text, p_email text, p_name text, p_email_authoritative boolean)
   RETURNS uuid
   LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path = public, pg_temp
   AS $$
@@ -34,6 +39,9 @@ BEGIN
   IF FOUND THEN
     RETURN v_id;
   END IF;
+  IF NOT p_email_authoritative THEN
+    RETURN NULL;
+  END IF;
   SELECT id, google_sub INTO v_id, v_linked_sub FROM people WHERE email = lower(p_email);
   IF NOT FOUND THEN
     -- NULL when a concurrent sign-in took the email or the subject first; signing in again works.
@@ -42,7 +50,7 @@ BEGIN
       RETURNING id INTO v_id;
     RETURN v_id;
   END IF;
-  IF v_linked_sub IS NULL AND p_link_by_email THEN
+  IF v_linked_sub IS NULL THEN
     UPDATE people SET google_sub = p_sub WHERE id = v_id;
     RETURN v_id;
   END IF;
