@@ -65,7 +65,24 @@ curl -s localhost:$API_PORT/cost-centers -H "Authorization: Bearer $TOKEN" -H 'X
 
 People sign in with Google (`GET /auth/google/start`, a browser flow; see [docs/google-sign-in.md](docs/google-sign-in.md) for how it works, why Expo Go is enough and the Google Cloud Console setup). Google is optional: its four `GOOGLE_*` values come from a gitignored `.env` at the repository root (template: `.env.example`), and without them the API runs as before. `GET /auth/options` tells the app which sign-ins exist. Automated tests never use Google: they sign in through the dev login, and the Google tests use a local stand-in with its own signing keys.
 
-`pnpm db:reset` is `make seed` (runs inside the API container, so Docker is all you need). Seeded companies and people, with their stable ids, are in `apps/api/prisma/seed-data.ts`: four companies (main EUR, SEK, large, empty) and twelve people, including a person who is requester in one company and approver in another (alice), a person with no company (nomad), a deactivated membership (oscar) and the attacker who belongs only to the empty company (mallory). The supplier "Office Depot" exists in both the main and the SEK company with a different price for the same paper, and the main company also has an inactive supplier (Old Paper Mill) whose catalog item stays visible but cannot be chosen.
+`pnpm db:reset` is `make seed` (runs inside the API container, so Docker is all you need). Seeded companies and people, with their stable ids, are in `apps/api/prisma/seed-data.ts`. Every seeded id is `00000000-0000-4000-8000-0000000000` followed by two characters. There are four companies: Acme Trading (`a1`, EUR, the main one), Nordic Supplies (`a2`, SEK), Megacorp Industries (`a3`, EUR, large) and Fresh Start Ltd (`a4`, EUR, empty). The supplier "Office Depot" exists in both Acme Trading and Nordic Supplies with a different price for the same paper, and Acme Trading also has an inactive supplier (Old Paper Mill) whose catalog item stays visible but cannot be chosen.
+
+The twelve seeded people all have `<name>@procurely.test` addresses. The app's sign-in screen offers only some of them as quick picks, but its id field accepts any of these ids.
+
+| Person  | Id ends in | Memberships                                                 |
+| ------- | ---------- | ----------------------------------------------------------- |
+| alice   | `b1`       | requester in Acme Trading, approver in Nordic Supplies      |
+| bob     | `b2`       | approver in Acme Trading                                    |
+| carol   | `b3`       | buyer in Acme Trading                                       |
+| dave    | `b4`       | admin in Acme Trading                                       |
+| erik    | `b5`       | admin in Nordic Supplies                                    |
+| frida   | `b6`       | requester in Nordic Supplies                                |
+| gustav  | `b7`       | admin in Megacorp Industries                                |
+| hanna   | `b8`       | approver in Megacorp Industries                             |
+| ivan    | `b9`       | requester in Megacorp Industries                            |
+| nomad   | `ba`       | none                                                        |
+| oscar   | `bb`       | requester in Acme Trading, deactivated                      |
+| mallory | `bc`       | requester in Fresh Start Ltd, the attacker in the RLS tests |
 
 ## Roles, members and the audit log
 
@@ -87,6 +104,21 @@ Every change to memberships, cost centers, suppliers and catalog items writes an
 
 Host ports are derived per checkout (see [One stack per checkout](#one-stack-per-checkout)); `make env` prints them, and `API_PORT` and `DB_PORT` override them, e.g. `API_PORT=3100 pnpm stack:up`.
 
+### Inviting a person
+
+The app has no members screen yet, so an invitation is an API call, `POST /members` with an admin's session. This one signs in as dave (admin in Acme Trading) through the dev login and invites an address to Acme Trading as a requester:
+
+```sh
+eval "$(make -s env)"
+TOKEN=$(curl -s -XPOST localhost:$API_PORT/auth/dev-login -H 'content-type: application/json' \
+  -d '{"personId":"00000000-0000-4000-8000-0000000000b4"}' | jq -r .token)
+curl -s -XPOST localhost:$API_PORT/members -H "Authorization: Bearer $TOKEN" \
+  -H 'X-Company-Id: 00000000-0000-4000-8000-0000000000a1' -H 'content-type: application/json' \
+  -d '{"email":"you@gmail.com","role":"REQUESTER"}'
+```
+
+`role` is one of `REQUESTER`, `APPROVER`, `BUYER` and `ADMIN`. To invite to Nordic Supplies or Megacorp Industries, sign in as their admin (erik or gustav in the [seeded people](#company-isolation-rls)) and change `X-Company-Id` to match.
+
 ## Mobile app
 
 Expo SDK 57 (TypeScript, Expo Router, TanStack Query). The sign-in screen offers Google sign-in when the API has it configured (otherwise it says so) and, in development bundles, the dev login as a seeded person. Signed in, the app shows their companies with a switcher and lists the cost centers of the selected company (admins add, rename and delete them there). The Suppliers and Catalog screens show the selected company's suppliers and catalog items with prices; buyers and admins add and edit them, deactivate suppliers and delete items, and everyone else only reads. The app offers only the actions the role allows; the database enforces it either way. The API address is one value, `EXPO_PUBLIC_API_URL`, read when Metro bundles; nothing in the code names a host. Copy `apps/mobile/.env.example` to `apps/mobile/.env.local` (gitignored) or export it in the shell, then restart Metro (`--clear` after changing it).
@@ -102,14 +134,15 @@ The API allows cross-origin browser calls only when `NODE_ENV` is `development` 
 
 ### On a physical iPhone with Expo Go
 
-The phone must reach two things on your machine: Metro (port 8081, serves the JavaScript) and the API (pinned to port 3000 below). The dev login signs in as any seeded user and the compose stack runs in development mode, so the API must **never** be put on a public tunnel or otherwise exposed to the internet. The setup below uses [Tailscale](https://tailscale.com): the phone reaches WSL directly over a private tailnet that contains only your own devices, and nothing is opened on the home network, the Windows firewall or the internet (no `.wslconfig` or firewall changes).
+The phone must reach two things on your machine: Metro (port 8081, serves the JavaScript) and the API (pinned to port 3000 below, the port that `tailscale serve` proxies in the [Google sign-in setup](docs/google-sign-in.md#1-an-https-name-for-the-api-on-your-tailnet)). The dev login signs in as any seeded user and the compose stack runs in development mode, so the API must **never** be put on a public tunnel or otherwise exposed to the internet. The setup below uses [Tailscale](https://tailscale.com): the phone reaches WSL directly over a private tailnet that contains only your own devices, and nothing is opened on the home network, the Windows firewall or the internet (no `.wslconfig` or firewall changes).
 
 One-time setup, on your machine and phone:
 
 1. In WSL (systemd must be enabled, it is by default on current WSL), install Tailscale and sign in: `curl -fsSL https://tailscale.com/install.sh | sh`, then `sudo tailscale up` and open the printed login URL.
 2. On the iPhone, install the Tailscale app from the App Store and sign in with the same account. Keep it connected (VPN on) while testing.
+3. Create a free Expo account. Sign in to it in the Expo Go app on the iPhone, and sign in the Expo CLI on your machine to the same account (`npx expo login` in `apps/mobile`). On a physical iPhone, Expo Go opens a project only when both are signed in to the same account. Otherwise it shows "You need to be signed in to Expo Go and Expo CLI to open your project". After signing in, tap Try Again on that screen. Metro does not need a restart. Android, simulators and published updates do not need this ([Expo: sign-in required](https://docs.expo.dev/troubleshooting/expo-go-sign-in-required/)).
 
-Each session:
+Run each session from the repository folder itself. This checkout gets its own stack (see [One stack per checkout](#one-stack-per-checkout)), so the phone test needs no separate clone.
 
 ```sh
 export API_PORT=3000                              # fixed API port instead of the derived one; keep it for every stack command
@@ -124,7 +157,7 @@ Keep the tailnet private to your own devices: do not share the node, and do not 
 
 Expo's built-in tunnel (`expo start --tunnel`) is a fallback for Metro only: it does not carry the app's API calls, so sign-in would fail unless the API is reachable some other way. Do not expose the API to get around this.
 
-**Not yet verified:** nobody has opened the app on a phone yet. The Tailscale setup and the Expo Go connection are written from Tailscale's and Expo's documentation and could not be run from the agent environment. What was verified: the iOS bundle builds (`expo export --platform ios`) and the same app runs end to end in the browser.
+**Verified** on 2026-10-04. With the steps above, the app opens in Expo Go on an iPhone over Tailscale. What is verified for Google sign-in on the phone is listed in [docs/google-sign-in.md](docs/google-sign-in.md#expo-go-is-enough-no-development-build).
 
 ## CI
 
