@@ -48,6 +48,7 @@ function Routes() {
         <Stack.Screen name="index" options={{ title: 'Procurely' }} />
         <Stack.Screen name="suppliers" options={{ title: 'Suppliers' }} />
         <Stack.Screen name="catalog" options={{ title: 'Catalog' }} />
+        <Stack.Screen name="requisitions" options={{ title: 'Requisitions' }} />
       </Stack.Protected>
       <Stack.Protected guard={!signedIn}>
         <Stack.Screen name="login" options={{ title: 'Sign in' }} />

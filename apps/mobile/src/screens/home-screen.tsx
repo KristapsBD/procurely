@@ -20,7 +20,10 @@ import {
   useSignOutWhenUnauthorized,
   writeErrorMessage,
 } from '../features/data';
-import { canManageCostCenters } from '../features/permissions';
+import {
+  canManageCostCenters,
+  canRaiseRequisitions,
+} from '../features/permissions';
 import { useSession } from '../session/session';
 import { CompanyLine, WithActiveCompany } from './with-active-company';
 
@@ -47,6 +50,12 @@ export function HomeScreen() {
                 onPress={() => router.push('/suppliers')}
               />
               <Button label="Catalog" onPress={() => router.push('/catalog')} />
+              {canRaiseRequisitions(active.role) && (
+                <Button
+                  label="Requisitions"
+                  onPress={() => router.push('/requisitions')}
+                />
+              )}
             </View>
             <CostCenters company={active} />
           </>

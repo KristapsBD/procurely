@@ -132,6 +132,29 @@ describe('HomeScreen company switching', () => {
   });
 });
 
+describe('HomeScreen requisitions entry point', () => {
+  it.each([
+    ['REQUESTER', true],
+    ['ADMIN', true],
+    ['BUYER', false],
+    ['APPROVER', false],
+  ] as const)('as %s, offers requisitions: %s', async (role, offered) => {
+    render(
+      <TestApp
+        api={fakeApi({
+          companies: async () => [membership('company-acme', 'Acme', role)],
+        })}
+      >
+        <HomeScreen />
+      </TestApp>,
+    );
+    await screen.findByRole('button', { name: 'Catalog' });
+    expect(
+      screen.queryByRole('button', { name: 'Requisitions' }) !== null,
+    ).toBe(offered);
+  });
+});
+
 describe('HomeScreen cost centers', () => {
   it('offers cost-center management to an admin only', async () => {
     render(
