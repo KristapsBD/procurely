@@ -30,3 +30,4 @@ Maintained source for verifying user-facing behavior of the Expo **web** app aga
 - [Cost centers](./cost-centers.md) — list by company; admin add/rename/delete.
 - [Suppliers](./suppliers.md) — list, buyer add/rename/deactivate, requester read-only.
 - [Catalog](./catalog.md) — prices, inactive supplier, buyer edit, requester read-only.
+- [Requisitions](./requisitions.md) — create, edit, submit, cancel; admin read-only; no entry for buyers and approvers.
