@@ -1,4 +1,4 @@
-.PHONY: help up down reset seed logs ps psql env
+.PHONY: help up down prune reset seed logs ps psql env
 
 # Every checkout gets its own stack: the Compose project name and the host ports derive
 # from a checksum of this checkout's absolute path, so two checkouts never share containers,
@@ -28,6 +28,9 @@ up: ## Build and start Postgres + API, wait until healthy
 
 down: ## Stop the stack, keep the database data
 	docker compose down
+
+prune: ## List leftover procurely stacks; APPLY=1 removes the listed ones
+	@APPLY='$(APPLY)' PRUNE_PROJECTS='$(PRUNE_PROJECTS)' bash '$(CURDIR)/scripts/prune-stacks.sh'
 
 reset: ## Wipe the database volume and start fresh
 	docker compose down -v
