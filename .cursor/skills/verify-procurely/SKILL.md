@@ -90,8 +90,8 @@ If this run created extra cost centers, suppliers, or catalog items and you need
 
 ## Helpers
 
-| Script | Invocation |
-| --- | --- |
-| Launch stack + Metro | `.cursor/skills/verify-procurely/scripts/launch.sh` |
-| Readiness | `.cursor/skills/verify-procurely/scripts/doctor.sh` |
-| Teardown | `.cursor/skills/verify-procurely/scripts/cleanup.sh` |
+| Script               | Invocation                                           |
+| -------------------- | ---------------------------------------------------- |
+| Launch stack + Metro | `.cursor/skills/verify-procurely/scripts/launch.sh`  |
+| Readiness            | `.cursor/skills/verify-procurely/scripts/doctor.sh`  |
+| Teardown             | `.cursor/skills/verify-procurely/scripts/cleanup.sh` |
