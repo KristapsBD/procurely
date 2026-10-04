@@ -17,6 +17,12 @@ enum Role {
   ADMIN
 }
 
+enum RequisitionStatus {
+  DRAFT
+  SUBMITTED
+  CANCELLED
+}
+
 model Company {
   id           String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name         String
@@ -26,19 +32,21 @@ model Company {
   costCenters  CostCenter[]
   suppliers    Supplier[]
   catalogItems CatalogItem[]
+  requisitions Requisition[]
   auditLog     AuditLog[]
 
   @@map("companies")
 }
 
 model Person {
-  id          String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email       String       @unique
-  name        String
+  id           String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email        String        @unique
+  name         String
   /// Google's stable subject identifier, set at the first Google sign-in. Null until then.
-  googleSub   String?      @unique @map("google_sub")
-  memberships Membership[]
-  auditLog    AuditLog[]
+  googleSub    String?       @unique @map("google_sub")
+  memberships  Membership[]
+  requisitions Requisition[]
+  auditLog     AuditLog[]
 
   @@map("people")
 }
@@ -58,13 +66,16 @@ model Membership {
 }
 
 model CostCenter {
-  id        String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  companyId String  @map("company_id") @db.Uuid
-  code      String
-  name      String
-  company   Company @relation(fields: [companyId], references: [id])
+  id           String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId    String        @map("company_id") @db.Uuid
+  code         String
+  name         String
+  company      Company       @relation(fields: [companyId], references: [id])
+  requisitions Requisition[]
 
   @@unique([companyId, code])
+  // Target of the company-matching foreign key from requisitions.
+  @@unique([companyId, id])
   @@map("cost_centers")
 }
 
@@ -86,18 +97,62 @@ model Supplier {
 
 /// Something the company buys from one supplier at an agreed price.
 model CatalogItem {
-  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  companyId      String   @map("company_id") @db.Uuid
-  supplierId     String   @map("supplier_id") @db.Uuid
-  name           String
+  id               String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId        String            @map("company_id") @db.Uuid
+  supplierId       String            @map("supplier_id") @db.Uuid
+  name             String
   /// Agreed unit price in integer minor units of the company currency (cents, öre).
-  unitPriceMinor Int      @map("unit_price_minor")
-  company        Company  @relation(fields: [companyId], references: [id])
+  unitPriceMinor   Int               @map("unit_price_minor")
+  company          Company           @relation(fields: [companyId], references: [id])
   // Composite key: the supplier must belong to the same company as the item.
-  supplier       Supplier @relation(fields: [companyId, supplierId], references: [companyId, id])
+  supplier         Supplier          @relation(fields: [companyId, supplierId], references: [companyId, id])
+  requisitionLines RequisitionLine[]
 
   @@unique([companyId, supplierId, name])
+  // Target of the company-matching foreign key from requisition_lines.
+  @@unique([companyId, id])
   @@map("catalog_items")
+}
+
+/// A request to buy catalog items, charged to a cost center. Never deleted: cancel instead.
+/// Its total is the sum of its line amounts, computed on read.
+model Requisition {
+  id                String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId         String            @map("company_id") @db.Uuid
+  requesterPersonId String            @map("requester_person_id") @db.Uuid
+  /// Null while a draft has none. The foreign key also covers company_id.
+  costCenterId      String?           @map("cost_center_id") @db.Uuid
+  justification     String            @default("")
+  status            RequisitionStatus @default(DRAFT)
+  createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  company           Company           @relation(fields: [companyId], references: [id])
+  requester         Person            @relation(fields: [requesterPersonId], references: [id])
+  costCenter        CostCenter?       @relation(fields: [companyId, costCenterId], references: [companyId, id], onDelete: Restrict)
+  lines             RequisitionLine[]
+
+  @@unique([companyId, id])
+  @@index([companyId, requesterPersonId])
+  @@map("requisitions")
+}
+
+/// One catalog item on a requisition. The unit price is copied from the catalog when the
+/// requisition is saved, so a later price change does not alter it.
+model RequisitionLine {
+  id             String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId      String      @map("company_id") @db.Uuid
+  requisitionId  String      @map("requisition_id") @db.Uuid
+  /// Order of the line within its requisition, from 0.
+  position       Int
+  catalogItemId  String      @map("catalog_item_id") @db.Uuid
+  quantity       Int
+  unitPriceMinor Int         @map("unit_price_minor")
+  /// quantity * unitPriceMinor, enforced by a check constraint.
+  amountMinor    Int         @map("amount_minor")
+  requisition    Requisition @relation(fields: [companyId, requisitionId], references: [companyId, id])
+  catalogItem    CatalogItem @relation(fields: [companyId, catalogItemId], references: [companyId, id])
+
+  @@unique([requisitionId, position])
+  @@map("requisition_lines")
 }
 
 /// Append-only: the API role can insert and select (admins only) but never update or delete.
