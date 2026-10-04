@@ -13,7 +13,7 @@ Decision: the app stays on Expo Go. Google sign-in is a browser flow, and the AP
 - So Google returns to the API instead, at `https://<machine>.<tailnet>.ts.net/auth/google/callback`. `tailscale serve` gives the machine that https name with a real certificate, reachable only inside your tailnet ([Tailscale Serve](https://tailscale.com/kb/1312/serve)). `ts.net` is on the [public suffix list](https://publicsuffix.org/list/public_suffix_list.dat) (entry by Tailscale Inc.), so the address passes Google's rules. Google never connects to the redirect URI itself; the phone's browser follows Google's redirect to it, and the phone reaches it over Tailscale. Nothing is exposed to the internet: use `serve`, never `funnel`.
 - The API then sends the browser back to Expo Go's `exp://` address. The app opens the whole flow with `WebBrowser.openAuthSessionAsync`, which on iOS uses `ASWebAuthenticationSession` and returns the final address to the app ([Expo: WebBrowser](https://docs.expo.dev/versions/latest/sdk/webbrowser/)).
 
-**Not yet verified:** no Google OAuth client exists yet, and the flow has not been run on the iPhone or against real Google. The API side was verified with HTTP tests against a local stand-in for Google (its own signing keys), and the app side in the browser target against the real API with the same stand-in. The first real check is the manual one at the end of the setup below.
+**Verified** on 2026-10-04 in Expo Go on an iPhone over Tailscale, with the setup below. A real Google sign-in works, and a person an admin invited is linked on their first Google sign-in (case 4 of [Who a Google sign-in becomes](#who-a-google-sign-in-becomes)). Google sign-in on Android is **not yet verified**. The automated tests use a local stand-in for Google with its own signing keys, for the API and for the app in the browser target.
 
 ## How it works
 
@@ -63,8 +63,9 @@ You need the Tailscale setup from the README (Tailscale in WSL and on the iPhone
 
 ### 1. An https name for the API on your tailnet
 
-1. In the [Tailscale admin console](https://login.tailscale.com/admin/dns), on the DNS page, make sure MagicDNS is on and enable HTTPS Certificates.
-2. In WSL, with the stack running on the fixed port of the phone setup in the README (`export API_PORT=3000`, then `pnpm stack:up`):
+1. In the [Tailscale admin console](https://login.tailscale.com/admin/dns), on the DNS page, make sure MagicDNS is on and enable HTTPS Certificates. `tailscale serve` cannot issue the https name without them.
+2. In WSL, run `sudo tailscale set --operator=$USER` once, so your user can run `tailscale serve` without root. Without it, every `tailscale serve` call below needs `sudo`.
+3. `tailscale serve --bg 3000` proxies port 3000, so the stack must run with `API_PORT=3000`, the fixed port of the [phone setup in the README](../README.md#on-a-physical-iphone-with-expo-go) (`export API_PORT=3000`, then `pnpm stack:up`). Then, in WSL:
 
    ```sh
    tailscale serve --bg 3000     # tailnet only; prints https://<machine>.<tailnet>.ts.net
@@ -107,7 +108,7 @@ TS_IP=$(tailscale ip -4)
 EXPO_PUBLIC_API_URL=https://<machine>.<tailnet>.ts.net REACT_NATIVE_PACKAGER_HOSTNAME=$TS_IP pnpm mobile:start
 ```
 
-(`EXPO_PUBLIC_API_URL=http://$TS_IP:3000` works too; the https name keeps everything on one address.) Open `exp://<TS_IP>:8081` in Expo Go and tap **Sign in with Google**. iOS asks whether Expo Go may use the site to sign in; continue, pick your Google account, and the app should come back signed in. A Google account with no company sees the no-access message; an admin can invite its Gmail address (dev login as Dave, an admin of Acme Trading, through the API) and the next sign-in shows the company.
+(`EXPO_PUBLIC_API_URL=http://$TS_IP:3000` works too; the https name keeps everything on one address.) Open `exp://<TS_IP>:8081` in Expo Go and tap **Sign in with Google**. iOS asks whether Expo Go may use the site to sign in; continue, pick your Google account, and the app should come back signed in. A Google account with no company sees the no-access message. An admin can invite its Gmail address with the API call in [Inviting a person](../README.md#inviting-a-person), and the next sign-in shows the company. To check the linking of an invited person, invite the address before its first Google sign-in.
 
 If something goes wrong:
 
