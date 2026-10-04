@@ -17,6 +17,8 @@ import { MeController } from './me/me.controller';
 import { MembersController } from './members/members.controller';
 import { MembersService } from './members/members.service';
 import { PrismaService } from './prisma.service';
+import { RequisitionsController } from './requisitions/requisitions.controller';
+import { RequisitionsService } from './requisitions/requisitions.service';
 import { SuppliersController } from './suppliers/suppliers.controller';
 import { SuppliersService } from './suppliers/suppliers.service';
 import { TenantDb } from './tenancy/tenant-db.service';
@@ -33,6 +35,7 @@ import { TenantDb } from './tenancy/tenant-db.service';
     AuditLogController,
     SuppliersController,
     CatalogItemsController,
+    RequisitionsController,
   ],
   providers: [
     PrismaService,
@@ -40,6 +43,7 @@ import { TenantDb } from './tenancy/tenant-db.service';
     MembersService,
     SuppliersService,
     CatalogItemsService,
+    RequisitionsService,
     SessionTokens,
     Sessions,
     SessionGuard,

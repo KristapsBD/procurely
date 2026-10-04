@@ -10,6 +10,8 @@ import {
   type DevLoginRequest,
   type GoogleSessionRequest,
   type MeResponse,
+  type Requisition,
+  type SaveRequisitionRequest,
   type SessionResponse,
   type Supplier,
   type UpdateCatalogItemRequest,
@@ -78,6 +80,30 @@ export interface Api {
     companyId: string,
     id: string,
   ): Promise<void>;
+  /** The person's own requisitions; an admin gets every one of the company. */
+  requisitions(token: string, companyId: string): Promise<Requisition[]>;
+  createRequisition(
+    token: string,
+    companyId: string,
+    body: SaveRequisitionRequest,
+  ): Promise<Requisition>;
+  /** Replaces a draft's cost center, justification and lines. */
+  updateRequisition(
+    token: string,
+    companyId: string,
+    id: string,
+    body: SaveRequisitionRequest,
+  ): Promise<Requisition>;
+  submitRequisition(
+    token: string,
+    companyId: string,
+    id: string,
+  ): Promise<Requisition>;
+  cancelRequisition(
+    token: string,
+    companyId: string,
+    id: string,
+  ): Promise<Requisition>;
 }
 
 export class ApiError extends Error {
@@ -91,7 +117,7 @@ export class ApiError extends Error {
 }
 
 interface RequestOptions {
-  method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   token?: string;
   companyId?: string;
   body?: unknown;
@@ -139,6 +165,7 @@ export function createApi(baseUrl: string, fetchFn: typeof fetch = fetch): Api {
       request<T>(path, { method, token, companyId, body });
   const get = scoped('GET');
   const post = scoped('POST');
+  const put = scoped('PUT');
   const patch = scoped('PATCH');
   const del = scoped('DELETE');
 
@@ -183,5 +210,14 @@ export function createApi(baseUrl: string, fetchFn: typeof fetch = fetch): Api {
       patch(token, companyId, `/catalog-items/${id}`, body),
     deleteCatalogItem: (token, companyId, id) =>
       del(token, companyId, `/catalog-items/${id}`),
+    requisitions: (token, companyId) => get(token, companyId, '/requisitions'),
+    createRequisition: (token, companyId, body) =>
+      post(token, companyId, '/requisitions', body),
+    updateRequisition: (token, companyId, id, body) =>
+      put(token, companyId, `/requisitions/${id}`, body),
+    submitRequisition: (token, companyId, id) =>
+      post(token, companyId, `/requisitions/${id}/submit`),
+    cancelRequisition: (token, companyId, id) =>
+      post(token, companyId, `/requisitions/${id}/cancel`),
   };
 }

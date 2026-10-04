@@ -2,7 +2,7 @@ import { BadRequestException } from '@nestjs/common';
 import { isUuid } from '../tenancy/uuid';
 
 /** Largest amount a Postgres integer column holds. */
-const MAX_MINOR_AMOUNT = 2 ** 31 - 1;
+export const MAX_MINOR_AMOUNT = 2 ** 31 - 1;
 
 /** A non-blank string, trimmed. */
 export function requireString(value: unknown, field: string): string {
@@ -44,6 +44,34 @@ export function requireMinorAmount(value: unknown, field: string): number {
     throw new BadRequestException(
       `${field} must be a whole number of minor units, zero or more`,
     );
+  }
+  return value;
+}
+
+/** A whole number, 1 or more, that fits an integer column. */
+export function requirePositiveInteger(value: unknown, field: string): number {
+  if (
+    typeof value !== 'number' ||
+    !Number.isInteger(value) ||
+    value < 1 ||
+    value > MAX_MINOR_AMOUNT
+  ) {
+    throw new BadRequestException(`${field} must be a whole number, 1 or more`);
+  }
+  return value;
+}
+
+/** A string that may be empty, trimmed. */
+export function requireText(value: unknown, field: string): string {
+  if (typeof value !== 'string') {
+    throw new BadRequestException(`${field} must be a string`);
+  }
+  return value.trim();
+}
+
+export function requireArray(value: unknown, field: string): unknown[] {
+  if (!Array.isArray(value)) {
+    throw new BadRequestException(`${field} must be an array`);
   }
   return value;
 }

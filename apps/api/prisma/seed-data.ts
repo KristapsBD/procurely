@@ -262,3 +262,19 @@ export const catalogItems = [
     unitPriceMinor: 1999,
   },
 ];
+
+export const REQUISITION = {
+  aliceDraft: '00000000-0000-4000-8000-0000000000f1',
+} as const;
+
+// One draft, so the requisition tables are not empty for the RLS audit. Tests make their own.
+export const requisitions = [
+  {
+    id: REQUISITION.aliceDraft,
+    companyId: COMPANY.main,
+    requesterPersonId: PERSON.alice,
+    costCenterCode: 'OPS',
+    justification: 'Paper for the quarterly reports',
+    lines: [{ catalogItemId: CATALOG_ITEM.mainPaper, quantity: 2 }],
+  },
+];

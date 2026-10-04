@@ -34,7 +34,7 @@ export class Actor {
   }
 
   private call(
-    method: 'get' | 'post' | 'patch' | 'delete',
+    method: 'get' | 'post' | 'put' | 'patch' | 'delete',
     path: string,
     companyId?: string,
   ) {
@@ -111,5 +111,23 @@ export class Actor {
   }
   deleteCatalogItem(companyId: string, id: string) {
     return this.call('delete', `/catalog-items/${id}`, companyId);
+  }
+  listRequisitions(companyId: string) {
+    return this.call('get', '/requisitions', companyId);
+  }
+  getRequisition(companyId: string, id: string) {
+    return this.call('get', `/requisitions/${id}`, companyId);
+  }
+  createRequisition(companyId: string, body: object) {
+    return this.call('post', '/requisitions', companyId).send(body);
+  }
+  updateRequisition(companyId: string, id: string, body: object) {
+    return this.call('put', `/requisitions/${id}`, companyId).send(body);
+  }
+  submitRequisition(companyId: string, id: string) {
+    return this.call('post', `/requisitions/${id}/submit`, companyId);
+  }
+  cancelRequisition(companyId: string, id: string) {
+    return this.call('post', `/requisitions/${id}/cancel`, companyId);
   }
 }

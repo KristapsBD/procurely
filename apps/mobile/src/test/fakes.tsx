@@ -3,6 +3,7 @@ import type {
   CompanyMembership,
   CostCenter,
   MeResponse,
+  Requisition,
   Role,
   SessionResponse,
   Supplier,
@@ -53,6 +54,36 @@ export function catalogItem(
   };
 }
 
+/** A requisition with one line per item, priced at the item's catalog price. */
+export function requisition(
+  companyId: string,
+  justification: string,
+  lines: { item: CatalogItem; quantity: number }[] = [],
+  overrides: Partial<Requisition> = {},
+): Requisition {
+  const priced = lines.map(({ item, quantity }) => ({
+    id: `line-${item.id}`,
+    catalogItemId: item.id,
+    catalogItemName: item.name,
+    quantity,
+    unitPriceMinor: item.unitPriceMinor,
+    amountMinor: quantity * item.unitPriceMinor,
+  }));
+  return {
+    id: `${companyId}-req-${justification}`,
+    companyId,
+    requesterPersonId: alice.id,
+    requesterName: alice.name,
+    costCenterId: null,
+    justification,
+    status: 'DRAFT',
+    lines: priced,
+    totalMinor: priced.reduce((sum, l) => sum + l.amountMinor, 0),
+    actions: ['edit', 'submit', 'cancel'],
+    ...overrides,
+  };
+}
+
 /**
  * Presses a button that starts a write, and lets the write run before the test goes on. A plain
  * press followed by waitFor can starve the mutation's promise chain for seconds on a slow run.
@@ -96,6 +127,11 @@ export function fakeApi(overrides: Partial<Api> = {}): Api {
     createCatalogItem: notFaked,
     updateCatalogItem: notFaked,
     deleteCatalogItem: notFaked,
+    requisitions: async () => [],
+    createRequisition: notFaked,
+    updateRequisition: notFaked,
+    submitRequisition: notFaked,
+    cancelRequisition: notFaked,
     ...overrides,
   };
 }

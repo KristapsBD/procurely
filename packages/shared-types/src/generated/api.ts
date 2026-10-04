@@ -272,6 +272,75 @@ export interface paths {
         patch: operations["MembersController_update"];
         trace?: never;
     };
+    "/requisitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The person's own requisitions, newest first; an admin sees every one of the company. */
+        get: operations["RequisitionsController_list"];
+        put?: never;
+        /** Saves a new draft as the person asking. */
+        post: operations["RequisitionsController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/requisitions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["RequisitionsController_get"];
+        /** Replaces a draft's cost center, justification and lines. */
+        put: operations["RequisitionsController_update"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/requisitions/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Draft or submitted to cancelled. Cancelled is final. */
+        post: operations["RequisitionsController_cancel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/requisitions/{id}/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Draft to submitted. Refused unless it has a cost center, a justification and a line. */
+        post: operations["RequisitionsController_submit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/suppliers": {
         parameters: {
             query?: never;
@@ -408,8 +477,57 @@ export interface components {
             id: string;
             name: string;
         };
+        Requisition: {
+            /**
+             * @description What the signed-in person may do to it now. Submitting a draft can still be refused when
+             *     it is incomplete.
+             */
+            actions: components["schemas"]["RequisitionAction"][];
+            companyId: string;
+            /** @description Null while a draft has no cost center yet. */
+            costCenterId: string | null;
+            id: string;
+            justification: string;
+            lines: components["schemas"]["RequisitionLine"][];
+            requesterName: string;
+            requesterPersonId: string;
+            status: components["schemas"]["RequisitionStatus"];
+            /** @description Sum of the line amounts in integer minor units of the company currency. */
+            totalMinor: number;
+        };
+        /**
+         * @description What the signed-in person may do to it now. Submitting a draft can still be refused when
+         *     it is incomplete.
+         * @enum {string}
+         */
+        RequisitionAction: "edit" | "submit" | "cancel";
+        RequisitionLine: {
+            /** @description quantity times unitPriceMinor. */
+            amountMinor: number;
+            catalogItemId: string;
+            catalogItemName: string;
+            id: string;
+            /** @description A whole number, 1 or more. */
+            quantity: number;
+            /** @description Copied from the catalog item when the requisition was saved, in integer minor units. */
+            unitPriceMinor: number;
+        };
+        RequisitionLineInput: {
+            catalogItemId: string;
+            /** @description A whole number, 1 or more. */
+            quantity: number;
+        };
+        /** @enum {string} */
+        RequisitionStatus: "DRAFT" | "SUBMITTED" | "CANCELLED";
         /** @enum {string} */
         Role: "REQUESTER" | "APPROVER" | "BUYER" | "ADMIN";
+        SaveRequisitionRequest: {
+            costCenterId: string | null;
+            /** @description May be empty in a draft. */
+            justification: string;
+            /** @description Items of active suppliers. The unit prices are taken from the catalog. */
+            lines: components["schemas"]["RequisitionLineInput"][];
+        };
         SessionResponse: {
             person: components["schemas"]["Person"];
             /** @description Bearer token for the Authorization header. */
@@ -979,6 +1097,154 @@ export interface operations {
             };
         };
     };
+    RequisitionsController_list: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The company the person acts in (a company UUID). */
+                "x-company-id": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Requisition"][];
+                };
+            };
+        };
+    };
+    RequisitionsController_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The company the person acts in (a company UUID). */
+                "x-company-id": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveRequisitionRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Requisition"];
+                };
+            };
+        };
+    };
+    RequisitionsController_get: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The company the person acts in (a company UUID). */
+                "x-company-id": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Requisition"];
+                };
+            };
+        };
+    };
+    RequisitionsController_update: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The company the person acts in (a company UUID). */
+                "x-company-id": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveRequisitionRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Requisition"];
+                };
+            };
+        };
+    };
+    RequisitionsController_cancel: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The company the person acts in (a company UUID). */
+                "x-company-id": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Requisition"];
+                };
+            };
+        };
+    };
+    RequisitionsController_submit: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The company the person acts in (a company UUID). */
+                "x-company-id": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Requisition"];
+                };
+            };
+        };
+    };
     SuppliersController_list: {
         parameters: {
             query?: {
@@ -1099,7 +1365,13 @@ export type InviteMemberRequest = components['schemas']['InviteMemberRequest'];
 export type MeResponse = components['schemas']['MeResponse'];
 export type Member = components['schemas']['Member'];
 export type Person = components['schemas']['Person'];
+export type Requisition = components['schemas']['Requisition'];
+export type RequisitionAction = components['schemas']['RequisitionAction'];
+export type RequisitionLine = components['schemas']['RequisitionLine'];
+export type RequisitionLineInput = components['schemas']['RequisitionLineInput'];
+export type RequisitionStatus = components['schemas']['RequisitionStatus'];
 export type Role = components['schemas']['Role'];
+export type SaveRequisitionRequest = components['schemas']['SaveRequisitionRequest'];
 export type SessionResponse = components['schemas']['SessionResponse'];
 export type Supplier = components['schemas']['Supplier'];
 export type UpdateCatalogItemRequest = components['schemas']['UpdateCatalogItemRequest'];

@@ -181,3 +181,73 @@ export class UpdateCatalogItemRequest {
   @ApiPropertyOptional()
   unitPriceMinor?: number;
 }
+
+export const REQUISITION_STATUSES = [
+  'DRAFT',
+  'SUBMITTED',
+  'CANCELLED',
+] as const;
+export type RequisitionStatus = (typeof REQUISITION_STATUSES)[number];
+
+export const REQUISITION_ACTIONS = ['edit', 'submit', 'cancel'] as const;
+export type RequisitionAction = (typeof REQUISITION_ACTIONS)[number];
+
+export class RequisitionLine {
+  id!: string;
+  catalogItemId!: string;
+  catalogItemName!: string;
+  /** A whole number, 1 or more. */
+  quantity!: number;
+  /** Copied from the catalog item when the requisition was saved, in integer minor units. */
+  unitPriceMinor!: number;
+  /** quantity times unitPriceMinor. */
+  amountMinor!: number;
+}
+
+/** A request to buy catalog items, charged to a cost center. Only the requester changes it. */
+export class Requisition {
+  id!: string;
+  companyId!: string;
+  requesterPersonId!: string;
+  requesterName!: string;
+  /** Null while a draft has no cost center yet. */
+  @ApiProperty({ type: String, nullable: true })
+  costCenterId!: string | null;
+  justification!: string;
+  @ApiProperty({ enum: REQUISITION_STATUSES, enumName: 'RequisitionStatus' })
+  status!: RequisitionStatus;
+  @ApiProperty({ type: [RequisitionLine] })
+  lines!: RequisitionLine[];
+  /** Sum of the line amounts in integer minor units of the company currency. */
+  totalMinor!: number;
+  /**
+   * What the signed-in person may do to it now. Submitting a draft can still be refused when
+   * it is incomplete.
+   */
+  @ApiProperty({
+    enum: REQUISITION_ACTIONS,
+    enumName: 'RequisitionAction',
+    isArray: true,
+  })
+  actions!: RequisitionAction[];
+}
+
+export class RequisitionLineInput {
+  catalogItemId!: string;
+  /** A whole number, 1 or more. */
+  quantity!: number;
+}
+
+/**
+ * A whole draft: creates one, or replaces a draft's cost center, justification and lines. A
+ * draft may be incomplete; submitting needs a cost center, a justification and a line.
+ */
+export class SaveRequisitionRequest {
+  @ApiProperty({ type: String, nullable: true })
+  costCenterId!: string | null;
+  /** May be empty in a draft. */
+  justification!: string;
+  /** Items of active suppliers. The unit prices are taken from the catalog. */
+  @ApiProperty({ type: [RequisitionLineInput] })
+  lines!: RequisitionLineInput[];
+}
