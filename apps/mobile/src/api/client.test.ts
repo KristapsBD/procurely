@@ -94,6 +94,30 @@ describe('createApi writes', () => {
     );
   });
 
+  it('replaces a draft with PUT and moves it with POST to its action', async () => {
+    const fetchFn = jest.fn(async () => jsonResponse({}));
+    const api = createApi('http://api.test', fetchFn);
+    const draft = { costCenterId: null, justification: '', lines: [] };
+    await api.updateRequisition('tok', 'c', 'r-1', draft);
+    await api.submitRequisition('tok', 'c', 'r-1');
+    await api.cancelRequisition('tok', 'c', 'r-1');
+    expect(fetchFn).toHaveBeenNthCalledWith(
+      1,
+      'http://api.test/requisitions/r-1',
+      expect.objectContaining({ method: 'PUT', body: JSON.stringify(draft) }),
+    );
+    expect(fetchFn).toHaveBeenNthCalledWith(
+      2,
+      'http://api.test/requisitions/r-1/submit',
+      expect.objectContaining({ method: 'POST', body: undefined }),
+    );
+    expect(fetchFn).toHaveBeenNthCalledWith(
+      3,
+      'http://api.test/requisitions/r-1/cancel',
+      expect.objectContaining({ method: 'POST', body: undefined }),
+    );
+  });
+
   it('carries the API’s explanation of a refusal', async () => {
     const fetchFn = jest.fn(async () =>
       jsonResponse({ message: 'Already exists', statusCode: 409 }, 409),

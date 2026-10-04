@@ -2,6 +2,7 @@ import type {
   CatalogItem,
   CompanyMembership,
   CostCenter,
+  Requisition,
   Supplier,
 } from '@procurely/shared-types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -82,6 +83,16 @@ export function useCatalogItems(companyId: string) {
   return useQuery<CatalogItem[]>({
     queryKey: queryKeys.catalogItems(companyId),
     queryFn: () => api.catalogItems(required(token), companyId),
+    enabled: token !== null,
+  });
+}
+
+export function useRequisitions(companyId: string) {
+  const api = useApi();
+  const token = useToken();
+  return useQuery<Requisition[]>({
+    queryKey: queryKeys.requisitions(companyId),
+    queryFn: () => api.requisitions(required(token), companyId),
     enabled: token !== null,
   });
 }
