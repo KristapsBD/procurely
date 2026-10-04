@@ -1076,6 +1076,278 @@
           "CatalogItems"
         ]
       }
+    },
+    "/requisitions": {
+      "get": {
+        "operationId": "RequisitionsController_list",
+        "parameters": [
+          {
+            "name": "x-company-id",
+            "in": "header",
+            "description": "The company the person acts in (a company UUID).",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Requisition"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "The person's own requisitions, newest first; an admin sees every one of the company.",
+        "tags": [
+          "Requisitions"
+        ]
+      },
+      "post": {
+        "operationId": "RequisitionsController_create",
+        "parameters": [
+          {
+            "name": "x-company-id",
+            "in": "header",
+            "description": "The company the person acts in (a company UUID).",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveRequisitionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Requisition"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Saves a new draft as the person asking.",
+        "tags": [
+          "Requisitions"
+        ]
+      }
+    },
+    "/requisitions/{id}": {
+      "get": {
+        "operationId": "RequisitionsController_get",
+        "parameters": [
+          {
+            "name": "x-company-id",
+            "in": "header",
+            "description": "The company the person acts in (a company UUID).",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Requisition"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "Requisitions"
+        ]
+      },
+      "put": {
+        "operationId": "RequisitionsController_update",
+        "parameters": [
+          {
+            "name": "x-company-id",
+            "in": "header",
+            "description": "The company the person acts in (a company UUID).",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveRequisitionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Requisition"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Replaces a draft's cost center, justification and lines.",
+        "tags": [
+          "Requisitions"
+        ]
+      }
+    },
+    "/requisitions/{id}/submit": {
+      "post": {
+        "operationId": "RequisitionsController_submit",
+        "parameters": [
+          {
+            "name": "x-company-id",
+            "in": "header",
+            "description": "The company the person acts in (a company UUID).",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Requisition"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Draft to submitted. Refused unless it has a cost center, a justification and a line.",
+        "tags": [
+          "Requisitions"
+        ]
+      }
+    },
+    "/requisitions/{id}/cancel": {
+      "post": {
+        "operationId": "RequisitionsController_cancel",
+        "parameters": [
+          {
+            "name": "x-company-id",
+            "in": "header",
+            "description": "The company the person acts in (a company UUID).",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Requisition"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Draft or submitted to cancelled. Cancelled is final.",
+        "tags": [
+          "Requisitions"
+        ]
+      }
     }
   },
   "info": {
@@ -1538,6 +1810,159 @@
             "type": "number"
           }
         }
+      },
+      "RequisitionStatus": {
+        "type": "string",
+        "enum": [
+          "DRAFT",
+          "SUBMITTED",
+          "CANCELLED"
+        ]
+      },
+      "RequisitionLine": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "catalogItemId": {
+            "type": "string"
+          },
+          "catalogItemName": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number",
+            "description": "A whole number, 1 or more."
+          },
+          "unitPriceMinor": {
+            "type": "number",
+            "description": "Copied from the catalog item when the requisition was saved, in integer minor units."
+          },
+          "amountMinor": {
+            "type": "number",
+            "description": "quantity times unitPriceMinor."
+          }
+        },
+        "required": [
+          "id",
+          "catalogItemId",
+          "catalogItemName",
+          "quantity",
+          "unitPriceMinor",
+          "amountMinor"
+        ]
+      },
+      "RequisitionAction": {
+        "type": "string",
+        "enum": [
+          "edit",
+          "submit",
+          "cancel"
+        ],
+        "description": "What the signed-in person may do to it now. Submitting a draft can still be refused when\nit is incomplete."
+      },
+      "Requisition": {
+        "type": "object",
+        "properties": {
+          "costCenterId": {
+            "type": "string",
+            "nullable": true,
+            "description": "Null while a draft has no cost center yet."
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RequisitionStatus"
+              }
+            ]
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RequisitionLine"
+            }
+          },
+          "actions": {
+            "type": "array",
+            "description": "What the signed-in person may do to it now. Submitting a draft can still be refused when\nit is incomplete.",
+            "items": {
+              "$ref": "#/components/schemas/RequisitionAction"
+            }
+          },
+          "id": {
+            "type": "string"
+          },
+          "companyId": {
+            "type": "string"
+          },
+          "requesterPersonId": {
+            "type": "string"
+          },
+          "requesterName": {
+            "type": "string"
+          },
+          "justification": {
+            "type": "string"
+          },
+          "totalMinor": {
+            "type": "number",
+            "description": "Sum of the line amounts in integer minor units of the company currency."
+          }
+        },
+        "required": [
+          "costCenterId",
+          "status",
+          "lines",
+          "actions",
+          "id",
+          "companyId",
+          "requesterPersonId",
+          "requesterName",
+          "justification",
+          "totalMinor"
+        ]
+      },
+      "RequisitionLineInput": {
+        "type": "object",
+        "properties": {
+          "catalogItemId": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number",
+            "description": "A whole number, 1 or more."
+          }
+        },
+        "required": [
+          "catalogItemId",
+          "quantity"
+        ]
+      },
+      "SaveRequisitionRequest": {
+        "type": "object",
+        "properties": {
+          "costCenterId": {
+            "type": "string",
+            "nullable": true
+          },
+          "lines": {
+            "description": "Items of active suppliers. The unit prices are taken from the catalog.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RequisitionLineInput"
+            }
+          },
+          "justification": {
+            "type": "string",
+            "description": "May be empty in a draft."
+          }
+        },
+        "required": [
+          "costCenterId",
+          "lines",
+          "justification"
+        ]
       }
     }
   }

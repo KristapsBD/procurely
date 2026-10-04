@@ -5,6 +5,9 @@ import type { CompanyRequestScope } from './request-scope';
 /** Who may change suppliers and catalog items (mirrors the row-level security policies). */
 export const PURCHASING_ROLES: readonly Role[] = ['BUYER', 'ADMIN'];
 
+/** Who may raise and change their own requisitions (mirrors the row-level security policies). */
+export const REQUISITION_ROLES: readonly Role[] = ['REQUESTER', 'ADMIN'];
+
 /**
  * Call when a write matched no rows. Row-level security hides rows the person may not
  * change, so "nothing matched" means no such row or not allowed. A member of the company
