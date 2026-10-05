@@ -1,11 +1,13 @@
 import { PrismaClient } from '@prisma/client';
 import {
+  approvalRules,
   auditLog,
   catalogItems,
   companies,
   costCenters,
   memberships,
   people,
+  requisitionDecisions,
   requisitions,
   suppliers,
 } from './seed-data';
@@ -63,6 +65,14 @@ async function main() {
       skipDuplicates: true,
     });
     await seedRequisitions(prisma);
+    await prisma.requisitionDecision.createMany({
+      data: requisitionDecisions,
+      skipDuplicates: true,
+    });
+    await prisma.approvalRule.createMany({
+      data: approvalRules,
+      skipDuplicates: true,
+    });
     await prisma.auditLog.createMany({ data: auditLog, skipDuplicates: true });
   } finally {
     await prisma.$disconnect();

@@ -4,14 +4,14 @@ import { PrismaClient } from '@prisma/client';
 //  1. every table in the public schema has RLS enabled and forced,
 //  2. every table with a company_id column has at least one policy,
 //  3. the API role cannot bypass RLS (not superuser, no BYPASSRLS, owns nothing, inherits nothing),
-//  4. append-only tables (audit_log) have no update/delete/truncate privilege for the API role
-//     and no update, delete or catch-all policy,
+//  4. append-only tables (audit_log, requisition_decisions) have no update/delete/truncate
+//     privilege for the API role and no update, delete or catch-all policy,
 //  5. connected as the API role with no identity set, every table is empty to it
 //     even though the (seeded) tables hold rows.
 // DIRECT_URL is the database owner, DATABASE_URL the API role. Run after the seed is loaded.
 const NOT_AUDITED = ['_prisma_migrations'];
 // Tables the API may only insert into and select from, never change.
-const APPEND_ONLY = ['audit_log'];
+const APPEND_ONLY = ['audit_log', 'requisition_decisions'];
 
 interface TableRow {
   table: string;

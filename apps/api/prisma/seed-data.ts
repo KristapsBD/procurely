@@ -265,9 +265,13 @@ export const catalogItems = [
 
 export const REQUISITION = {
   aliceDraft: '00000000-0000-4000-8000-0000000000f1',
+  fridaApproved: '00000000-0000-4000-8000-0000000000f2',
 } as const;
 
-// One draft, so the requisition tables are not empty for the RLS audit. Tests make their own.
+const SEK_APPROVAL_NOTE = 'Approved for the spring stock-up';
+
+// Alice's draft, and one requisition decided by an admin in the SEK company (it has no approval
+// rules), so every requisition table has a row for the RLS audit. Tests make their own.
 export const requisitions = [
   {
     id: REQUISITION.aliceDraft,
@@ -276,5 +280,36 @@ export const requisitions = [
     costCenterCode: 'OPS',
     justification: 'Paper for the quarterly reports',
     lines: [{ catalogItemId: CATALOG_ITEM.mainPaper, quantity: 2 }],
+  },
+  {
+    id: REQUISITION.fridaApproved,
+    companyId: COMPANY.sek,
+    requesterPersonId: PERSON.frida,
+    costCenterCode: 'OPS',
+    justification: 'Paper for the spring',
+    status: 'APPROVED' as const,
+    approvalRoute: 'NO_RULES' as const,
+    decisionNote: SEK_APPROVAL_NOTE,
+    lines: [{ catalogItemId: CATALOG_ITEM.sekPaper, quantity: 1 }],
+  },
+];
+
+export const requisitionDecisions = [
+  {
+    companyId: COMPANY.sek,
+    requisitionId: REQUISITION.fridaApproved,
+    actorPersonId: PERSON.erik,
+    outcome: 'APPROVED' as const,
+    comment: SEK_APPROVAL_NOTE,
+  },
+];
+
+// Acme Trading and Nordic Supplies have no approval rules: an admin decides their requisitions.
+// One Megacorp rule keeps the table non-empty for the RLS audit.
+export const approvalRules = [
+  {
+    companyId: COMPANY.large,
+    thresholdMinor: 100000,
+    requiredRole: 'APPROVER' as const,
   },
 ];
