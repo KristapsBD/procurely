@@ -1111,7 +1111,7 @@
             "bearer": []
           }
         ],
-        "summary": "The person's own requisitions, newest first; an admin sees every one of the company.",
+        "summary": "Newest first: the person's own requisitions; for an approver also the submitted ones routed\nto approvers and those they decided; for an admin every one of the company.",
         "tags": [
           "Requisitions"
         ]
@@ -1298,7 +1298,7 @@
             "bearer": []
           }
         ],
-        "summary": "Draft to submitted. Refused unless it has a cost center, a justification and a line.",
+        "summary": "Draft to submitted, refused unless it has a cost center, a justification and a line. Under\nthe company's lowest approval threshold it is approved at once, with the reason in\ndecisionNote. A company without approval rules leaves it to an admin.",
         "tags": [
           "Requisitions"
         ]
@@ -1346,6 +1346,238 @@
         "summary": "Draft or submitted to cancelled. Cancelled is final.",
         "tags": [
           "Requisitions"
+        ]
+      }
+    },
+    "/requisitions/{id}/approve": {
+      "post": {
+        "operationId": "RequisitionsController_approve",
+        "parameters": [
+          {
+            "name": "x-company-id",
+            "in": "header",
+            "description": "The company the person acts in (a company UUID).",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApproveRequisitionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Requisition"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Submitted to approved, by an approver or admin the requisition's route admits. Never by the\nrequester. The comment is optional and shown to the requester.",
+        "tags": [
+          "Requisitions"
+        ]
+      }
+    },
+    "/requisitions/{id}/reject": {
+      "post": {
+        "operationId": "RequisitionsController_reject",
+        "parameters": [
+          {
+            "name": "x-company-id",
+            "in": "header",
+            "description": "The company the person acts in (a company UUID).",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RejectRequisitionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Requisition"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Submitted to rejected, by the same deciders. The reason is required and shown to the requester.",
+        "tags": [
+          "Requisitions"
+        ]
+      }
+    },
+    "/approval-rules": {
+      "get": {
+        "operationId": "ApprovalRulesController_list",
+        "parameters": [
+          {
+            "name": "x-company-id",
+            "in": "header",
+            "description": "The company the person acts in (a company UUID).",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ApprovalRule"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Lowest threshold first.",
+        "tags": [
+          "ApprovalRules"
+        ]
+      },
+      "post": {
+        "operationId": "ApprovalRulesController_create",
+        "parameters": [
+          {
+            "name": "x-company-id",
+            "in": "header",
+            "description": "The company the person acts in (a company UUID).",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateApprovalRuleRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalRule"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "A second rule at the same threshold is refused with 409.",
+        "tags": [
+          "ApprovalRules"
+        ]
+      }
+    },
+    "/approval-rules/{id}": {
+      "delete": {
+        "operationId": "ApprovalRulesController_remove",
+        "parameters": [
+          {
+            "name": "x-company-id",
+            "in": "header",
+            "description": "The company the person acts in (a company UUID).",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "ApprovalRules"
         ]
       }
     }
@@ -1816,8 +2048,20 @@
         "enum": [
           "DRAFT",
           "SUBMITTED",
+          "APPROVED",
+          "REJECTED",
           "CANCELLED"
         ]
+      },
+      "ApprovalRoute": {
+        "type": "string",
+        "enum": [
+          "APPROVER",
+          "ADMIN",
+          "UNDER_THRESHOLD",
+          "NO_RULES"
+        ],
+        "description": "Null while a draft, and on a draft that was cancelled."
       },
       "RequisitionLine": {
         "type": "object",
@@ -1858,7 +2102,9 @@
         "enum": [
           "edit",
           "submit",
-          "cancel"
+          "cancel",
+          "approve",
+          "reject"
         ],
         "description": "What the signed-in person may do to it now. Submitting a draft can still be refused when\nit is incomplete."
       },
@@ -1876,6 +2122,20 @@
                 "$ref": "#/components/schemas/RequisitionStatus"
               }
             ]
+          },
+          "approvalRoute": {
+            "nullable": true,
+            "description": "Null while a draft, and on a draft that was cancelled.",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ApprovalRoute"
+              }
+            ]
+          },
+          "decisionNote": {
+            "type": "string",
+            "nullable": true,
+            "description": "For the requester: the approver's comment, the rejection reason, or why the requisition was\napproved automatically. Null when there is none."
           },
           "lines": {
             "type": "array",
@@ -1913,6 +2173,8 @@
         "required": [
           "costCenterId",
           "status",
+          "approvalRoute",
+          "decisionNote",
           "lines",
           "actions",
           "id",
@@ -1962,6 +2224,82 @@
           "costCenterId",
           "lines",
           "justification"
+        ]
+      },
+      "ApproveRequisitionRequest": {
+        "type": "object",
+        "properties": {
+          "comment": {
+            "type": "string",
+            "description": "Shown to the requester. Optional; blank counts as none."
+          }
+        }
+      },
+      "RejectRequisitionRequest": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "description": "Shown to the requester. Required, not blank."
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      },
+      "ApproverRole": {
+        "type": "string",
+        "enum": [
+          "APPROVER",
+          "ADMIN"
+        ]
+      },
+      "ApprovalRule": {
+        "type": "object",
+        "properties": {
+          "requiredRole": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ApproverRole"
+              }
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "companyId": {
+            "type": "string"
+          },
+          "thresholdMinor": {
+            "type": "number",
+            "description": "Integer minor units of the company currency, zero or more."
+          }
+        },
+        "required": [
+          "requiredRole",
+          "id",
+          "companyId",
+          "thresholdMinor"
+        ]
+      },
+      "CreateApprovalRuleRequest": {
+        "type": "object",
+        "properties": {
+          "requiredRole": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ApproverRole"
+              }
+            ]
+          },
+          "thresholdMinor": {
+            "type": "number",
+            "description": "Integer minor units of the company currency, zero or more."
+          }
+        },
+        "required": [
+          "requiredRole",
+          "thresholdMinor"
         ]
       }
     }

@@ -10,7 +10,12 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth } from '@nestjs/swagger';
-import { Requisition, SaveRequisitionRequest } from '../contract/api.dto';
+import {
+  ApproveRequisitionRequest,
+  RejectRequisitionRequest,
+  Requisition,
+  SaveRequisitionRequest,
+} from '../contract/api.dto';
 import { ApiCompanyHeader } from '../contract/decorators';
 import { SessionGuard } from '../auth/session.guard';
 import { translateDbError } from '../tenancy/db-errors';
@@ -19,7 +24,11 @@ import {
   type CompanyRequestScope,
 } from '../tenancy/request-scope';
 import { TenantDb } from '../tenancy/tenant-db.service';
-import { parseSaveRequisition } from './requisition-input';
+import {
+  parseApproveComment,
+  parseRejectReason,
+  parseSaveRequisition,
+} from './requisition-input';
 import { RequisitionsService } from './requisitions.service';
 
 @Controller('requisitions')
@@ -32,7 +41,10 @@ export class RequisitionsController {
     private readonly requisitions: RequisitionsService,
   ) {}
 
-  /** The person's own requisitions, newest first; an admin sees every one of the company. */
+  /**
+   * Newest first: the person's own requisitions; for an approver also the submitted ones routed
+   * to approvers and those they decided; for an admin every one of the company.
+   */
   @Get()
   list(@CompanyScope() scope: CompanyRequestScope): Promise<Requisition[]> {
     return this.db.run(scope, (tx) => this.requisitions.list(tx, scope));
@@ -71,7 +83,11 @@ export class RequisitionsController {
       .catch(translateDbError);
   }
 
-  /** Draft to submitted. Refused unless it has a cost center, a justification and a line. */
+  /**
+   * Draft to submitted, refused unless it has a cost center, a justification and a line. Under
+   * the company's lowest approval threshold it is approved at once, with the reason in
+   * decisionNote. A company without approval rules leaves it to an admin.
+   */
   @Post(':id/submit')
   @HttpCode(200)
   submit(
@@ -92,6 +108,41 @@ export class RequisitionsController {
   ): Promise<Requisition> {
     return this.db
       .run(scope, (tx) => this.requisitions.transition(tx, scope, id, 'cancel'))
+      .catch(translateDbError);
+  }
+
+  /**
+   * Submitted to approved, by an approver or admin the requisition's route admits. Never by the
+   * requester. The comment is optional and shown to the requester.
+   */
+  @Post(':id/approve')
+  @HttpCode(200)
+  approve(
+    @CompanyScope() scope: CompanyRequestScope,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: ApproveRequisitionRequest,
+  ): Promise<Requisition> {
+    const comment = parseApproveComment(body);
+    return this.db
+      .run(scope, (tx) =>
+        this.requisitions.decide(tx, scope, id, 'approve', comment),
+      )
+      .catch(translateDbError);
+  }
+
+  /** Submitted to rejected, by the same deciders. The reason is required and shown to the requester. */
+  @Post(':id/reject')
+  @HttpCode(200)
+  reject(
+    @CompanyScope() scope: CompanyRequestScope,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: RejectRequisitionRequest,
+  ): Promise<Requisition> {
+    const reason = parseRejectReason(body);
+    return this.db
+      .run(scope, (tx) =>
+        this.requisitions.decide(tx, scope, id, 'reject', reason),
+      )
       .catch(translateDbError);
   }
 }
