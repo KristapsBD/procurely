@@ -70,6 +70,8 @@ describe('requisitions', () => {
         costCenterId: null,
         justification: '',
         status: 'DRAFT',
+        approvalRoute: null,
+        decisionNote: null,
         lines: [],
         totalMinor: 0,
         actions: ['edit', 'submit', 'cancel'],

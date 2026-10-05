@@ -130,4 +130,23 @@ export class Actor {
   cancelRequisition(companyId: string, id: string) {
     return this.call('post', `/requisitions/${id}/cancel`, companyId);
   }
+  approveRequisition(companyId: string, id: string, body: object = {}) {
+    return this.call('post', `/requisitions/${id}/approve`, companyId).send(
+      body,
+    );
+  }
+  rejectRequisition(companyId: string, id: string, body: object) {
+    return this.call('post', `/requisitions/${id}/reject`, companyId).send(
+      body,
+    );
+  }
+  listApprovalRules(companyId: string) {
+    return this.call('get', '/approval-rules', companyId);
+  }
+  createApprovalRule(companyId: string, body: object) {
+    return this.call('post', '/approval-rules', companyId).send(body);
+  }
+  deleteApprovalRule(companyId: string, id: string) {
+    return this.call('delete', `/approval-rules/${id}`, companyId);
+  }
 }
