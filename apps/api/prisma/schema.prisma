@@ -231,6 +231,8 @@ model AuditLog {
   entityId      String?  @map("entity_id") @db.Uuid
   details       Json?
   createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  /// Insertion order; breaks ties between entries written in one transaction.
+  seq           BigInt   @unique @default(autoincrement())
   company       Company  @relation(fields: [companyId], references: [id])
   actor         Person   @relation(fields: [actorPersonId], references: [id])
 
