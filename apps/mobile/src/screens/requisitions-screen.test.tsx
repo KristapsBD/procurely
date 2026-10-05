@@ -194,6 +194,114 @@ describe('RequisitionsScreen', () => {
     expect(await button('New requisition')).toBeTruthy();
   });
 
+  it('shows the reason when a submit is approved automatically', async () => {
+    const reason =
+      "Approved automatically: the total of 74.97 EUR is under the company's lowest approval threshold of 500.00 EUR.";
+    const approved: Requisition = {
+      ...printerPaper,
+      status: 'APPROVED',
+      approvalRoute: 'UNDER_THRESHOLD',
+      decisionNote: reason,
+      actions: [],
+    };
+    let current = printerPaper;
+    renderAs('REQUESTER', [], {
+      requisitions: async () => [current],
+      submitRequisition: async () => (current = approved),
+    });
+    fireEvent.press(await button('Open Printer paper'));
+    await pressToWrite(await button('Submit'));
+    expect(
+      await screen.findByText('Approved · requested by Alice'),
+    ).toBeTruthy();
+    expect(screen.getByText(reason)).toBeTruthy();
+    noButton('Cancel requisition');
+  });
+
+  it('shows the requester who decides, and then the decision with its note', async () => {
+    const decided = (change: Partial<Requisition>) =>
+      requisition(ACME, 'Printer paper', [{ item: paper, quantity: 3 }], {
+        approvalRoute: 'NO_RULES',
+        actions: [],
+        ...change,
+      });
+    renderAs('REQUESTER', [
+      decided({ status: 'SUBMITTED', actions: ['cancel'] }),
+    ]);
+    fireEvent.press(await button('Open Printer paper'));
+    expect(
+      await screen.findByText(
+        'The company has no approval rule, so an admin decides.',
+      ),
+    ).toBeTruthy();
+    noButton('Approve Printer paper');
+  });
+
+  it.each([
+    ['APPROVED', 'Within budget', "Approver's comment: Within budget"],
+    ['REJECTED', 'Use stock', 'Rejection reason: Use stock'],
+  ] as const)(
+    'shows a %s requisition’s note to the requester',
+    async (status, decisionNote, shown) => {
+      renderAs('REQUESTER', [
+        requisition(ACME, 'Printer paper', [{ item: paper, quantity: 3 }], {
+          status,
+          approvalRoute: 'NO_RULES',
+          decisionNote,
+          actions: [],
+        }),
+      ]);
+      fireEvent.press(await button('Open Printer paper'));
+      expect(await screen.findByText(shown)).toBeTruthy();
+      expect(
+        screen.getByText(
+          `${status === 'APPROVED' ? 'Approved' : 'Rejected'} · requested by Alice`,
+        ),
+      ).toBeTruthy();
+    },
+  );
+
+  it('lets an admin decide someone else’s submitted requisition but not edit it', async () => {
+    const api = renderAs(
+      'ADMIN',
+      [
+        requisition(ACME, 'Team paper', [{ item: paper, quantity: 1 }], {
+          requesterPersonId: 'p-rita',
+          requesterName: 'Rita',
+          status: 'SUBMITTED',
+          approvalRoute: 'NO_RULES',
+          actions: ['approve', 'reject'],
+        }),
+      ],
+      {
+        rejectRequisition: jest.fn(async (_t, _c, id, body) => ({
+          ...printerPaper,
+          id,
+          status: 'REJECTED' as const,
+          decisionNote: body.reason,
+          actions: [],
+        })),
+      },
+    );
+    fireEvent.press(await button('Open Team paper'));
+    expect(await button('Approve Team paper')).toBeTruthy();
+    noButton('Edit draft');
+    noButton('Cancel requisition');
+    fireEvent.changeText(
+      screen.getByLabelText('Reason for rejecting Team paper'),
+      'Not this quarter',
+    );
+    await pressToWrite(
+      screen.getByRole('button', { name: 'Reject Team paper' }),
+    );
+    expect(api.rejectRequisition).toHaveBeenCalledWith(
+      'token-alice',
+      ACME,
+      `${ACME}-req-Team paper`,
+      { reason: 'Not this quarter' },
+    );
+  });
+
   it.each(['BUYER', 'APPROVER'] as const)(
     'shows a %s no requisitions and does not ask for them',
     async (role) => {

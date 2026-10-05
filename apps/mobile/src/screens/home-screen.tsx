@@ -21,6 +21,8 @@ import {
   writeErrorMessage,
 } from '../features/data';
 import {
+  canDecideRequisitions,
+  canManageApprovalRules,
   canManageCostCenters,
   canRaiseRequisitions,
 } from '../features/permissions';
@@ -54,6 +56,18 @@ export function HomeScreen() {
                 <Button
                   label="Requisitions"
                   onPress={() => router.push('/requisitions')}
+                />
+              )}
+              {canDecideRequisitions(active.role) && (
+                <Button
+                  label="Approvals"
+                  onPress={() => router.push('/approvals')}
+                />
+              )}
+              {canManageApprovalRules(active.role) && (
+                <Button
+                  label="Approval rules"
+                  onPress={() => router.push('/approval-rules')}
                 />
               )}
             </View>

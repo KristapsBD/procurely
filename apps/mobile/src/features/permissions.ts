@@ -20,3 +20,16 @@ export function canRaiseRequisitions(role: Role): boolean {
 export function canManageCostCenters(role: Role): boolean {
   return role === 'ADMIN';
 }
+
+/**
+ * Approvers and admins have an approvals inbox. Which requisitions they may decide is the API's
+ * call (it offers approve and reject); the requester never decides their own.
+ */
+export function canDecideRequisitions(role: Role): boolean {
+  return role === 'APPROVER' || role === 'ADMIN';
+}
+
+/** Only admins add and delete approval rules. */
+export function canManageApprovalRules(role: Role): boolean {
+  return role === 'ADMIN';
+}
