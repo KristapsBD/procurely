@@ -9,13 +9,16 @@ import {
   type CreateSupplierRequest,
   type DevLoginRequest,
   type GoogleSessionRequest,
+  type InviteMemberRequest,
   type MeResponse,
+  type Member,
   type Requisition,
   type SaveRequisitionRequest,
   type SessionResponse,
   type Supplier,
   type UpdateCatalogItemRequest,
   type UpdateCostCenterRequest,
+  type UpdateMemberRequest,
   type UpdateSupplierRequest,
 } from '@procurely/shared-types';
 
@@ -104,6 +107,19 @@ export interface Api {
     companyId: string,
     id: string,
   ): Promise<Requisition>;
+  /** Admins see the whole roster. Anyone else sees at most their own membership. */
+  members(token: string, companyId: string): Promise<Member[]>;
+  inviteMember(
+    token: string,
+    companyId: string,
+    body: InviteMemberRequest,
+  ): Promise<Member>;
+  updateMember(
+    token: string,
+    companyId: string,
+    id: string,
+    body: UpdateMemberRequest,
+  ): Promise<Member>;
 }
 
 export class ApiError extends Error {
@@ -219,5 +235,10 @@ export function createApi(baseUrl: string, fetchFn: typeof fetch = fetch): Api {
       post(token, companyId, `/requisitions/${id}/submit`),
     cancelRequisition: (token, companyId, id) =>
       post(token, companyId, `/requisitions/${id}/cancel`),
+    members: (token, companyId) => get(token, companyId, '/members'),
+    inviteMember: (token, companyId, body) =>
+      post(token, companyId, '/members', body),
+    updateMember: (token, companyId, id, body) =>
+      patch(token, companyId, `/members/${id}`, body),
   };
 }
