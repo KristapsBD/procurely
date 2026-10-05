@@ -77,6 +77,8 @@ export function requisition(
     costCenterId: null,
     justification,
     status: 'DRAFT',
+    approvalRoute: null,
+    decisionNote: null,
     lines: priced,
     totalMinor: priced.reduce((sum, l) => sum + l.amountMinor, 0),
     actions: ['edit', 'submit', 'cancel'],
@@ -132,6 +134,11 @@ export function fakeApi(overrides: Partial<Api> = {}): Api {
     updateRequisition: notFaked,
     submitRequisition: notFaked,
     cancelRequisition: notFaked,
+    approveRequisition: notFaked,
+    rejectRequisition: notFaked,
+    approvalRules: async () => [],
+    createApprovalRule: notFaked,
+    deleteApprovalRule: notFaked,
     ...overrides,
   };
 }

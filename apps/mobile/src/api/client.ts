@@ -1,15 +1,19 @@
 import {
   COMPANY_HEADER,
+  type ApprovalRule,
+  type ApproveRequisitionRequest,
   type AuthOptions,
   type CatalogItem,
   type CompanyMembership,
   type CostCenter,
+  type CreateApprovalRuleRequest,
   type CreateCatalogItemRequest,
   type CreateCostCenterRequest,
   type CreateSupplierRequest,
   type DevLoginRequest,
   type GoogleSessionRequest,
   type MeResponse,
+  type RejectRequisitionRequest,
   type Requisition,
   type SaveRequisitionRequest,
   type SessionResponse,
@@ -104,6 +108,32 @@ export interface Api {
     companyId: string,
     id: string,
   ): Promise<Requisition>;
+  /** Someone else's submitted requisition, by an approver or admin its route admits. */
+  approveRequisition(
+    token: string,
+    companyId: string,
+    id: string,
+    body: ApproveRequisitionRequest,
+  ): Promise<Requisition>;
+  /** Like approve; the reason is required and shown to the requester. */
+  rejectRequisition(
+    token: string,
+    companyId: string,
+    id: string,
+    body: RejectRequisitionRequest,
+  ): Promise<Requisition>;
+  /** Lowest threshold first. Every member reads them; only admins change them. */
+  approvalRules(token: string, companyId: string): Promise<ApprovalRule[]>;
+  createApprovalRule(
+    token: string,
+    companyId: string,
+    body: CreateApprovalRuleRequest,
+  ): Promise<ApprovalRule>;
+  deleteApprovalRule(
+    token: string,
+    companyId: string,
+    id: string,
+  ): Promise<void>;
 }
 
 export class ApiError extends Error {
@@ -219,5 +249,15 @@ export function createApi(baseUrl: string, fetchFn: typeof fetch = fetch): Api {
       post(token, companyId, `/requisitions/${id}/submit`),
     cancelRequisition: (token, companyId, id) =>
       post(token, companyId, `/requisitions/${id}/cancel`),
+    approveRequisition: (token, companyId, id, body) =>
+      post(token, companyId, `/requisitions/${id}/approve`, body),
+    rejectRequisition: (token, companyId, id, body) =>
+      post(token, companyId, `/requisitions/${id}/reject`, body),
+    approvalRules: (token, companyId) =>
+      get(token, companyId, '/approval-rules'),
+    createApprovalRule: (token, companyId, body) =>
+      post(token, companyId, '/approval-rules', body),
+    deleteApprovalRule: (token, companyId, id) =>
+      del(token, companyId, `/approval-rules/${id}`),
   };
 }

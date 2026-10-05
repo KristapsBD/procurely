@@ -1,4 +1,5 @@
 import type {
+  ApprovalRule,
   CatalogItem,
   CompanyMembership,
   CostCenter,
@@ -93,6 +94,16 @@ export function useRequisitions(companyId: string) {
   return useQuery<Requisition[]>({
     queryKey: queryKeys.requisitions(companyId),
     queryFn: () => api.requisitions(required(token), companyId),
+    enabled: token !== null,
+  });
+}
+
+export function useApprovalRules(companyId: string) {
+  const api = useApi();
+  const token = useToken();
+  return useQuery<ApprovalRule[]>({
+    queryKey: queryKeys.approvalRules(companyId),
+    queryFn: () => api.approvalRules(required(token), companyId),
     enabled: token !== null,
   });
 }
