@@ -8,6 +8,8 @@ import {
 } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import type {
+  DecisionAction,
+  RequesterAction,
   Requisition,
   RequisitionAction,
   RequisitionLineInput,
@@ -15,12 +17,21 @@ import type {
 } from '../contract/api.dto';
 import { writeAudit } from '../audit/audit-log';
 import type { CompanyRequestScope } from '../tenancy/request-scope';
-import { REQUISITION_ROLES, rejectUnmatchedWrite } from '../tenancy/roles';
 import {
+  DECIDER_ROLES,
+  REQUISITION_ROLES,
+  rejectUnmatchedWrite,
+} from '../tenancy/roles';
+import {
+  type Actor,
   type Refusal,
+  approvalRequirement,
+  autoApprovalNote,
   decide,
+  decideApproval,
   lineAmount,
   offeredActions,
+  routeOf,
   totalOf,
 } from './requisition-lifecycle';
 
@@ -46,15 +57,19 @@ const AUDIT_ACTION: Record<RequisitionAction, string> = {
   edit: 'requisition.updated',
   submit: 'requisition.submitted',
   cancel: 'requisition.cancelled',
+  approve: 'requisition.approved',
+  reject: 'requisition.rejected',
 };
 
 const DONE: Record<RequisitionAction, string> = {
   edit: 'edited',
   submit: 'submitted',
   cancel: 'cancelled',
+  approve: 'approved',
+  reject: 'rejected',
 };
 
-function toRequisition(r: RequisitionRow, personId: string): Requisition {
+function toRequisition(r: RequisitionRow, actor: Actor): Requisition {
   const lines = r.lines.map((l) => ({
     id: l.id,
     catalogItemId: l.catalogItemId,
@@ -71,9 +86,11 @@ function toRequisition(r: RequisitionRow, personId: string): Requisition {
     costCenterId: r.costCenterId,
     justification: r.justification,
     status: r.status,
+    approvalRoute: r.approvalRoute,
+    decisionNote: r.decisionNote,
     lines,
     totalMinor: totalOf(lines),
-    actions: offeredActions(r, personId),
+    actions: offeredActions(r, actor),
   };
 }
 
@@ -82,6 +99,14 @@ function refusalError(refusal: Refusal): HttpException {
     case 'not-requester':
       return new ForbiddenException(
         'Only the requester may change a requisition',
+      );
+    case 'own-requisition':
+      return new ForbiddenException(
+        'You cannot approve or reject your own requisition',
+      );
+    case 'not-decider':
+      return new ForbiddenException(
+        'Your role may not approve or reject this requisition',
       );
     case 'not-now':
       return new ConflictException(
@@ -140,11 +165,25 @@ async function priceLines(
   });
 }
 
+/** The person asking and their role in the company they act in. */
+async function actorOf(tx: Tx, scope: CompanyRequestScope): Promise<Actor> {
+  const own = await tx.membership.findFirst({
+    where: {
+      companyId: scope.companyId,
+      personId: scope.personId,
+      active: true,
+    },
+    select: { role: true },
+  });
+  return { personId: scope.personId, role: own?.role ?? null };
+}
+
 /**
- * Requisitions of the person asking (an admin reads all of the company's). Every method runs
+ * Requisitions the person may read: their own, all of the company's for an admin, and for an
+ * approver the submitted ones routed to approvers and those they decided. Every method runs
  * inside the caller's TenantDb.run, so a change and its audit entry share one transaction.
  * Row-level security decides who sees and writes which rows; the requisition lifecycle module
- * decides which change is legal in which status.
+ * decides which change is legal in which status, and who decides by the approval rules.
  */
 @Injectable()
 export class RequisitionsService {
@@ -153,7 +192,8 @@ export class RequisitionsService {
       include: withDetails,
       orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
     });
-    return rows.map((r) => toRequisition(r, scope.personId));
+    const actor = await actorOf(tx, scope);
+    return rows.map((r) => toRequisition(r, actor));
   }
 
   async get(
@@ -166,7 +206,7 @@ export class RequisitionsService {
       include: withDetails,
     });
     if (!row) throw new NotFoundException();
-    return toRequisition(row, scope.personId);
+    return toRequisition(row, await actorOf(tx, scope));
   }
 
   async create(
@@ -218,44 +258,132 @@ export class RequisitionsService {
     return this.reread(tx, scope, id);
   }
 
+  /**
+   * Submit fixes who decides, by the company's rules now. Under every threshold it is approved
+   * at once, and the requester reads why.
+   */
   async transition(
     tx: Tx,
     scope: CompanyRequestScope,
     id: string,
     action: 'submit' | 'cancel',
   ): Promise<Requisition> {
-    const { from, to } = await this.loadForChange(tx, scope, id, action);
-    await tx.requisition.update({ where: { id }, data: { status: to } });
+    const { from, to, requirement, rules, totalMinor } =
+      await this.loadForChange(tx, scope, id, action);
+    const autoApproved = action === 'submit' && to === 'APPROVED';
+    const decisionNote = autoApproved
+      ? autoApprovalNote(totalMinor, rules, await this.currency(tx, scope))
+      : null;
+    await tx.requisition.update({
+      where: { id },
+      data:
+        action === 'submit'
+          ? { status: to, approvalRoute: routeOf(requirement), decisionNote }
+          : { status: to },
+    });
     await writeAudit(tx, scope, {
       action: AUDIT_ACTION[action],
       entityType: 'requisition',
       entityId: id,
       details: { from, to },
     });
+    if (autoApproved) {
+      await writeAudit(tx, scope, {
+        action: 'requisition.auto_approved',
+        entityType: 'requisition',
+        entityId: id,
+        details: { totalMinor, note: decisionNote },
+      });
+    }
+    return this.reread(tx, scope, id);
+  }
+
+  /** Approve (comment optional) or reject (reason required) someone else's submitted requisition. */
+  async decide(
+    tx: Tx,
+    scope: CompanyRequestScope,
+    id: string,
+    action: DecisionAction,
+    note: string | null,
+  ): Promise<Requisition> {
+    const row = await this.lock(tx, id);
+    if (!row) return rejectUnmatchedWrite(tx, scope, DECIDER_ROLES);
+    const decision = decideApproval(row, action, await actorOf(tx, scope));
+    if (!decision.allowed) throw refusalError(decision);
+    // The decision row first: it is what lets an approver read the requisition once decided.
+    await tx.requisitionDecision.createMany({
+      data: [
+        {
+          companyId: scope.companyId,
+          requisitionId: id,
+          actorPersonId: scope.personId,
+          outcome: decision.to,
+          comment: note,
+        },
+      ],
+    });
+    await tx.requisition.update({
+      where: { id },
+      data: { status: decision.to, decisionNote: note },
+    });
+    await writeAudit(tx, scope, {
+      action: AUDIT_ACTION[action],
+      entityType: 'requisition',
+      entityId: id,
+      details: {
+        from: row.status,
+        to: decision.to,
+        approvalRoute: row.approvalRoute,
+        note,
+      },
+    });
     return this.reread(tx, scope, id);
   }
 
   /**
-   * Locks the requisition, then asks the lifecycle whether the action is legal. The lock makes
-   * a concurrent edit, submit or cancel wait, so the decision holds until this one commits.
-   * FOR UPDATE only returns rows the person may change, so an admin reading someone else's
-   * requisition locks nothing, and the lifecycle then refuses them.
+   * Locks the requisition. The lock makes a concurrent change wait, so a decision holds until
+   * this one commits. FOR UPDATE only returns rows the person may change, so an admin reading
+   * someone else's draft locks nothing, and the lifecycle then refuses them.
    */
+  private async lock(tx: Tx, id: string) {
+    await tx.$queryRaw`SELECT id FROM requisitions WHERE id = ${id}::uuid FOR UPDATE`;
+    return tx.requisition.findUnique({
+      where: { id },
+      include: { lines: true },
+    });
+  }
+
+  /** Locks the requisition, then asks the lifecycle whether the requester's action is legal. */
   private async loadForChange(
     tx: Tx,
     scope: CompanyRequestScope,
     id: string,
-    action: RequisitionAction,
+    action: RequesterAction,
   ) {
-    await tx.$queryRaw`SELECT id FROM requisitions WHERE id = ${id}::uuid FOR UPDATE`;
-    const row = await tx.requisition.findUnique({
-      where: { id },
-      include: { lines: true },
-    });
+    const row = await this.lock(tx, id);
     if (!row) return rejectUnmatchedWrite(tx, scope, REQUISITION_ROLES);
-    const decision = decide(row, action, scope.personId);
+    const rules = await tx.approvalRule.findMany({
+      select: { thresholdMinor: true, requiredRole: true },
+    });
+    const totalMinor = totalOf(row.lines);
+    const requirement = approvalRequirement(rules, totalMinor);
+    const decision = decide(row, action, scope.personId, requirement);
     if (!decision.allowed) throw refusalError(decision);
-    return { from: row.status, to: decision.to };
+    return {
+      from: row.status,
+      to: decision.to,
+      requirement,
+      rules,
+      totalMinor,
+    };
+  }
+
+  private async currency(tx: Tx, scope: CompanyRequestScope): Promise<string> {
+    const company = await tx.company.findUniqueOrThrow({
+      where: { id: scope.companyId },
+      select: { currency: true },
+    });
+    return company.currency;
   }
 
   private async writeLines(
@@ -285,6 +413,6 @@ export class RequisitionsService {
       where: { id },
       include: withDetails,
     });
-    return toRequisition(row, scope.personId);
+    return toRequisition(row, await actorOf(tx, scope));
   }
 }

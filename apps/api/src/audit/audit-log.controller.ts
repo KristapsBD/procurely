@@ -25,7 +25,7 @@ export class AuditLogController {
   ): Promise<AuditEntry[]> {
     const rows = await this.db.run(scope, (tx) =>
       tx.auditLog.findMany({
-        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        orderBy: [{ createdAt: 'desc' }, { seq: 'desc' }],
         take: PAGE_SIZE,
       }),
     );

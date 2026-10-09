@@ -8,6 +8,9 @@ export const PURCHASING_ROLES: readonly Role[] = ['BUYER', 'ADMIN'];
 /** Who may raise and change their own requisitions (mirrors the row-level security policies). */
 export const REQUISITION_ROLES: readonly Role[] = ['REQUESTER', 'ADMIN'];
 
+/** Who may approve or reject someone else's requisition (mirrors the row-level security policies). */
+export const DECIDER_ROLES: readonly Role[] = ['APPROVER', 'ADMIN'];
+
 /**
  * Call when a write matched no rows. Row-level security hides rows the person may not
  * change, so "nothing matched" means no such row or not allowed. A member of the company

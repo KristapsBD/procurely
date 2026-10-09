@@ -25,7 +25,7 @@ Preconditions:
 - **Edit.** Open the seed draft, `Edit draft`, set quantity 4, `Save draft`: `Total 99.96 EUR`.
 - **Nordic.** On home click `Nordic Supplies`: line reads `you are approver` and there is no `Requisitions` button.
 - **Carol.** Sign in as Carol: no `Requisitions` button. Opening `/requisitions` directly shows `Requisitions are for requesters and admins.`
-- **Dave.** Sign in with Dave's person id. `Requisitions` lists Alice's rows. Opening one shows no action buttons.
+- **Dave.** Sign in with Dave's person id. `Requisitions` lists Alice's rows. Opening her draft shows no action buttons: an admin never edits someone else's draft. Acme has no approval rules, so a requisition Alice submitted shows `Approve …` and `Reject …` to Dave (see [Approvals](./approvals.md)), still with no `Edit draft` or `Cancel requisition`.
 - **Proof.** Snapshots of each state. Optionally `select action from audit_log where action like 'requisition.%'` in the db container.
 
 ## Gotchas

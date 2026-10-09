@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ApprovalRulesController } from './approval-rules/approval-rules.controller';
 import { AuditLogController } from './audit/audit-log.controller';
 import { AuthController } from './auth/auth.controller';
 import { GoogleAuthController } from './auth/google-auth.controller';
@@ -36,6 +37,7 @@ import { TenantDb } from './tenancy/tenant-db.service';
     SuppliersController,
     CatalogItemsController,
     RequisitionsController,
+    ApprovalRulesController,
   ],
   providers: [
     PrismaService,

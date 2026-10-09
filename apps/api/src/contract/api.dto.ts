@@ -185,12 +185,72 @@ export class UpdateCatalogItemRequest {
 export const REQUISITION_STATUSES = [
   'DRAFT',
   'SUBMITTED',
+  'APPROVED',
+  'REJECTED',
   'CANCELLED',
 ] as const;
 export type RequisitionStatus = (typeof REQUISITION_STATUSES)[number];
 
-export const REQUISITION_ACTIONS = ['edit', 'submit', 'cancel'] as const;
+/** What only the requester does to their requisition. */
+export const REQUESTER_ACTIONS = ['edit', 'submit', 'cancel'] as const;
+export type RequesterAction = (typeof REQUESTER_ACTIONS)[number];
+/** What a decider (never the requester) does to a submitted requisition. */
+export const DECISION_ACTIONS = ['approve', 'reject'] as const;
+export type DecisionAction = (typeof DECISION_ACTIONS)[number];
+export const REQUISITION_ACTIONS = [
+  ...REQUESTER_ACTIONS,
+  ...DECISION_ACTIONS,
+] as const;
 export type RequisitionAction = (typeof REQUISITION_ACTIONS)[number];
+
+/** The roles an approval rule may require. Requesters and buyers never approve. */
+export const APPROVER_ROLES = ['APPROVER', 'ADMIN'] as const;
+export type ApproverRole = (typeof APPROVER_ROLES)[number];
+
+/**
+ * Who decides a requisition, fixed when it leaves DRAFT: an approver or an admin (an approver
+ * rule), an admin (an admin rule), nobody because it was under every threshold and approved on
+ * submit, or an admin because the company had no approval rules.
+ */
+export const APPROVAL_ROUTES = [
+  'APPROVER',
+  'ADMIN',
+  'UNDER_THRESHOLD',
+  'NO_RULES',
+] as const;
+export type ApprovalRoute = (typeof APPROVAL_ROUTES)[number];
+
+/**
+ * From thresholdMinor on (inclusive), requiredRole approves. A requisition follows the rule with
+ * the greatest threshold at or below its total.
+ */
+export class ApprovalRule {
+  id!: string;
+  companyId!: string;
+  /** Integer minor units of the company currency, zero or more. */
+  thresholdMinor!: number;
+  @ApiProperty({ enum: APPROVER_ROLES, enumName: 'ApproverRole' })
+  requiredRole!: ApproverRole;
+}
+
+/** Thresholds are unique per company. To change a rule, delete it and create another. */
+export class CreateApprovalRuleRequest {
+  /** Integer minor units of the company currency, zero or more. */
+  thresholdMinor!: number;
+  @ApiProperty({ enum: APPROVER_ROLES, enumName: 'ApproverRole' })
+  requiredRole!: ApproverRole;
+}
+
+export class ApproveRequisitionRequest {
+  /** Shown to the requester. Optional; blank counts as none. */
+  @ApiPropertyOptional()
+  comment?: string;
+}
+
+export class RejectRequisitionRequest {
+  /** Shown to the requester. Required, not blank. */
+  reason!: string;
+}
 
 export class RequisitionLine {
   id!: string;
@@ -204,7 +264,10 @@ export class RequisitionLine {
   amountMinor!: number;
 }
 
-/** A request to buy catalog items, charged to a cost center. Only the requester changes it. */
+/**
+ * A request to buy catalog items, charged to a cost center. Only the requester edits, submits
+ * or cancels it; an approver or admin other than the requester approves or rejects it.
+ */
 export class Requisition {
   id!: string;
   companyId!: string;
@@ -216,6 +279,19 @@ export class Requisition {
   justification!: string;
   @ApiProperty({ enum: REQUISITION_STATUSES, enumName: 'RequisitionStatus' })
   status!: RequisitionStatus;
+  /** Null while a draft, and on a draft that was cancelled. */
+  @ApiProperty({
+    enum: APPROVAL_ROUTES,
+    enumName: 'ApprovalRoute',
+    nullable: true,
+  })
+  approvalRoute!: ApprovalRoute | null;
+  /**
+   * For the requester: the approver's comment, the rejection reason, or why the requisition was
+   * approved automatically. Null when there is none.
+   */
+  @ApiProperty({ type: String, nullable: true })
+  decisionNote!: string | null;
   @ApiProperty({ type: [RequisitionLine] })
   lines!: RequisitionLine[];
   /** Sum of the line amounts in integer minor units of the company currency. */

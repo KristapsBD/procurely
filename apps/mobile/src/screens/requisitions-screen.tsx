@@ -14,8 +14,10 @@ import {
   useSignOutWhenUnauthorized,
   writeErrorMessage,
 } from '../features/data';
+import { approvalNote } from '../features/approvals';
 import { formatMoney } from '../features/money';
 import { canRaiseRequisitions } from '../features/permissions';
+import { DecisionPanel } from './decision-panel';
 import { RequisitionForm } from './requisition-form';
 import { CompanyLine, WithActiveCompany } from './with-active-company';
 
@@ -27,6 +29,10 @@ export function statusLabel(status: RequisitionStatus): string {
       return 'Draft';
     case 'SUBMITTED':
       return 'Submitted';
+    case 'APPROVED':
+      return 'Approved';
+    case 'REJECTED':
+      return 'Rejected';
     case 'CANCELLED':
       return 'Cancelled';
     default: {
@@ -36,7 +42,7 @@ export function statusLabel(status: RequisitionStatus): string {
   }
 }
 
-function titleOf(r: Requisition): string {
+export function titleOf(r: Requisition): string {
   return r.justification === '' ? 'Untitled draft' : r.justification;
 }
 
@@ -157,6 +163,7 @@ function RequisitionDetail(props: {
   const [editing, setEditing] = useState(false);
   const costCenters = useCostCenters(company.companyId);
   const costCenter = costCenters.data?.find((c) => c.id === r.costCenterId);
+  const note = approvalNote(r);
   if (editing) {
     return (
       <RequisitionForm
@@ -173,6 +180,7 @@ function RequisitionDetail(props: {
       <Text style={styles.muted}>
         {`${statusLabel(r.status)} · requested by ${r.requesterName}`}
       </Text>
+      {note && <Text style={styles.body}>{note}</Text>}
       <Text style={styles.body}>
         {`Cost center: ${costCenter?.code ?? 'none yet'}`}
       </Text>
@@ -189,19 +197,27 @@ function RequisitionDetail(props: {
         requisition={r}
         onEdit={() => setEditing(true)}
       />
+      <DecisionPanel
+        companyId={company.companyId}
+        requisition={r}
+        title={titleOf(r)}
+      />
       <Button label="Back to requisitions" onPress={props.onBack} />
     </View>
   );
 }
 
-/** Exactly the actions the API offers this person on this requisition. */
+/** Exactly the requester's actions the API offers this person; DecisionPanel has the others. */
 function RequisitionActions(props: {
   company: CompanyMembership;
   requisition: Requisition;
   onEdit: () => void;
 }) {
   const { companyId } = props.company;
-  const { id, actions } = props.requisition;
+  const { id } = props.requisition;
+  const actions = props.requisition.actions.filter(
+    (a) => a !== 'approve' && a !== 'reject',
+  );
   const move = useCompanyMutation(
     companyId,
     (api, token, action: 'submit' | 'cancel') =>
@@ -233,6 +249,9 @@ function RequisitionActions(props: {
             onPress={() => move.mutate('cancel')}
           />
         );
+      case 'approve':
+      case 'reject':
+        return null;
       default: {
         const unhandled: never = action;
         return unhandled;

@@ -20,33 +20,58 @@ enum Role {
 enum RequisitionStatus {
   DRAFT
   SUBMITTED
+  APPROVED
+  REJECTED
   CANCELLED
 }
 
+/// The roles an approval rule may require. Requesters and buyers never approve.
+enum ApproverRole {
+  APPROVER
+  ADMIN
+}
+
+/// Who decides a requisition, fixed when it leaves DRAFT: the role of the applicable rule, nobody
+/// (under every threshold: approved on submit), or an admin (the company has no rules).
+enum ApprovalRoute {
+  APPROVER
+  ADMIN
+  UNDER_THRESHOLD
+  NO_RULES
+}
+
+enum DecisionOutcome {
+  APPROVED
+  REJECTED
+}
+
 model Company {
-  id           String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name         String
+  id            String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name          String
   /// ISO 4217 code. One currency per company; amounts are integer minor units.
-  currency     String        @db.Char(3)
-  memberships  Membership[]
-  costCenters  CostCenter[]
-  suppliers    Supplier[]
-  catalogItems CatalogItem[]
-  requisitions Requisition[]
-  auditLog     AuditLog[]
+  currency      String                @db.Char(3)
+  memberships   Membership[]
+  costCenters   CostCenter[]
+  suppliers     Supplier[]
+  catalogItems  CatalogItem[]
+  requisitions  Requisition[]
+  auditLog      AuditLog[]
+  approvalRules ApprovalRule[]
+  decisions     RequisitionDecision[]
 
   @@map("companies")
 }
 
 model Person {
-  id           String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email        String        @unique
+  id           String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email        String                @unique
   name         String
   /// Google's stable subject identifier, set at the first Google sign-in. Null until then.
-  googleSub    String?       @unique @map("google_sub")
+  googleSub    String?               @unique @map("google_sub")
   memberships  Membership[]
   requisitions Requisition[]
   auditLog     AuditLog[]
+  decisions    RequisitionDecision[]
 
   @@map("people")
 }
@@ -117,18 +142,25 @@ model CatalogItem {
 /// A request to buy catalog items, charged to a cost center. Never deleted: cancel instead.
 /// Its total is the sum of its line amounts, computed on read.
 model Requisition {
-  id                String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  companyId         String            @map("company_id") @db.Uuid
-  requesterPersonId String            @map("requester_person_id") @db.Uuid
+  id                String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId         String                @map("company_id") @db.Uuid
+  requesterPersonId String                @map("requester_person_id") @db.Uuid
   /// Null while a draft has none. The foreign key also covers company_id.
-  costCenterId      String?           @map("cost_center_id") @db.Uuid
-  justification     String            @default("")
-  status            RequisitionStatus @default(DRAFT)
-  createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
-  company           Company           @relation(fields: [companyId], references: [id])
-  requester         Person            @relation(fields: [requesterPersonId], references: [id])
-  costCenter        CostCenter?       @relation(fields: [companyId, costCenterId], references: [companyId, id], onDelete: Restrict)
+  costCenterId      String?               @map("cost_center_id") @db.Uuid
+  justification     String                @default("")
+  status            RequisitionStatus     @default(DRAFT)
+  /// Null while a draft, and on a draft that was cancelled.
+  approvalRoute     ApprovalRoute?        @map("approval_route")
+  /// What the requester reads about the outcome: the approver's comment, the rejection reason,
+  /// or why it was approved automatically.
+  decisionNote      String?               @map("decision_note")
+  createdAt         DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  company           Company               @relation(fields: [companyId], references: [id])
+  requester         Person                @relation(fields: [requesterPersonId], references: [id])
+  costCenter        CostCenter?           @relation(fields: [companyId, costCenterId], references: [companyId, id], onDelete: Restrict)
   lines             RequisitionLine[]
+  /// At most one: requisition_id is unique.
+  decisions         RequisitionDecision[]
 
   @@unique([companyId, id])
   @@index([companyId, requesterPersonId])
@@ -155,6 +187,39 @@ model RequisitionLine {
   @@map("requisition_lines")
 }
 
+/// "From this amount on, this role approves." Thresholds are inclusive. Never updated: a change
+/// is a delete plus a create.
+model ApprovalRule {
+  id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId      String       @map("company_id") @db.Uuid
+  /// Integer minor units of the company currency, zero or more.
+  thresholdMinor Int          @map("threshold_minor")
+  requiredRole   ApproverRole @map("required_role")
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  company        Company      @relation(fields: [companyId], references: [id])
+
+  @@unique([companyId, thresholdMinor])
+  @@map("approval_rules")
+}
+
+/// A person's approval or rejection of a submitted requisition. Append-only, one per requisition.
+/// An automatic approval has none.
+model RequisitionDecision {
+  id            String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId     String          @map("company_id") @db.Uuid
+  requisitionId String          @unique @map("requisition_id") @db.Uuid
+  actorPersonId String          @map("actor_person_id") @db.Uuid
+  outcome       DecisionOutcome
+  /// Optional on an approval, the required reason on a rejection.
+  comment       String?
+  createdAt     DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  company       Company         @relation(fields: [companyId], references: [id])
+  requisition   Requisition     @relation(fields: [companyId, requisitionId], references: [companyId, id])
+  actor         Person          @relation(fields: [actorPersonId], references: [id])
+
+  @@map("requisition_decisions")
+}
+
 /// Append-only: the API role can insert and select (admins only) but never update or delete.
 model AuditLog {
   id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -166,6 +231,8 @@ model AuditLog {
   entityId      String?  @map("entity_id") @db.Uuid
   details       Json?
   createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  /// Insertion order; breaks ties between entries written in one transaction.
+  seq           BigInt   @unique @default(autoincrement())
   company       Company  @relation(fields: [companyId], references: [id])
   actor         Person   @relation(fields: [actorPersonId], references: [id])
 

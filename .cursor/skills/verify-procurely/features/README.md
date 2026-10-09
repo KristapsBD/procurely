@@ -31,4 +31,5 @@ Maintained source for verifying user-facing behavior of the Expo **web** app aga
 - [Suppliers](./suppliers.md) — list, buyer add/rename/deactivate, requester read-only.
 - [Catalog](./catalog.md) — prices, inactive supplier, buyer edit, requester read-only.
 - [Requisitions](./requisitions.md) — create, edit, submit, cancel; admin read-only; no entry for buyers and approvers.
+- [Approvals](./approvals.md) — admin approval rules, auto-approval under the threshold, approver inbox approve/reject, no self-approval.
 - [Members](./members.md) — admin list, invite, role, deactivate; no entry for other roles.
