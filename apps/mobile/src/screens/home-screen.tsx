@@ -22,6 +22,7 @@ import {
 } from '../features/data';
 import {
   canManageCostCenters,
+  canManageMembers,
   canRaiseRequisitions,
 } from '../features/permissions';
 import { useSession } from '../session/session';
@@ -54,6 +55,12 @@ export function HomeScreen() {
                 <Button
                   label="Requisitions"
                   onPress={() => router.push('/requisitions')}
+                />
+              )}
+              {canManageMembers(active.role) && (
+                <Button
+                  label="Members"
+                  onPress={() => router.push('/members')}
                 />
               )}
             </View>

@@ -20,3 +20,8 @@ export function canRaiseRequisitions(role: Role): boolean {
 export function canManageCostCenters(role: Role): boolean {
   return role === 'ADMIN';
 }
+
+/** Only admins invite people and change memberships. */
+export function canManageMembers(role: Role): boolean {
+  return role === 'ADMIN';
+}

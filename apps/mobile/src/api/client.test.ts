@@ -118,6 +118,42 @@ describe('createApi writes', () => {
     );
   });
 
+  it('invites and updates a member in the named company', async () => {
+    const fetchFn = jest.fn(async () => jsonResponse({}));
+    const api = createApi('http://api.test', fetchFn);
+    await api.members('tok', 'company-1');
+    await api.inviteMember('tok', 'company-1', {
+      email: 'a@x.test',
+      role: 'BUYER',
+    });
+    await api.updateMember('tok', 'company-1', 'member-1', { active: false });
+
+    expect(fetchFn).toHaveBeenNthCalledWith(
+      1,
+      'http://api.test/members',
+      expect.objectContaining({
+        method: 'GET',
+        headers: { authorization: 'Bearer tok', [COMPANY_HEADER]: 'company-1' },
+      }),
+    );
+    expect(fetchFn).toHaveBeenNthCalledWith(
+      2,
+      'http://api.test/members',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ email: 'a@x.test', role: 'BUYER' }),
+      }),
+    );
+    expect(fetchFn).toHaveBeenNthCalledWith(
+      3,
+      'http://api.test/members/member-1',
+      expect.objectContaining({
+        method: 'PATCH',
+        body: JSON.stringify({ active: false }),
+      }),
+    );
+  });
+
   it('carries the API’s explanation of a refusal', async () => {
     const fetchFn = jest.fn(async () =>
       jsonResponse({ message: 'Already exists', statusCode: 409 }, 409),
