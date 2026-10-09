@@ -3,6 +3,7 @@ import type {
   CompanyMembership,
   CostCenter,
   MeResponse,
+  Member,
   Requisition,
   Role,
   SessionResponse,
@@ -28,6 +29,23 @@ export function membership(
 
 export function costCenter(companyId: string, code: string): CostCenter {
   return { id: `${companyId}-${code}`, companyId, code, name: `${code} name` };
+}
+
+export function member(
+  companyId: string,
+  name: string,
+  role: Role = 'REQUESTER',
+  active = true,
+): Member {
+  const slug = name.toLowerCase().replace(/\s+/g, '.');
+  return {
+    id: `${companyId}-${slug}`,
+    personId: `person-${slug}`,
+    email: `${slug}@x.test`,
+    name,
+    role,
+    active,
+  };
 }
 
 export function supplier(
@@ -139,6 +157,9 @@ export function fakeApi(overrides: Partial<Api> = {}): Api {
     approvalRules: async () => [],
     createApprovalRule: notFaked,
     deleteApprovalRule: notFaked,
+    members: async () => [],
+    inviteMember: notFaked,
+    updateMember: notFaked,
     ...overrides,
   };
 }

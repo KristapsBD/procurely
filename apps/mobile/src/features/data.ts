@@ -3,6 +3,7 @@ import type {
   CatalogItem,
   CompanyMembership,
   CostCenter,
+  Member,
   Requisition,
   Supplier,
 } from '@procurely/shared-types';
@@ -104,6 +105,16 @@ export function useApprovalRules(companyId: string) {
   return useQuery<ApprovalRule[]>({
     queryKey: queryKeys.approvalRules(companyId),
     queryFn: () => api.approvalRules(required(token), companyId),
+    enabled: token !== null,
+  });
+}
+
+export function useMembers(companyId: string) {
+  const api = useApi();
+  const token = useToken();
+  return useQuery<Member[]>({
+    queryKey: queryKeys.members(companyId),
+    queryFn: () => api.members(required(token), companyId),
     enabled: token !== null,
   });
 }

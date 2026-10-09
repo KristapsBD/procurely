@@ -54,6 +54,7 @@ function Routes() {
           name="approval-rules"
           options={{ title: 'Approval rules' }}
         />
+        <Stack.Screen name="members" options={{ title: 'Members' }} />
       </Stack.Protected>
       <Stack.Protected guard={!signedIn}>
         <Stack.Screen name="login" options={{ title: 'Sign in' }} />

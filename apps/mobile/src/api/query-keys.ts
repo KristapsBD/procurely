@@ -19,6 +19,7 @@ export const queryKeys = {
     ['company', companyId, 'requisitions'] as const,
   approvalRules: (companyId: string) =>
     ['company', companyId, 'approval-rules'] as const,
+  members: (companyId: string) => ['company', companyId, 'members'] as const,
 };
 
 export function isOtherCompanyQuery(query: Query, companyId: string) {

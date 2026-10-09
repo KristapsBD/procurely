@@ -24,6 +24,7 @@ import {
   canDecideRequisitions,
   canManageApprovalRules,
   canManageCostCenters,
+  canManageMembers,
   canRaiseRequisitions,
 } from '../features/permissions';
 import { useSession } from '../session/session';
@@ -68,6 +69,12 @@ export function HomeScreen() {
                 <Button
                   label="Approval rules"
                   onPress={() => router.push('/approval-rules')}
+                />
+              )}
+              {canManageMembers(active.role) && (
+                <Button
+                  label="Members"
+                  onPress={() => router.push('/members')}
                 />
               )}
             </View>

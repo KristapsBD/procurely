@@ -33,3 +33,8 @@ export function canDecideRequisitions(role: Role): boolean {
 export function canManageApprovalRules(role: Role): boolean {
   return role === 'ADMIN';
 }
+
+/** Only admins invite people and change memberships. */
+export function canManageMembers(role: Role): boolean {
+  return role === 'ADMIN';
+}
