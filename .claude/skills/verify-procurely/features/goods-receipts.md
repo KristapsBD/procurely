@@ -19,7 +19,7 @@ A buyer or admin confirms deliveries against the lines of a purchase order, with
 
 Preconditions:
 
-- Doctor is green. Fresh seed. Acme has no approved requisition in the seed, so this recipe makes one and its order, and needs a reseed afterwards.
+- Doctor is green. Fresh seed. This recipe makes its own requisition and order (`Toner and pens`) so it does not disturb the seeded ones, and needs a reseed afterwards. The seeded orders already show each status; see [Seed dataset](./seed-dataset.md).
 
 - **Prepare.** Follow the Prepare and Create steps of [Purchase orders](./purchase-orders.md) (justification `Toner and pens`, quantity `3`, price `24.00`), then stay signed in as Carol on the order detail.
 - **Partial.** `Status: Issued` and `Nothing received yet.` are shown. Type `2` into `Received now of A4 copy paper, box of 5 reams` and `one box dented` into `Note for A4 copy paper, box of 5 reams`. Click `Record delivery`. Expect `Status: Partially received`, `A4 copy paper, box of 5 reams: 2 of 3 received` and a history line `+2 × A4 copy paper, box of 5 reams (one box dented)`.

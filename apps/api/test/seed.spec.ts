@@ -75,7 +75,7 @@ describe('seed', () => {
 
   it('has the same rows on every machine and every run', () => {
     expect(fingerprint(rows)).toBe(
-      'f576af57a498c0f9eb141856a1f35c4600a4567fbad39138468b9f6293b2cb4d',
+      '30187d26900b716e75a5f9638497d2afbdab31f81dd48e47407f92b70efcbef3',
     );
     expect(fingerprint(seedRows())).toBe(fingerprint(rows));
   });
