@@ -313,3 +313,13 @@ export const approvalRules = [
     requiredRole: 'APPROVER' as const,
   },
 ];
+
+// One phone, registered for the one company its person acts in. Carol is a buyer, who is never
+// notified, so no test traffic reaches it. It keeps the table non-empty for the RLS audit.
+export const pushDevices = [
+  {
+    companyId: COMPANY.main,
+    personId: PERSON.carol,
+    token: 'ExponentPushToken[seeded-carol-phone]',
+  },
+];
