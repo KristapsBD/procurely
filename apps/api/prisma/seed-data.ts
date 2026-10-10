@@ -460,26 +460,40 @@ const receipt = (
   })),
 });
 
-const decided = (
-  status: 'APPROVED' | 'REJECTED',
+const approved = (
   submitIso: string,
   by: string,
   iso: string,
   comment: string | null,
+  order?: OrderSpec,
 ): Outcome => ({
-  status,
-  at: at(submitIso),
+  status: 'APPROVED',
+  submittedAt: at(submitIso),
+  decision: { by, at: at(iso), comment },
+  order,
+});
+
+const rejected = (
+  submitIso: string,
+  by: string,
+  iso: string,
+  comment: string,
+): Outcome => ({
+  status: 'REJECTED',
+  submittedAt: at(submitIso),
   decision: { by, at: at(iso), comment },
 });
 
 const submitted = (iso: string): Outcome => ({
   status: 'SUBMITTED',
-  at: at(iso),
+  submittedAt: at(iso),
 });
 
-const autoApproved = (iso: string): Outcome => ({
+const autoApproved = (iso: string, order?: OrderSpec): Outcome => ({
   status: 'APPROVED',
-  at: at(iso),
+  submittedAt: at(iso),
+  decision: 'automatic',
+  order,
 });
 
 interface Story {
@@ -490,7 +504,6 @@ interface Story {
   lines: LineSpec[];
   created: string;
   outcome: Outcome;
-  order?: OrderSpec;
 }
 
 const storyOf =
@@ -504,7 +517,6 @@ const storyOf =
     lines: s.lines,
     createdAt: at(s.created),
     outcome: s.outcome,
-    order: s.order,
   });
 
 const acme = storyOf(COMPANY.main);
@@ -540,8 +552,7 @@ export const storyHistories: RequisitionHistory[] = [
     why: 'Premium headsets for the sales floor',
     lines: lines([ACME.headset.id, 6]),
     created: '2026-08-05T10:00:00Z',
-    outcome: decided(
-      'REJECTED',
+    outcome: rejected(
       '2026-08-05T10:30:00Z',
       dave,
       '2026-08-06T08:15:00Z',
@@ -558,7 +569,7 @@ export const storyHistories: RequisitionHistory[] = [
     outcome: {
       status: 'CANCELLED',
       from: 'DRAFT',
-      at: at('2026-08-07T11:20:00Z'),
+      cancelledAt: at('2026-08-07T11:20:00Z'),
     },
   }),
   acme({
@@ -572,7 +583,7 @@ export const storyHistories: RequisitionHistory[] = [
       status: 'CANCELLED',
       from: 'SUBMITTED',
       submittedAt: at('2026-08-10T14:10:00Z'),
-      at: at('2026-08-11T09:00:00Z'),
+      cancelledAt: at('2026-08-11T09:00:00Z'),
     },
   }),
   acme({
@@ -582,8 +593,7 @@ export const storyHistories: RequisitionHistory[] = [
     why: 'Toner for the third floor printers',
     lines: lines([ACME.toner.id, 4]),
     created: '2026-08-14T08:30:00Z',
-    outcome: decided(
-      'APPROVED',
+    outcome: approved(
       '2026-08-14T08:45:00Z',
       dave,
       '2026-08-15T10:00:00Z',
@@ -597,19 +607,18 @@ export const storyHistories: RequisitionHistory[] = [
     why: 'Replacement keyboards for the support team',
     lines: lines([ACME.keyboard.id, 10]),
     created: '2026-08-17T09:00:00Z',
-    outcome: decided(
-      'APPROVED',
+    outcome: approved(
       '2026-08-17T09:10:00Z',
       dave,
       '2026-08-17T15:00:00Z',
       null,
+      {
+        id: PURCHASE_ORDER.aliceIssued,
+        by: carol,
+        at: at('2026-08-18T09:00:00Z'),
+        receipts: [],
+      },
     ),
-    order: {
-      id: PURCHASE_ORDER.aliceIssued,
-      by: carol,
-      at: at('2026-08-18T09:00:00Z'),
-      receipts: [],
-    },
   }),
   acme({
     id: REQUISITION.paulaPartial,
@@ -618,25 +627,30 @@ export const storyHistories: RequisitionHistory[] = [
     why: 'Monitors for the new analytics team',
     lines: lines([ACME.monitor.id, 10]),
     created: '2026-08-19T09:00:00Z',
-    outcome: decided(
-      'APPROVED',
+    outcome: approved(
       '2026-08-19T09:20:00Z',
       dave,
       '2026-08-19T16:00:00Z',
       'Approved, please order from TechWorld',
+      {
+        id: PURCHASE_ORDER.paulaPartial,
+        by: carol,
+        at: at('2026-08-20T09:00:00Z'),
+        receipts: [
+          receipt(
+            PURCHASE_ORDER.paulaPartial,
+            1,
+            carol,
+            '2026-08-27T13:00:00Z',
+            [
+              0,
+              6,
+              'Four monitors arrived with cracked screens. TechWorld will redeliver.',
+            ],
+          ),
+        ],
+      },
     ),
-    order: {
-      id: PURCHASE_ORDER.paulaPartial,
-      by: carol,
-      at: at('2026-08-20T09:00:00Z'),
-      receipts: [
-        receipt(PURCHASE_ORDER.paulaPartial, 1, carol, '2026-08-27T13:00:00Z', [
-          0,
-          6,
-          'Four monitors arrived with cracked screens. TechWorld will redeliver.',
-        ]),
-      ],
-    },
   }),
   acme({
     id: REQUISITION.aliceFullyReceived,
@@ -645,41 +659,44 @@ export const storyHistories: RequisitionHistory[] = [
     why: 'Laptops for the autumn interns',
     lines: lines([CATALOG_ITEM.mainLaptop, 5]),
     created: '2026-08-21T09:00:00Z',
-    outcome: decided(
-      'APPROVED',
+    outcome: approved(
       '2026-08-21T09:15:00Z',
       dave,
       '2026-08-21T14:00:00Z',
       'Approved',
+      {
+        id: PURCHASE_ORDER.aliceFullyReceived,
+        by: carol,
+        at: at('2026-08-22T09:00:00Z'),
+        receipts: [
+          receipt(
+            PURCHASE_ORDER.aliceFullyReceived,
+            1,
+            carol,
+            '2026-08-28T10:00:00Z',
+            [0, 5],
+          ),
+          receipt(
+            PURCHASE_ORDER.aliceFullyReceived,
+            2,
+            carol,
+            '2026-08-28T15:00:00Z',
+            [
+              0,
+              -1,
+              'One laptop was the wrong model and went back to TechWorld.',
+            ],
+          ),
+          receipt(
+            PURCHASE_ORDER.aliceFullyReceived,
+            3,
+            carol,
+            '2026-09-03T11:00:00Z',
+            [0, 1, 'Replacement laptop delivered.'],
+          ),
+        ],
+      },
     ),
-    order: {
-      id: PURCHASE_ORDER.aliceFullyReceived,
-      by: carol,
-      at: at('2026-08-22T09:00:00Z'),
-      receipts: [
-        receipt(
-          PURCHASE_ORDER.aliceFullyReceived,
-          1,
-          carol,
-          '2026-08-28T10:00:00Z',
-          [0, 5],
-        ),
-        receipt(
-          PURCHASE_ORDER.aliceFullyReceived,
-          2,
-          carol,
-          '2026-08-28T15:00:00Z',
-          [0, -1, 'One laptop was the wrong model and went back to TechWorld.'],
-        ),
-        receipt(
-          PURCHASE_ORDER.aliceFullyReceived,
-          3,
-          carol,
-          '2026-09-03T11:00:00Z',
-          [0, 1, 'Replacement laptop delivered.'],
-        ),
-      ],
-    },
   }),
   acme({
     id: REQUISITION.paulaClosed,
@@ -688,37 +705,40 @@ export const storyHistories: RequisitionHistory[] = [
     why: 'Paper and folders for the audit',
     lines: lines([CATALOG_ITEM.mainPaper, 20], [ACME.folders.id, 10]),
     created: '2026-08-24T09:00:00Z',
-    outcome: decided(
-      'APPROVED',
+    outcome: approved(
       '2026-08-24T09:10:00Z',
       dave,
       '2026-08-24T13:00:00Z',
       null,
+      {
+        id: PURCHASE_ORDER.paulaClosed,
+        by: carol,
+        at: at('2026-08-25T09:00:00Z'),
+        lines: [
+          {
+            catalogItemId: CATALOG_ITEM.mainPaper,
+            quantity: 20,
+            unitPriceMinor: 2399,
+          },
+          {
+            catalogItemId: ACME.folders.id,
+            quantity: 10,
+            unitPriceMinor: 1560,
+          },
+        ],
+        receipts: [
+          receipt(
+            PURCHASE_ORDER.paulaClosed,
+            1,
+            carol,
+            '2026-08-31T09:00:00Z',
+            [0, 20],
+            [1, 10],
+          ),
+        ],
+        closure: { by: carol, at: at('2026-09-01T09:00:00Z') },
+      },
     ),
-    order: {
-      id: PURCHASE_ORDER.paulaClosed,
-      by: carol,
-      at: at('2026-08-25T09:00:00Z'),
-      lines: [
-        {
-          catalogItemId: CATALOG_ITEM.mainPaper,
-          quantity: 20,
-          unitPriceMinor: 2399,
-        },
-        { catalogItemId: ACME.folders.id, quantity: 10, unitPriceMinor: 1560 },
-      ],
-      receipts: [
-        receipt(
-          PURCHASE_ORDER.paulaClosed,
-          1,
-          carol,
-          '2026-08-31T09:00:00Z',
-          [0, 20],
-          [1, 10],
-        ),
-      ],
-      closure: { by: carol, at: at('2026-09-01T09:00:00Z') },
-    },
   }),
 
   nordic({
@@ -728,27 +748,26 @@ export const storyHistories: RequisitionHistory[] = [
     why: 'Paper for the spring',
     lines: lines([CATALOG_ITEM.sekPaper, 1]),
     created: '2026-01-12T09:00:00Z',
-    outcome: decided(
-      'APPROVED',
+    outcome: approved(
       '2026-01-12T09:10:00Z',
       erik,
       '2026-01-13T08:00:00Z',
       SEK_APPROVAL_NOTE,
+      {
+        id: PURCHASE_ORDER.fridaPaper,
+        by: erik,
+        at: at('2026-01-14T09:00:00Z'),
+        receipts: [
+          {
+            id: '00000000-0000-4000-8000-000000000111',
+            by: erik,
+            at: at('2026-01-20T09:00:00Z'),
+            lines: [{ position: 0, quantity: 1, note: null }],
+          },
+        ],
+        closure: { by: erik, at: at('2026-01-21T09:00:00Z') },
+      },
     ),
-    order: {
-      id: PURCHASE_ORDER.fridaPaper,
-      by: erik,
-      at: at('2026-01-14T09:00:00Z'),
-      receipts: [
-        {
-          id: '00000000-0000-4000-8000-000000000111',
-          by: erik,
-          at: at('2026-01-20T09:00:00Z'),
-          lines: [{ position: 0, quantity: 1, note: null }],
-        },
-      ],
-      closure: { by: erik, at: at('2026-01-21T09:00:00Z') },
-    },
   }),
   nordic({
     id: REQUISITION.fridaAdminRoute,
@@ -766,13 +785,12 @@ export const storyHistories: RequisitionHistory[] = [
     why: 'Paper and pens for the autumn campaign',
     lines: lines([CATALOG_ITEM.sekPaper, 10], [NORDIC.pens.id, 5]),
     created: '2026-08-22T09:00:00Z',
-    outcome: autoApproved('2026-08-22T09:15:00Z'),
-    order: {
+    outcome: autoApproved('2026-08-22T09:15:00Z', {
       id: PURCHASE_ORDER.fridaAutoApproved,
       by: kerstin,
       at: at('2026-08-23T09:00:00Z'),
       receipts: [],
-    },
+    }),
   }),
 
   mega({
@@ -800,19 +818,18 @@ export const storyHistories: RequisitionHistory[] = [
     why: 'Gloves for the maintenance crew',
     lines: lines([MEGA.gloves.id, 19], [MEGA.weldingGloves.id, 1]),
     created: '2026-08-06T09:00:00Z',
-    outcome: decided(
-      'APPROVED',
+    outcome: approved(
       '2026-08-06T09:10:00Z',
       hanna,
       '2026-08-07T08:00:00Z',
       'Approved. Keep the delivery note for the audit.',
+      {
+        id: PURCHASE_ORDER.lukasOverThreshold,
+        by: jonas,
+        at: at('2026-08-08T09:00:00Z'),
+        receipts: [],
+      },
     ),
-    order: {
-      id: PURCHASE_ORDER.lukasOverThreshold,
-      by: jonas,
-      at: at('2026-08-08T09:00:00Z'),
-      receipts: [],
-    },
   }),
   mega({
     id: REQUISITION.gustavOwn,
@@ -839,8 +856,7 @@ export const storyHistories: RequisitionHistory[] = [
     why: 'Extra shelving for the spare parts store',
     lines: lines([MEGA.shelving.id, 5]),
     created: '2026-08-09T09:00:00Z',
-    outcome: decided(
-      'REJECTED',
+    outcome: rejected(
       '2026-08-09T09:10:00Z',
       hanna,
       '2026-08-10T08:30:00Z',

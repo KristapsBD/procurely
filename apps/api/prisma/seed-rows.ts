@@ -17,6 +17,7 @@ import { reference, storyHistories } from './seed-data';
 import { membershipId, rulesAsOf, seedId } from './seed-kit';
 import type {
   At,
+  Decision,
   OrderSpec,
   Outcome,
   ReceiptSpec,
@@ -312,17 +313,18 @@ function submit(w: Walk, at: At): void {
   };
 }
 
-type Decided = Extract<Outcome, { status: 'APPROVED' | 'REJECTED' }>;
-
-function decideStep(w: Walk, o: Decided): void {
-  const { decision } = o;
-  must(decision, `${w.h.id}: no decision to apply`);
-  ascending(`${w.h.id} decision`, o.at, decision.at);
+function decideStep(
+  w: Walk,
+  status: 'APPROVED' | 'REJECTED',
+  submittedAt: At,
+  decision: Decision,
+): void {
+  ascending(`${w.h.id} decision`, submittedAt, decision.at);
   must(
-    o.status === 'APPROVED' || decision.comment?.trim(),
+    status === 'APPROVED' || decision.comment?.trim(),
     `${w.h.id}: a rejection needs a reason`,
   );
-  const action = o.status === 'APPROVED' ? 'approve' : 'reject';
+  const action = status === 'APPROVED' ? 'approve' : 'reject';
   const actor = {
     personId: decision.by,
     role: w.ctx.roleOf(w.h.companyId, decision.by),
@@ -335,7 +337,7 @@ function decideStep(w: Walk, o: Decided): void {
   recordRequisition(
     w,
     decision.at,
-    `requisition.${o.status.toLowerCase()}`,
+    `requisition.${status.toLowerCase()}`,
     decision.by,
     {
       from: 'SUBMITTED',
@@ -362,26 +364,33 @@ function walkOutcome(w: Walk): void {
     case 'DRAFT':
       return;
     case 'SUBMITTED':
-      ascending(`${w.h.id} submit`, w.h.createdAt, o.at);
-      return submit(w, o.at);
+      ascending(`${w.h.id} submit`, w.h.createdAt, o.submittedAt);
+      return submit(w, o.submittedAt);
     case 'CANCELLED':
-      must(
-        (o.from === 'SUBMITTED') === (o.submittedAt !== undefined),
-        `${w.h.id}: submittedAt belongs to a cancelled submission only`,
-      );
-      if (o.submittedAt) {
-        ascending(`${w.h.id} cancel`, w.h.createdAt, o.submittedAt, o.at);
+      if (o.from === 'SUBMITTED') {
+        ascending(
+          `${w.h.id} cancel`,
+          w.h.createdAt,
+          o.submittedAt,
+          o.cancelledAt,
+        );
         submit(w, o.submittedAt);
       } else {
-        ascending(`${w.h.id} cancel`, w.h.createdAt, o.at);
+        ascending(`${w.h.id} cancel`, w.h.createdAt, o.cancelledAt);
       }
-      return cancel(w, o.at);
-    default:
-      ascending(`${w.h.id} submit`, w.h.createdAt, o.at);
-      submit(w, o.at);
-      if (o.decision) return decideStep(w, o);
+      return cancel(w, o.cancelledAt);
+    case 'REJECTED':
+      ascending(`${w.h.id} submit`, w.h.createdAt, o.submittedAt);
+      submit(w, o.submittedAt);
+      return decideStep(w, o.status, o.submittedAt, o.decision);
+    case 'APPROVED':
+      ascending(`${w.h.id} submit`, w.h.createdAt, o.submittedAt);
+      submit(w, o.submittedAt);
+      if (o.decision !== 'automatic') {
+        return decideStep(w, o.status, o.submittedAt, o.decision);
+      }
       must(
-        o.status === 'APPROVED' && w.stage.status === 'APPROVED',
+        w.stage.status === 'APPROVED',
         `${w.h.id}: only an under-threshold submit is decided by nobody`,
       );
   }
@@ -459,9 +468,8 @@ function requisitionRows(
   return lines;
 }
 
-function approvedAt(o: Outcome): At {
-  must(o.status === 'APPROVED', 'an order needs an approved requisition');
-  return o.decision?.at ?? o.at;
+function approvedAt(o: Extract<Outcome, { status: 'APPROVED' }>): At {
+  return o.decision === 'automatic' ? o.submittedAt : o.decision.at;
 }
 
 interface OrderLine {
@@ -628,8 +636,9 @@ function orderRows(
   h: RequisitionHistory,
   requisitionLines: PricedLine[],
   spec: OrderSpec,
+  approved: At,
 ): void {
-  ascending(`${spec.id} order`, approvedAt(h.outcome), spec.at);
+  ascending(`${spec.id} order`, approved, spec.at);
   must(
     canBuy(ctx, h.companyId, spec.by),
     `${spec.id}: ${spec.by} may not order`,
@@ -704,7 +713,10 @@ export function materialize(
     );
     justifications.add(h.justification);
     const lines = requisitionRows(ctx, sink, h);
-    if (h.order) orderRows(ctx, sink, h, lines, h.order);
+    const { outcome } = h;
+    if (outcome.status === 'APPROVED' && outcome.order) {
+      orderRows(ctx, sink, h, lines, outcome.order, approvedAt(outcome));
+    }
   }
   return sink.finish();
 }

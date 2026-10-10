@@ -170,6 +170,12 @@ describe('seed', () => {
     const story = (id: string) => storyHistories.find((h) => h.id === id)!;
     const refused = (h: RequisitionHistory, reason: RegExp) =>
       expect(() => materialize([h], reference)).toThrow(reason);
+    const approvedOrder = (id: string) => {
+      const h = story(id);
+      if (h.outcome.status !== 'APPROVED' || !h.outcome.order)
+        throw new Error('story moved');
+      return { h, outcome: h.outcome, order: h.outcome.order };
+    };
 
     it('when an approver decides their own requisition', () => {
       const own = story(REQUISITION.gustavOwn);
@@ -178,7 +184,7 @@ describe('seed', () => {
           ...own,
           outcome: {
             status: 'APPROVED',
-            at: new Date('2026-08-18T09:10:00Z'),
+            submittedAt: new Date('2026-08-18T09:10:00Z'),
             decision: {
               by: own.requesterPersonId,
               at: new Date('2026-08-19T09:00:00Z'),
@@ -199,7 +205,7 @@ describe('seed', () => {
           ...rejected,
           outcome: {
             ...rejected.outcome,
-            decision: { ...rejected.outcome.decision!, comment: ' ' },
+            decision: { ...rejected.outcome.decision, comment: ' ' },
           },
         },
         /a rejection needs a reason/,
@@ -211,26 +217,34 @@ describe('seed', () => {
       refused(
         {
           ...waiting,
-          outcome: { status: 'APPROVED', at: new Date('2026-08-05T09:10:00Z') },
+          outcome: {
+            status: 'APPROVED',
+            submittedAt: new Date('2026-08-05T09:10:00Z'),
+            decision: 'automatic',
+          },
         },
         /decided by nobody/,
       );
     });
 
     it('when a delivery would exceed what was ordered', () => {
-      const ordered = story(REQUISITION.aliceFullyReceived);
-      const order = ordered.order!;
+      const { h, outcome, order } = approvedOrder(
+        REQUISITION.aliceFullyReceived,
+      );
       refused(
         {
-          ...ordered,
-          order: {
-            ...order,
-            receipts: [
-              {
-                ...order.receipts[0],
-                lines: [{ position: 0, quantity: 6, note: null }],
-              },
-            ],
+          ...h,
+          outcome: {
+            ...outcome,
+            order: {
+              ...order,
+              receipts: [
+                {
+                  ...order.receipts[0],
+                  lines: [{ position: 0, quantity: 6, note: null }],
+                },
+              ],
+            },
           },
         },
         /would hold 6 of 5/,
@@ -238,13 +252,19 @@ describe('seed', () => {
     });
 
     it('when an order that is not fully received is closed', () => {
-      const partial = story(REQUISITION.paulaPartial);
+      const { h, outcome, order } = approvedOrder(REQUISITION.paulaPartial);
       refused(
         {
-          ...partial,
-          order: {
-            ...partial.order!,
-            closure: { by: PERSON.carol, at: new Date('2026-09-02T09:00:00Z') },
+          ...h,
+          outcome: {
+            ...outcome,
+            order: {
+              ...order,
+              closure: {
+                by: PERSON.carol,
+                at: new Date('2026-09-02T09:00:00Z'),
+              },
+            },
           },
         },
         /only a fully received order closes/,

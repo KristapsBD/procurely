@@ -9,19 +9,32 @@ export interface LineSpec {
 
 export type SeedRole = 'REQUESTER' | 'APPROVER' | 'BUYER' | 'ADMIN';
 
+export interface Decision {
+  by: string;
+  at: At;
+  comment: string | null;
+}
+
 export type Outcome =
   | { status: 'DRAFT' }
+  | { status: 'CANCELLED'; from: 'DRAFT'; cancelledAt: At }
   | {
       status: 'CANCELLED';
-      from: 'DRAFT' | 'SUBMITTED';
-      submittedAt?: At;
-      at: At;
+      from: 'SUBMITTED';
+      submittedAt: At;
+      cancelledAt: At;
     }
-  | { status: 'SUBMITTED'; at: At }
+  | { status: 'SUBMITTED'; submittedAt: At }
   | {
-      status: 'APPROVED' | 'REJECTED';
-      at: At;
-      decision?: { by: string; at: At; comment: string | null };
+      status: 'REJECTED';
+      submittedAt: At;
+      decision: Decision & { comment: string };
+    }
+  | {
+      status: 'APPROVED';
+      submittedAt: At;
+      decision: Decision | 'automatic';
+      order?: OrderSpec;
     };
 
 export interface ReceiptSpec {
@@ -49,7 +62,6 @@ export interface RequisitionHistory {
   lines: LineSpec[];
   createdAt: At;
   outcome: Outcome;
-  order?: OrderSpec;
 }
 
 export interface ApprovalRuleSeed {

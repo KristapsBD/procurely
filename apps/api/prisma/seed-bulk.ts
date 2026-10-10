@@ -357,12 +357,7 @@ function orderFor(
   };
 }
 
-interface Ending {
-  outcome: Outcome;
-  order?: OrderSpec;
-}
-
-function endingFor(
+function outcomeFor(
   rng: Rng,
   p: Plan,
   kind: Kind,
@@ -371,58 +366,52 @@ function endingFor(
   requirement: ApprovalRequirement,
   deciders: string[],
   lines: LineSpec[],
-): Ending {
+): Outcome {
   switch (kind) {
     case 'draft':
-      return { outcome: { status: 'DRAFT' } };
+      return { status: 'DRAFT' };
     case 'cancelDraft':
       return {
-        outcome: {
-          status: 'CANCELLED',
-          from: 'DRAFT',
-          at: plus(submitAt, rng.int(1, 30) * MINUTE),
-        },
+        status: 'CANCELLED',
+        from: 'DRAFT',
+        cancelledAt: plus(submitAt, rng.int(1, 30) * MINUTE),
       };
     case 'submitted':
-      return { outcome: { status: 'SUBMITTED', at: submitAt } };
+      return { status: 'SUBMITTED', submittedAt: submitAt };
     case 'cancelSubmitted':
       return {
-        outcome: {
-          status: 'CANCELLED',
-          from: 'SUBMITTED',
-          submittedAt: submitAt,
-          at: plus(submitAt, rng.int(1, 40) * HOUR),
-        },
+        status: 'CANCELLED',
+        from: 'SUBMITTED',
+        submittedAt: submitAt,
+        cancelledAt: plus(submitAt, rng.int(1, 40) * HOUR),
       };
     case 'rejected':
       return {
-        outcome: {
-          status: 'REJECTED',
-          at: submitAt,
-          decision: {
-            by: rng.pick(deciders),
-            at: plus(submitAt, rng.int(1, 48) * HOUR),
-            comment: rng.pick(REJECTIONS),
-          },
+        status: 'REJECTED',
+        submittedAt: submitAt,
+        decision: {
+          by: rng.pick(deciders),
+          at: plus(submitAt, rng.int(1, 48) * HOUR),
+          comment: rng.pick(REJECTIONS),
         },
       };
     default: {
       if (requirement.kind === 'under-threshold') {
         return {
-          outcome: { status: 'APPROVED', at: submitAt },
+          status: 'APPROVED',
+          submittedAt: submitAt,
+          decision: 'automatic',
           order: orderFor(rng, p, kind, requisitionId, submitAt, lines),
         };
       }
       const decidedAt = plus(submitAt, rng.int(1, 48) * HOUR);
       return {
-        outcome: {
-          status: 'APPROVED',
-          at: submitAt,
-          decision: {
-            by: rng.pick(deciders),
-            at: decidedAt,
-            comment: rng.chance(0.6) ? rng.pick(APPROVALS) : null,
-          },
+        status: 'APPROVED',
+        submittedAt: submitAt,
+        decision: {
+          by: rng.pick(deciders),
+          at: decidedAt,
+          comment: rng.chance(0.6) ? rng.pick(APPROVALS) : null,
         },
         order: orderFor(rng, p, kind, requisitionId, decidedAt, lines),
       };
@@ -447,7 +436,7 @@ function historyOf(
   const deciders = decidersFor(p, requirement, requester);
   const kind = kindFor(rng, requirement, deciders);
   const topic = rng.pick(p.topics);
-  const ending = endingFor(
+  const outcome = outcomeFor(
     rng,
     p,
     kind,
@@ -466,7 +455,7 @@ function historyOf(
     justification: `${topic}, ref ${p.tag}${String(index + 1).padStart(3, '0')}`,
     lines,
     createdAt,
-    ...ending,
+    outcome,
   };
 }
 
