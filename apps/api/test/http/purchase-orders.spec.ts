@@ -23,8 +23,7 @@ const MAIN: string = COMPANY.main;
 const MEGA: string = COMPANY.large;
 
 // Main company: alice requester, bob approver, carol buyer, dave admin (no approval rules, so an
-// admin decides). Megacorp has a 500.00 rule for approvers and a 5000.00 rule for admins. Each
-// test makes the requisitions and orders it needs.
+// admin decides). Each test makes the requisitions and orders it needs.
 describe('purchase orders', () => {
   let app: INestApplication;
   let db: TenantDb;

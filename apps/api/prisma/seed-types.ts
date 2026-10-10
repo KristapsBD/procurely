@@ -1,6 +1,5 @@
 import type { Prisma } from '@prisma/client';
 
-/** A fixed UTC instant. Seed code never reads the clock. */
 export type At = Date;
 
 export interface LineSpec {
@@ -10,10 +9,6 @@ export interface LineSpec {
 
 export type SeedRole = 'REQUESTER' | 'APPROVER' | 'BUYER' | 'ADMIN';
 
-/**
- * How a requisition ended up, stated as the API would have seen it. `at` is the instant of the
- * step that produced the status; for APPROVED and REJECTED that is the submit.
- */
 export type Outcome =
   | { status: 'DRAFT' }
   | {
@@ -26,7 +21,6 @@ export type Outcome =
   | {
       status: 'APPROVED' | 'REJECTED';
       at: At;
-      /** Absent on an automatic approval, which the materializer proves from the rules. */
       decision?: { by: string; at: At; comment: string | null };
     };
 
@@ -41,13 +35,11 @@ export interface OrderSpec {
   id: string;
   by: string;
   at: At;
-  /** Defaults to the requisition's lines at their catalog prices. */
   lines?: { catalogItemId: string; quantity: number; unitPriceMinor: number }[];
   receipts: ReceiptSpec[];
   closure?: { by: string; at: At };
 }
 
-/** Everything that ever happened to one requisition. Order only on an approved one. */
 export interface RequisitionHistory {
   id: string;
   companyId: string;
@@ -76,7 +68,6 @@ export interface MembershipSeed {
 }
 
 export interface ReferenceAuditEvent {
-  /** Hand-picked id; derived from the event's position when absent. */
   id?: string;
   at: At;
   companyId: string;
@@ -87,7 +78,6 @@ export interface ReferenceAuditEvent {
   details: Prisma.InputJsonObject;
 }
 
-/** One array per table, in foreign-key order. Audit rows are in insertion (sequence) order. */
 export interface SeedRows {
   companies: Prisma.CompanyCreateManyInput[];
   people: Prisma.PersonCreateManyInput[];
@@ -108,7 +98,6 @@ export interface SeedRows {
   auditLog: Prisma.AuditLogCreateManyInput[];
 }
 
-/** The hand-written rows the histories refer to. Ids of cost centers and memberships are derived. */
 export interface Reference {
   companies: Prisma.CompanyCreateManyInput[];
   people: Prisma.PersonCreateManyInput[];

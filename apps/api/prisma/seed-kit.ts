@@ -2,10 +2,6 @@ import { createHash } from 'node:crypto';
 import type { ApprovalRuleState } from '../src/requisitions/requisition-lifecycle';
 import type { ApprovalRuleSeed } from './seed-types';
 
-/**
- * A UUID derived from a namespace and parts, so every seeded row has the same id on every machine
- * and every reset. Formatted as a version 4, variant 8 UUID, which the database accepts.
- */
 export function seedId(namespace: string, ...parts: string[]): string {
   const hex = createHash('sha256')
     .update([namespace, ...parts].join('\u0000'))
@@ -19,7 +15,6 @@ export function seedId(namespace: string, ...parts: string[]): string {
   ].join('-');
 }
 
-/** A fixed UTC instant from an ISO string. */
 export function at(iso: string): Date {
   return new Date(iso);
 }
@@ -28,7 +23,6 @@ export function membershipId(companyId: string, personId: string): string {
   return seedId('membership', companyId, personId);
 }
 
-/** A small seeded PRNG, so the bulk layer is identical on every machine and every run. */
 export class Rng {
   private state: number;
 
@@ -36,7 +30,6 @@ export class Rng {
     this.state = seed >>> 0;
   }
 
-  /** mulberry32: a float in [0, 1). */
   next(): number {
     this.state = (this.state + 0x6d2b79f5) >>> 0;
     let t = this.state;
@@ -45,7 +38,6 @@ export class Rng {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   }
 
-  /** An integer in [min, max]. */
   int(min: number, max: number): number {
     return min + Math.floor(this.next() * (max - min + 1));
   }
@@ -58,7 +50,6 @@ export class Rng {
     return items[this.int(0, items.length - 1)];
   }
 
-  /** A key of the table, in proportion to its weight. */
   weighted<K extends string>(table: readonly (readonly [K, number])[]): K {
     const total = table.reduce((sum, [, weight]) => sum + weight, 0);
     let roll = this.next() * total;
@@ -78,7 +69,6 @@ export function plus(instant: Date, ms: number): Date {
   return new Date(instant.getTime() + ms);
 }
 
-/** A company's rules as they stood at an instant: a route is fixed by the rules at submit. */
 export function rulesAsOf(
   rules: readonly ApprovalRuleSeed[],
   companyId: string,

@@ -1,8 +1,3 @@
-// The seed in two layers. Reference data (companies, people, rules, suppliers, catalog) and the
-// hand-written story layer live here with stable identifiers, so tests, demos and agents can
-// refer to named cases. Dev-login signs in by person id. seed-bulk.ts generates the volume and
-// seed-rows.ts turns both layers into table rows.
-
 import { at, membershipId, seedId } from './seed-kit';
 import type {
   ApprovalRuleSeed,
@@ -40,13 +35,9 @@ export const PERSON = {
   oscar: '00000000-0000-4000-8000-0000000000bb',
   // The attacker: belongs only to the empty company.
   mallory: '00000000-0000-4000-8000-0000000000bc',
-  // Joined recently: a second requester in the main company.
   paula: '00000000-0000-4000-8000-0000000000b0',
-  // Buyer in the large company.
   jonas: '00000000-0000-4000-8000-0000000000bd',
-  // Buyer in the SEK company.
   kerstin: '00000000-0000-4000-8000-0000000000be',
-  // Second requester in the large company.
   lukas: '00000000-0000-4000-8000-0000000000bf',
 } as const;
 
@@ -279,8 +270,6 @@ const rule = (
   createdAt: at(createdAt),
 });
 
-// Acme Trading has no rules: an admin decides its requisitions. Nordic Supplies adopted its one
-// rule only after Frida's first requisition was decided, which is why that one has route NO_RULES.
 export const approvalRules = [
   rule(COMPANY.sek, 1000000, 'ADMIN', '2026-02-02T09:00:00Z'),
   rule(COMPANY.large, 50000, 'APPROVER', '2026-01-06T09:00:00Z'),
@@ -329,8 +318,6 @@ const ruleCreated = (r: ApprovalRuleSeed, actorPersonId: string) => ({
 
 const auditId = (n: number) => `00000000-0000-4000-8000-0000000000c${n}`;
 
-// Oscar's deactivation and Paula's invitation are the newest Acme events, so the newest-200 page
-// of the Acme audit log shows both. The audit log's role tests rely on that.
 export const referenceAudit: ReferenceAuditEvent[] = [
   invited(
     auditId(1),
@@ -422,7 +409,6 @@ export const referenceAudit: ReferenceAuditEvent[] = [
 export const REQUISITION = {
   aliceDraft: '00000000-0000-4000-8000-0000000000f1',
   fridaApproved: '00000000-0000-4000-8000-0000000000f2',
-  // Acme Trading (no rules, so Dave decides)
   aliceSubmitted: '00000000-0000-4000-8000-000000000201',
   aliceRejected: '00000000-0000-4000-8000-000000000202',
   paulaCancelledDraft: '00000000-0000-4000-8000-000000000203',
@@ -432,14 +418,12 @@ export const REQUISITION = {
   paulaPartial: '00000000-0000-4000-8000-000000000207',
   aliceFullyReceived: '00000000-0000-4000-8000-000000000208',
   paulaClosed: '00000000-0000-4000-8000-000000000209',
-  // Megacorp Industries (500.00 approver rule, 5000.00 admin rule)
   ivanUnderThreshold: '00000000-0000-4000-8000-000000000211',
   ivanAtThreshold: '00000000-0000-4000-8000-000000000212',
   lukasOverThreshold: '00000000-0000-4000-8000-000000000213',
   gustavOwn: '00000000-0000-4000-8000-000000000214',
   ivanAdminRoute: '00000000-0000-4000-8000-000000000215',
   ivanRejected: '00000000-0000-4000-8000-000000000216',
-  // Nordic Supplies (one 10000.00 admin rule)
   fridaAdminRoute: '00000000-0000-4000-8000-000000000221',
   fridaAutoApproved: '00000000-0000-4000-8000-000000000222',
 } as const;
@@ -530,9 +514,6 @@ const mega = storyOf(COMPANY.large);
 const { alice, carol, dave, erik, frida, gustav, hanna, ivan, jonas } = PERSON;
 const { kerstin, lukas, paula } = PERSON;
 
-// The story: one named case per role, state and edge. Instants run through August and September
-// 2026, after the bulk layer. Frida's first requisition is the exception: it has to predate
-// Nordic's approval rule.
 export const storyHistories: RequisitionHistory[] = [
   acme({
     id: REQUISITION.aliceDraft,

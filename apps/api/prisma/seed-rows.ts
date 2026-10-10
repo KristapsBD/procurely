@@ -1,8 +1,3 @@
-// Turns requisition histories and the hand-written reference data into one array of rows per
-// table. This is the only place that derives a route, a decision note, an audit entry, an id or a
-// receipt total, and it uses the API's own lifecycle functions to do it, so the seed cannot
-// disagree with the API. A history the API could not have produced throws.
-
 import type { Prisma } from '@prisma/client';
 import type { Role } from '../src/contract/api.dto';
 import {
@@ -107,7 +102,6 @@ interface AuditInput {
   id?: string;
 }
 
-/** Collects rows per table and audit events, which it orders by instant when finished. */
 class Sink {
   readonly rows: SeedRows = {
     companies: [],
@@ -219,7 +213,6 @@ type Stage = Pick<
   'status' | 'approvalRoute' | 'decisionNote'
 >;
 
-/** What the requisition looks like at some point, in the lifecycle's own terms. */
 interface Walk {
   ctx: Context;
   sink: Sink;
@@ -696,7 +689,6 @@ function orderRows(
   closureRows(ctx, sink, h, spec, receivable);
 }
 
-/** The single owner of every derived rule: histories and reference data in, table rows out. */
 export function materialize(
   histories: readonly RequisitionHistory[],
   ref: Reference,
@@ -717,7 +709,6 @@ export function materialize(
   return sink.finish();
 }
 
-/** Every row of the seed: the story layer and the bulk layer over the reference data. */
 export function seedRows(): SeedRows {
   return materialize([...bulkHistories(), ...storyHistories], reference);
 }

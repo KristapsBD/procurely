@@ -1,8 +1,3 @@
-// The bulk layer of the seed: about 200 requisition histories for each company that has people,
-// generated from a fixed random seed and fixed UTC instants, so every machine and every reset
-// gets the same rows. The window ends before the story layer begins. Who requests, who decides and
-// who buys follows each company's people and approval rules.
-
 import {
   approvalRequirement,
   mayDecide,
@@ -249,7 +244,6 @@ function receipt(
   return { id: seedId('goods-receipt', poId, String(n)), by, at, lines };
 }
 
-/** Receipts that leave the order partly received: damaged or short deliveries. */
 function partialReceipts(
   rng: Rng,
   poId: string,
@@ -281,7 +275,6 @@ function partialReceipts(
   return receipts;
 }
 
-/** Receipts that deliver every line in full: in one go, in two, or with a correction. */
 function completeReceipts(
   rng: Rng,
   poId: string,

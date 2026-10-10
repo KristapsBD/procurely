@@ -2,8 +2,6 @@ import { PrismaClient } from '@prisma/client';
 import { seedRows } from './seed-rows';
 import type { SeedRows } from './seed-types';
 
-// The BEFORE INSERT triggers of these two tables fire before ON CONFLICT can skip a duplicate, so a
-// second seed run would be refused. Rows already present are left out instead.
 async function missing<T extends { id?: string }>(
   rows: T[],
   existing: Promise<{ id: string }[]>,
@@ -12,7 +10,6 @@ async function missing<T extends { id?: string }>(
   return rows.filter((r) => !present.has(r.id!));
 }
 
-/** One createMany per table, in foreign-key order. A run on a seeded database changes nothing. */
 export async function insertAll(prisma: PrismaClient, rows: SeedRows) {
   await prisma.company.createMany({
     data: rows.companies,
