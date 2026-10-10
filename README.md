@@ -68,9 +68,16 @@ People sign in with Google (`GET /auth/google/start`, a browser flow; see [docs/
 
 Approvers are told on their phone when a requisition awaits them, and requesters when it is decided (`POST|DELETE /push-devices`, Expo push). Payloads carry ids only and go only to phones registered for the company the person acts in. A development outbox (`GET /push-devices/outbox`) shows what was sent without a phone; see [docs/push-notifications.md](docs/push-notifications.md) for how to verify a real push.
 
-`pnpm db:reset` is `make seed` (runs inside the API container, so Docker is all you need). Seeded companies and people, with their stable ids, are in `apps/api/prisma/seed-data.ts`. Every seeded id is `00000000-0000-4000-8000-0000000000` followed by two characters. There are four companies: Acme Trading (`a1`, EUR, the main one), Nordic Supplies (`a2`, SEK), Megacorp Industries (`a3`, EUR, large) and Fresh Start Ltd (`a4`, EUR, empty). The supplier "Office Depot" exists in both Acme Trading and Nordic Supplies with a different price for the same paper, and Acme Trading also has an inactive supplier (Old Paper Mill) whose catalog item stays visible but cannot be chosen.
+`pnpm db:reset` is `make seed` (runs inside the API container, so Docker is all you need). The seed has two layers over one set of reference data (companies, people, suppliers, catalog, approval rules), all in `apps/api/prisma/`:
 
-The twelve seeded people all have `<name>@procurely.test` addresses. The app's sign-in screen offers only some of them as quick picks, but its id field accepts any of these ids.
+- **Story layer** (`seed-data.ts`): hand-written requisitions and orders with stable named ids (`REQUISITION`, `PURCHASE_ORDER`) that cover every role, status and edge case. Tests, demos and agents refer to these by name.
+- **Bulk layer** (`seed-bulk.ts`): about 200 requisitions for each of Acme Trading, Nordic Supplies and Megacorp Industries (Fresh Start Ltd stays empty), generated from a fixed random seed and fixed UTC instants, so every machine gets the same rows. It covers every requisition status, both ways of cancelling and every purchase order status, with occasional damaged deliveries and corrections. Its dates run from March to July 2026, before the story layer.
+
+Both layers are written as one history per requisition (who did what, when). `seed-rows.ts` turns the histories into rows with the API's own lifecycle functions (route, automatic-approval note, who may decide, order status) and writes the same audit entries the API writes, so the seed cannot disagree with the API and throws on a history the API could not have produced. Every row has a deterministic id and an explicit timestamp: two resets give byte-identical tables, and `apps/api/test/seed.spec.ts` pins a fingerprint of all rows. After an intentional change to the seed, run that test and update the fingerprint it prints. `prisma db seed` on an already seeded database changes nothing.
+
+There are four companies: Acme Trading (`a1`, EUR, the main one), Nordic Supplies (`a2`, SEK), Megacorp Industries (`a3`, EUR, large) and Fresh Start Ltd (`a4`, EUR, empty). The supplier "Office Depot" exists in both Acme Trading and Nordic Supplies with a different price for the same paper, and Acme Trading also has an inactive supplier (Old Paper Mill) whose catalog item stays visible but cannot be chosen. Megacorp Industries has three suppliers (industrial, facilities, IT).
+
+The sixteen seeded people all have `<name>@procurely.test` addresses. The app's sign-in screen offers only some of them as quick picks, but its id field accepts any of these ids.
 
 | Person  | Id ends in | Memberships                                                 |
 | ------- | ---------- | ----------------------------------------------------------- |
@@ -86,6 +93,26 @@ The twelve seeded people all have `<name>@procurely.test` addresses. The app's s
 | nomad   | `ba`       | none                                                        |
 | oscar   | `bb`       | requester in Acme Trading, deactivated                      |
 | mallory | `bc`       | requester in Fresh Start Ltd, the attacker in the RLS tests |
+| paula   | `b0`       | requester in Acme Trading                                   |
+| jonas   | `bd`       | buyer in Megacorp Industries                                |
+| kerstin | `be`       | buyer in Nordic Supplies                                    |
+| lukas   | `bf`       | requester in Megacorp Industries                            |
+
+Approval rules differ by company, so each routing case has a home:
+
+| Company             | Rules                                              | Who decides                                         |
+| ------------------- | -------------------------------------------------- | --------------------------------------------------- |
+| Acme Trading        | none                                               | Dave, an admin, decides every submitted requisition |
+| Nordic Supplies     | from 10000.00 SEK, Admin                           | Erik from 10000.00 SEK, below it approved at once   |
+| Megacorp Industries | from 500.00 EUR, Approver; from 5000.00 EUR, Admin | Hanna or Gustav below 5000.00, Gustav from there on |
+| Fresh Start Ltd     | none, and no data at all                           | Mallory is its only member                          |
+
+The story layer, by company:
+
+- **Megacorp Industries** straddles the 500.00 EUR approver threshold: Ivan's 499.99 is approved at once with the automatic note, Ivan's 500.00 waits in Hanna's inbox, and Lukas's 500.01 was approved by Hanna with a comment and ordered by Jonas. Gustav, an admin, has his own pending requisition on the approver route, which Hanna can approve and Gustav cannot. Ivan's 5500.00 requisition is on the admin route and waits for Gustav, and another of Ivan's was rejected with a reason.
+- **Acme Trading** (Dave decides): Alice has one submitted requisition waiting, one rejected by Dave with a reason, one cancelled from submitted and one approved but not yet ordered; Paula has a draft that she cancelled. Carol's purchase orders cover every status: issued, partially received (a damaged partial delivery with its note), fully received (after a correction receipt with a negative quantity, then the replacement) and closed.
+- **Nordic Supplies**: Frida's first requisition predates the rule (route `NO_RULES`, ordered, delivered and closed). Her 25980.00 SEK laptop requisition waits for Erik, and an auto-approved one under 10000.00 SEK was ordered by Kerstin.
+- **Audit log**: invitations, rule changes, a supplier deactivation, and then the newest Acme events, Paula's invitation and Oscar's deactivation, so the newest-200 page of an admin's audit log shows both.
 
 ## Roles, members and the audit log
 
