@@ -119,6 +119,7 @@ export function purchaseOrder(
     quantity,
     unitPriceMinor,
     amountMinor: quantity * unitPriceMinor,
+    receivedQuantity: 0,
   }));
   return {
     id: `po-${req.id}`,
@@ -132,6 +133,9 @@ export function purchaseOrder(
     createdAt: '2026-10-10T12:00:00.000Z',
     lines: priced,
     totalMinor: priced.reduce((sum, l) => sum + l.amountMinor, 0),
+    status: 'ISSUED',
+    closedAt: null,
+    closedByName: null,
   };
 }
 
@@ -186,6 +190,9 @@ export function fakeApi(overrides: Partial<Api> = {}): Api {
     approveRequisition: notFaked,
     rejectRequisition: notFaked,
     purchaseOrders: async () => [],
+    goodsReceipts: async () => [],
+    recordGoodsReceipt: notFaked,
+    closePurchaseOrder: notFaked,
     createPurchaseOrder: notFaked,
     approvalRules: async () => [],
     createApprovalRule: notFaked,

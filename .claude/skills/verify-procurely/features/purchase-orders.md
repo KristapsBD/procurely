@@ -22,10 +22,10 @@ Preconditions:
 - Doctor is green. Fresh seed. Acme has no approved requisition in the seed, so this recipe makes one and needs a reseed afterwards.
 
 - **Prepare.** Sign in as Alice, `Requisitions`, `New requisition`, `Cost center OPS`, justification `Toner and pens`, `Add A4 copy paper, box of 5 reams`, `Save draft`, `Submit`. Sign in as Dave, `Approvals`, `Approve Toner and pens`.
-- **Create.** Sign in as Carol. Home shows `Purchase orders`. Open it: `No purchase orders yet.`, `New purchase order`. Click `Order Toner and pens`, `Supplier Office Depot` (`Supplier Old Paper Mill` is not offered: it is inactive). The form shows `Quantity of A4 copy paper, box of 5 reams` `1` and `Unit price of A4 copy paper, box of 5 reams (EUR)` `24.99`. Set the quantity to `3` and the price to `24.00`: `Total 72.00 EUR`. Click `Create purchase order`. Detail shows `Toner and pens`, `Office Depot · ordered by Carol Buyer`, `3 × A4 copy paper, box of 5 reams at 24.00 EUR = 72.00 EUR` and `Total 72.00 EUR`.
+- **Create.** Sign in as Carol. Home shows `Purchase orders`. Open it: `No purchase orders yet.`, `New purchase order`. Click `Order Toner and pens`, `Supplier Office Depot` (`Supplier Old Paper Mill` is not offered: it is inactive). The form shows `Quantity of A4 copy paper, box of 5 reams` `1` and `Unit price of A4 copy paper, box of 5 reams (EUR)` `24.99`. Set the quantity to `3` and the price to `24.00`: `Total 72.00 EUR`. Click `Create purchase order`. Detail shows `Toner and pens`, `Office Depot · ordered by Carol Buyer`, `Status: Issued`, `3 × A4 copy paper, box of 5 reams at 24.00 EUR = 72.00 EUR (0 received)` and `Total 72.00 EUR`. Receiving goods against it is in [Goods receipts](./goods-receipts.md).
 - **Convert once.** `Back to purchase orders`, `New purchase order`: `No approved requisition is waiting to be ordered.`
 - **Visibility.** Sign in as Alice, `Purchase orders`: the order is listed, there is no `New purchase order`. Sign in as Bob: `No purchase orders yet.`
-- **Isolation.** Sign in as Erik. Home shows Nordic Supplies. `Purchase orders` lists `Paper for the spring` (`Office Depot · 279.00 SEK`) and not `Toner and pens`.
+- **Isolation.** Sign in as Erik. Home shows Nordic Supplies. `Purchase orders` lists `Paper for the spring` (`Office Depot · 279.00 SEK · Closed`: the seed delivers and closes it) and not `Toner and pens`.
 - **Proof.** Snapshots of each state. Optionally `GET /purchase-orders` as Carol and `GET /audit-log` as Dave for `purchase_order.created`.
 - **Reseed** (`make seed`) when done.
 

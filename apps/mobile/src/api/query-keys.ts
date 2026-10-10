@@ -19,6 +19,8 @@ export const queryKeys = {
     ['company', companyId, 'requisitions'] as const,
   purchaseOrders: (companyId: string) =>
     ['company', companyId, 'purchase-orders'] as const,
+  goodsReceipts: (companyId: string, purchaseOrderId: string) =>
+    ['company', companyId, 'goods-receipts', purchaseOrderId] as const,
   approvalRules: (companyId: string) =>
     ['company', companyId, 'approval-rules'] as const,
   members: (companyId: string) => ['company', companyId, 'members'] as const,

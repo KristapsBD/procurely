@@ -363,7 +363,12 @@ export class PurchaseOrderLine {
   unitPriceMinor!: number;
   /** quantity times unitPriceMinor. */
   amountMinor!: number;
+  /** Net quantity confirmed by goods receipts so far, 0 up to quantity. */
+  receivedQuantity!: number;
 }
+
+export type PurchaseOrderStatus =
+  'ISSUED' | 'PARTIALLY_RECEIVED' | 'FULLY_RECEIVED' | 'CLOSED';
 
 /**
  * A buyer's order of an approved requisition from one supplier. Never changed afterwards. A
@@ -386,6 +391,19 @@ export class PurchaseOrder {
   lines!: PurchaseOrderLine[];
   /** Sum of the line amounts in integer minor units of the company currency. */
   totalMinor!: number;
+  /**
+   * Derived from the goods receipts: ISSUED until something is received, PARTIALLY_RECEIVED
+   * while any line is short, FULLY_RECEIVED once every line is complete, CLOSED after a buyer
+   * closes a fully received order.
+   */
+  @ApiProperty({
+    enum: ['ISSUED', 'PARTIALLY_RECEIVED', 'FULLY_RECEIVED', 'CLOSED'],
+  })
+  status!: PurchaseOrderStatus;
+  /** ISO 8601 timestamp, null until the order is closed. */
+  @ApiProperty({ format: 'date-time', nullable: true, type: String })
+  closedAt!: string | null;
+  closedByName!: string | null;
 }
 
 export class PurchaseOrderLineInput {
@@ -406,4 +424,49 @@ export class CreatePurchaseOrderRequest {
   /** At least one line. */
   @ApiProperty({ type: [PurchaseOrderLineInput] })
   lines!: PurchaseOrderLineInput[];
+}
+
+export class GoodsReceiptLine {
+  id!: string;
+  purchaseOrderLineId!: string;
+  catalogItemName!: string;
+  /** Positive for a delivery, negative for a correction of an earlier entry. */
+  quantity!: number;
+  @ApiProperty({ type: String, nullable: true })
+  note!: string | null;
+}
+
+/** One delivery confirmed against a purchase order. Recorded once, never edited or deleted. */
+export class GoodsReceipt {
+  id!: string;
+  companyId!: string;
+  purchaseOrderId!: string;
+  receivedByPersonId!: string;
+  receivedByName!: string;
+  /** ISO 8601 timestamp. */
+  @ApiProperty({ format: 'date-time' })
+  receivedAt!: string;
+  @ApiProperty({ type: [GoodsReceiptLine] })
+  lines!: GoodsReceiptLine[];
+}
+
+export class GoodsReceiptLineInput {
+  /** A line of this purchase order. Each line may appear once per receipt. */
+  purchaseOrderLineId!: string;
+  /**
+   * A whole number, not zero. Positive confirms a delivery; negative corrects earlier entries
+   * and needs a note. The line's net received quantity must stay between 0 and the ordered
+   * quantity.
+   */
+  quantity!: number;
+  /** Optional, up to 500 characters: damage, a shortfall, the reason for a correction. */
+  @ApiProperty({ required: false, type: String })
+  note?: string;
+}
+
+/** Confirms a delivery against order lines. Buyers and admins only; not on a closed order. */
+export class CreateGoodsReceiptRequest {
+  /** At least one line. */
+  @ApiProperty({ type: [GoodsReceiptLineInput] })
+  lines!: GoodsReceiptLineInput[];
 }

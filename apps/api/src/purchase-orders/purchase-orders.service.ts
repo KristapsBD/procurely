@@ -11,6 +11,7 @@ import type {
   PurchaseOrder,
 } from '../contract/api.dto';
 import { lineAmount, totalOf } from '../requisitions/requisition-lifecycle';
+import { statusOf } from './purchase-order-status';
 import type { CompanyRequestScope } from '../tenancy/request-scope';
 import { PURCHASING_ROLES, rejectUnmatchedWrite } from '../tenancy/roles';
 
@@ -21,9 +22,13 @@ const withDetails = {
   supplier: { select: { name: true } },
   createdBy: { select: { name: true } },
   lines: {
-    include: { catalogItem: { select: { name: true } } },
+    include: {
+      catalogItem: { select: { name: true } },
+      receiptLines: { select: { quantity: true } },
+    },
     orderBy: { position: 'asc' },
   },
+  closures: { include: { closedBy: { select: { name: true } } } },
 } as const satisfies Prisma.PurchaseOrderInclude;
 type PurchaseOrderRow = Prisma.PurchaseOrderGetPayload<{
   include: typeof withDetails;
@@ -37,7 +42,9 @@ function toPurchaseOrder(o: PurchaseOrderRow): PurchaseOrder {
     quantity: l.quantity,
     unitPriceMinor: l.unitPriceMinor,
     amountMinor: l.amountMinor,
+    receivedQuantity: l.receiptLines.reduce((sum, r) => sum + r.quantity, 0),
   }));
+  const closure = o.closures[0];
   return {
     id: o.id,
     companyId: o.companyId,
@@ -50,6 +57,9 @@ function toPurchaseOrder(o: PurchaseOrderRow): PurchaseOrder {
     createdAt: o.createdAt.toISOString(),
     lines,
     totalMinor: totalOf(lines),
+    status: statusOf(lines, closure !== undefined),
+    closedAt: closure?.closedAt.toISOString() ?? null,
+    closedByName: closure?.closedBy.name ?? null,
   };
 }
 
@@ -123,7 +133,7 @@ export class PurchaseOrdersService {
     return this.get(tx, id);
   }
 
-  private async requirePurchasingRole(tx: Tx, scope: CompanyRequestScope) {
+  async requirePurchasingRole(tx: Tx, scope: CompanyRequestScope) {
     const own = await tx.membership.findFirst({
       where: {
         companyId: scope.companyId,

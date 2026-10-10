@@ -5,9 +5,11 @@ import {
   catalogItems,
   companies,
   costCenters,
+  goodsReceipts,
   memberships,
   people,
   pushDevices,
+  purchaseOrderClosures,
   purchaseOrders,
   requisitionDecisions,
   requisitions,
@@ -64,6 +66,40 @@ async function seedPurchaseOrders(prisma: PrismaClient) {
   }
 }
 
+async function seedGoodsReceipts(prisma: PrismaClient) {
+  for (const { lines, ...receipt } of goodsReceipts) {
+    await prisma.goodsReceipt.createMany({
+      data: [receipt],
+      skipDuplicates: true,
+    });
+    for (const { position, ...line } of lines) {
+      const orderLine = await prisma.purchaseOrderLine.findFirstOrThrow({
+        where: { purchaseOrderId: receipt.purchaseOrderId, position },
+      });
+      const exists = await prisma.goodsReceiptLine.findFirst({
+        where: {
+          goodsReceiptId: receipt.id,
+          purchaseOrderLineId: orderLine.id,
+        },
+      });
+      if (exists) continue;
+      await prisma.goodsReceiptLine.create({
+        data: {
+          ...line,
+          companyId: receipt.companyId,
+          goodsReceiptId: receipt.id,
+          purchaseOrderId: receipt.purchaseOrderId,
+          purchaseOrderLineId: orderLine.id,
+        },
+      });
+    }
+  }
+  await prisma.purchaseOrderClosure.createMany({
+    data: purchaseOrderClosures,
+    skipDuplicates: true,
+  });
+}
+
 // Runs as the database owner (DIRECT_URL): the API role cannot write these tables.
 async function main() {
   const prisma = new PrismaClient({
@@ -91,6 +127,7 @@ async function main() {
       skipDuplicates: true,
     });
     await seedPurchaseOrders(prisma);
+    await seedGoodsReceipts(prisma);
     await prisma.approvalRule.createMany({
       data: approvalRules,
       skipDuplicates: true,

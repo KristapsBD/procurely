@@ -138,6 +138,7 @@ describe('purchase orders', () => {
             quantity: 3,
             unitPriceMinor: 2400,
             amountMinor: 7200,
+            receivedQuantity: 0,
           },
           {
             id: expect.any(String),
@@ -146,9 +147,13 @@ describe('purchase orders', () => {
             quantity: 10,
             unitPriceMinor: 99,
             amountMinor: 990,
+            receivedQuantity: 0,
           },
         ],
         totalMinor: 8190,
+        status: 'ISSUED',
+        closedAt: null,
+        closedByName: null,
       });
       expect(
         (await carol.getPurchaseOrder(MAIN, res.body.id).expect(200)).body,

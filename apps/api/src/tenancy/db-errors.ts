@@ -17,6 +17,15 @@ export function translateDbError(error: unknown): never {
       throw new BadRequestException('Refers to a record that does not exist');
     }
   }
+  // The goods receipt triggers refuse what a concurrent writer made impossible after the
+  // service's own check.
+  if (
+    /over-receiving|cannot correct below zero|purchase order is closed|not fully received/.test(
+      String(error),
+    )
+  ) {
+    throw new ConflictException('The order changed: reload and try again');
+  }
   if (String(error).includes('row-level security')) {
     throw new ForbiddenException('Not allowed in this company');
   }

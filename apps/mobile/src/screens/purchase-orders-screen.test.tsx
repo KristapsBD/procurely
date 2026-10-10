@@ -82,10 +82,10 @@ describe('PurchaseOrdersScreen', () => {
   it('lists the orders with supplier and total, and opens one with its lines', async () => {
     renderAs('REQUESTER');
     expect(await screen.findByText('Spring stock')).toBeTruthy();
-    expect(screen.getByText('Office Depot · 5.60 EUR')).toBeTruthy();
+    expect(screen.getByText('Office Depot · 5.60 EUR · Issued')).toBeTruthy();
     fireEvent.press(await button('Open order of Spring stock'));
     expect(
-      await screen.findByText('4 × Pens at 1.40 EUR = 5.60 EUR'),
+      await screen.findByText('4 × Pens at 1.40 EUR = 5.60 EUR (0 received)'),
     ).toBeTruthy();
     expect(screen.getByText('Total 5.60 EUR')).toBeTruthy();
     expect(screen.getByText('Office Depot · ordered by Carol')).toBeTruthy();

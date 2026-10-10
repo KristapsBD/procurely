@@ -347,6 +347,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/purchase-orders/{id}/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Buyers and admins only, and only for a fully received order. Final. */
+        post: operations["PurchaseOrdersController_close"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/purchase-orders/{id}/receipts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Newest first. Whoever may read the order reads its receipts. */
+        get: operations["PurchaseOrdersController_listReceipts"];
+        put?: never;
+        /**
+         * Confirms a delivery against order lines. Buyers and admins only. The order moves to
+         *     partially or fully received by itself. Refused with 409 when a line would be over-received,
+         *     a correction would go below zero, or the order is closed. Receipts cannot be edited or
+         *     deleted: correct one with a later entry of negative quantity and a note.
+         */
+        post: operations["PurchaseOrdersController_recordReceipt"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/push-devices": {
         parameters: {
             query?: never;
@@ -614,6 +654,10 @@ export interface components {
             code: string;
             name: string;
         };
+        CreateGoodsReceiptRequest: {
+            /** @description At least one line. */
+            lines: components["schemas"]["GoodsReceiptLineInput"][];
+        };
         CreatePurchaseOrderRequest: {
             /** @description At least one line. */
             lines: components["schemas"]["PurchaseOrderLineInput"][];
@@ -627,6 +671,39 @@ export interface components {
         };
         DevLoginRequest: {
             personId: string;
+        };
+        GoodsReceipt: {
+            companyId: string;
+            id: string;
+            lines: components["schemas"]["GoodsReceiptLine"][];
+            purchaseOrderId: string;
+            /**
+             * Format: date-time
+             * @description ISO 8601 timestamp.
+             */
+            receivedAt: string;
+            receivedByName: string;
+            receivedByPersonId: string;
+        };
+        GoodsReceiptLine: {
+            catalogItemName: string;
+            id: string;
+            note: string | null;
+            purchaseOrderLineId: string;
+            /** @description Positive for a delivery, negative for a correction of an earlier entry. */
+            quantity: number;
+        };
+        GoodsReceiptLineInput: {
+            /** @description Optional, up to 500 characters: damage, a shortfall, the reason for a correction. */
+            note?: string;
+            /** @description A line of this purchase order. Each line may appear once per receipt. */
+            purchaseOrderLineId: string;
+            /**
+             * @description A whole number, not zero. Positive confirms a delivery; negative corrects earlier entries
+             *     and needs a note. The line's net received quantity must stay between 0 and the ordered
+             *     quantity.
+             */
+            quantity: number;
         };
         GoogleSessionRequest: {
             code: string;
@@ -666,6 +743,12 @@ export interface components {
             name: string;
         };
         PurchaseOrder: {
+            /**
+             * Format: date-time
+             * @description ISO 8601 timestamp, null until the order is closed.
+             */
+            closedAt: string | null;
+            closedByName: string | null;
             companyId: string;
             /**
              * Format: date-time
@@ -679,6 +762,13 @@ export interface components {
             requisitionId: string;
             /** @description The requisition's justification, to recognise it by. */
             requisitionJustification: string;
+            /**
+             * @description Derived from the goods receipts: ISSUED until something is received, PARTIALLY_RECEIVED
+             *     while any line is short, FULLY_RECEIVED once every line is complete, CLOSED after a buyer
+             *     closes a fully received order.
+             * @enum {string}
+             */
+            status: "ISSUED" | "PARTIALLY_RECEIVED" | "FULLY_RECEIVED" | "CLOSED";
             supplierId: string;
             supplierName: string;
             /** @description Sum of the line amounts in integer minor units of the company currency. */
@@ -692,6 +782,8 @@ export interface components {
             id: string;
             /** @description A whole number, 1 or more. */
             quantity: number;
+            /** @description Net quantity confirmed by goods receipts so far, 0 up to quantity. */
+            receivedQuantity: number;
             /** @description Set by the buyer when the order was made, in integer minor units. */
             unitPriceMinor: number;
         };
@@ -1491,6 +1583,82 @@ export interface operations {
             };
         };
     };
+    PurchaseOrdersController_close: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The company the person acts in (a company UUID). */
+                "x-company-id": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseOrder"];
+                };
+            };
+        };
+    };
+    PurchaseOrdersController_listReceipts: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The company the person acts in (a company UUID). */
+                "x-company-id": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoodsReceipt"][];
+                };
+            };
+        };
+    };
+    PurchaseOrdersController_recordReceipt: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The company the person acts in (a company UUID). */
+                "x-company-id": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateGoodsReceiptRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoodsReceipt"];
+                };
+            };
+        };
+    };
     PushDevicesController_register: {
         parameters: {
             query?: never;
@@ -1882,9 +2050,13 @@ export type CostCenter = components['schemas']['CostCenter'];
 export type CreateApprovalRuleRequest = components['schemas']['CreateApprovalRuleRequest'];
 export type CreateCatalogItemRequest = components['schemas']['CreateCatalogItemRequest'];
 export type CreateCostCenterRequest = components['schemas']['CreateCostCenterRequest'];
+export type CreateGoodsReceiptRequest = components['schemas']['CreateGoodsReceiptRequest'];
 export type CreatePurchaseOrderRequest = components['schemas']['CreatePurchaseOrderRequest'];
 export type CreateSupplierRequest = components['schemas']['CreateSupplierRequest'];
 export type DevLoginRequest = components['schemas']['DevLoginRequest'];
+export type GoodsReceipt = components['schemas']['GoodsReceipt'];
+export type GoodsReceiptLine = components['schemas']['GoodsReceiptLine'];
+export type GoodsReceiptLineInput = components['schemas']['GoodsReceiptLineInput'];
 export type GoogleSessionRequest = components['schemas']['GoogleSessionRequest'];
 export type HealthResponse = components['schemas']['HealthResponse'];
 export type InviteMemberRequest = components['schemas']['InviteMemberRequest'];
