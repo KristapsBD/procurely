@@ -30,6 +30,6 @@ Preconditions:
 
 ## Gotchas
 
-- Nordic Supplies after a company switch shows only that company's suppliers (Office Depot with SEK catalog lives there).
+- Nordic Supplies after a company switch shows only that company's suppliers (Office Depot with the SEK catalog, and Nordic Tech AB).
 - Accessible names include the supplier name (`Deactivate Office Depot`).
 - Reseed after Carol's mutations.

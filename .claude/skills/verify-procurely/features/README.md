@@ -7,7 +7,7 @@ Maintained source for verifying user-facing behavior of the Expo **web** app aga
 - Launch with `.claude/skills/verify-procurely/scripts/launch.sh` from the repo root.
 - Source the env file launch wrote under `/tmp/procurely-verify/<compose project>/env.sh` (exports `METRO_PORT`).
 - Run `.claude/skills/verify-procurely/scripts/doctor.sh` and require this checkout's `STACK_CHECKOUT`, a healthy API, and this checkout's Metro on `$METRO_PORT`.
-- Seed is the compose seed (`make seed`): companies Acme Trading (EUR), Nordic Supplies (SEK), Megacorp Industries, Fresh Start Ltd.
+- Seed is the compose seed (`make seed`): companies Acme Trading (EUR), Nordic Supplies (SEK), Megacorp Industries (EUR), Fresh Start Ltd (EUR, empty). Each of the first three holds about 200 requisitions with orders, plus named story cases; see [Seed dataset](./seed-dataset.md). Lists are long, so find rows by justification.
 - Drive only the instance this launch started. Do not use a developer Metro on 8081 or another clone's stack.
 - Start recipes from a freshly seeded database unless the feature file says otherwise.
 
@@ -34,4 +34,5 @@ Maintained source for verifying user-facing behavior of the Expo **web** app aga
 - [Approvals](./approvals.md) — admin approval rules, auto-approval under the threshold, approver inbox approve/reject, no self-approval.
 - [Purchase orders](./purchase-orders.md) — buyer/admin creates an order from an approved requisition for an active supplier; converts once; role-scoped list.
 - [Goods receipts](./goods-receipts.md) — buyer/admin confirms deliveries per order line, partial and full; over-receiving refused; status follows; correction by a later entry; close a fully received order.
+- [Seed dataset](./seed-dataset.md) — the story layer and the bulk volume, driven as Hanna, Gustav, Ivan, Lukas, Carol, Dave, Erik and Kerstin.
 - [Members](./members.md) — admin list, invite, role, deactivate; no entry for other roles.

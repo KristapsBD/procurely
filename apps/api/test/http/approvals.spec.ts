@@ -7,11 +7,21 @@ import type {
   CostCenter,
   Requisition,
 } from '@procurely/shared-types';
-import { CATALOG_ITEM, COMPANY, PERSON } from '../../prisma/seed-data';
+import {
+  CATALOG_ITEM,
+  COMPANY,
+  PERSON,
+  approvalRules,
+} from '../../prisma/seed-data';
 import { Actor, startApp } from './harness';
 
 const MEGA = COMPANY.large;
-const SEEDED_RULE = { thresholdMinor: 100000, requiredRole: 'APPROVER' };
+const SEEDED_RULES = approvalRules
+  .filter((r) => r.companyId === MEGA)
+  .map(({ thresholdMinor, requiredRole }) => ({
+    thresholdMinor,
+    requiredRole,
+  }));
 
 // Megacorp: gustav admin, hanna approver, ivan requester. Its rules change from test to test; a
 // catalog item priced at one cent makes a requisition's quantity its exact total. Acme (main:
@@ -47,7 +57,7 @@ describe('approvals', () => {
     acmeOps = await codeOf(await as(PERSON.alice), COMPANY.main, 'OPS');
   });
   afterAll(async () => {
-    await setRules([SEEDED_RULE]);
+    await setRules(SEEDED_RULES);
     await app.close();
   });
   const as = (personId: string) => Actor.signIn(app, personId);

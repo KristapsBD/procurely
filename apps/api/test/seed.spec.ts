@@ -1,0 +1,294 @@
+import { createHash } from 'node:crypto';
+import { isDeepStrictEqual } from 'node:util';
+import type { PrismaClient } from '@prisma/client';
+import { statusOf } from '../src/purchase-orders/purchase-order-status';
+import { BULK_SEED, bulkHistories } from '../prisma/seed-bulk';
+import {
+  COMPANY,
+  PERSON,
+  REQUISITION,
+  reference,
+  storyHistories,
+} from '../prisma/seed-data';
+import { insertAll } from '../prisma/seed-insert';
+import { materialize, seedRows } from '../prisma/seed-rows';
+import type { RequisitionHistory, SeedRows } from '../prisma/seed-types';
+
+function canonical(value: unknown): unknown {
+  if (value instanceof Date) return value.toISOString();
+  if (Array.isArray(value)) return value.map(canonical);
+  if (value !== null && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value)
+        .sort(([a], [b]) => (a < b ? -1 : 1))
+        .map(([k, v]) => [k, canonical(v)]),
+    );
+  }
+  return value;
+}
+
+const time = (instant: Date | string) => new Date(instant).getTime();
+
+const fingerprint = (rows: SeedRows) =>
+  createHash('sha256')
+    .update(JSON.stringify(canonical(rows)))
+    .digest('hex');
+
+function orderStatuses(rows: SeedRows): Set<string> {
+  const closed = new Set(
+    rows.purchaseOrderClosures.map((c) => c.purchaseOrderId),
+  );
+  const received = new Map<string, number>();
+  for (const l of rows.goodsReceiptLines) {
+    received.set(
+      l.purchaseOrderLineId,
+      (received.get(l.purchaseOrderLineId) ?? 0) + l.quantity,
+    );
+  }
+  return new Set(
+    rows.purchaseOrders.map((po) =>
+      statusOf(
+        rows.purchaseOrderLines
+          .filter((l) => l.purchaseOrderId === po.id)
+          .map((l) => ({
+            quantity: l.quantity,
+            receivedQuantity: received.get(l.id!) ?? 0,
+          })),
+        closed.has(po.id!),
+      ),
+    ),
+  );
+}
+
+const REQUISITION_STATUSES = [
+  'DRAFT',
+  'SUBMITTED',
+  'APPROVED',
+  'REJECTED',
+  'CANCELLED',
+];
+const ORDER_STATUSES = [
+  'ISSUED',
+  'PARTIALLY_RECEIVED',
+  'FULLY_RECEIVED',
+  'CLOSED',
+];
+
+describe('seed', () => {
+  const rows = seedRows();
+
+  it('has the same rows on every machine and every run', () => {
+    expect(fingerprint(rows)).toBe(
+      '30187d26900b716e75a5f9638497d2afbdab31f81dd48e47407f92b70efcbef3',
+    );
+    expect(fingerprint(seedRows())).toBe(fingerprint(rows));
+  });
+
+  it('depends on the random seed', () => {
+    expect(bulkHistories(BULK_SEED + 1)).not.toEqual(bulkHistories());
+  });
+
+  it('gives about 200 histories to each company with people, and none to the empty one', () => {
+    const count = (companyId: string) =>
+      bulkHistories().filter((h) => h.companyId === companyId).length;
+    for (const id of [COMPANY.main, COMPANY.sek, COMPANY.large]) {
+      expect(count(id)).toBeGreaterThanOrEqual(190);
+      expect(count(id)).toBeLessThanOrEqual(210);
+    }
+    expect(count(COMPANY.empty)).toBe(0);
+  });
+
+  it('puts the bulk layer before the story layer', () => {
+    const instants = (h: RequisitionHistory) =>
+      JSON.stringify(h).match(/\d{4}-\d\d-\d\dT[\d:.]+Z/g)!;
+    const newestBulk = bulkHistories().flatMap(instants).sort().at(-1)!;
+    const oldestStory = storyHistories
+      .filter((h) => h.id !== REQUISITION.fridaApproved)
+      .flatMap(instants)
+      .sort()[0];
+    expect(newestBulk < oldestStory).toBe(true);
+  });
+
+  it('straddles the 500.00 approver threshold in the large company by one cent', () => {
+    const total = (id: string) =>
+      rows.requisitionLines
+        .filter((l) => l.requisitionId === id)
+        .reduce((sum, l) => sum + l.amountMinor, 0);
+    const route = (id: string) =>
+      rows.requisitions.find((r) => r.id === id)!.approvalRoute;
+    const cases = [
+      [REQUISITION.ivanUnderThreshold, 49999, 'UNDER_THRESHOLD'],
+      [REQUISITION.ivanAtThreshold, 50000, 'APPROVER'],
+      [REQUISITION.lukasOverThreshold, 50001, 'APPROVER'],
+    ] as const;
+    for (const [id, expected, expectedRoute] of cases) {
+      expect([total(id), route(id)]).toEqual([expected, expectedRoute]);
+    }
+  });
+
+  it('shows every requisition and order status in both layers', () => {
+    for (const histories of [storyHistories, bulkHistories()]) {
+      const layer = materialize(histories, reference);
+      expect(new Set(layer.requisitions.map((r) => r.status))).toEqual(
+        new Set(REQUISITION_STATUSES),
+      );
+      expect(orderStatuses(layer)).toEqual(new Set(ORDER_STATUSES));
+    }
+  });
+
+  it('shows every requisition status in the bulk layer of each company', () => {
+    for (const companyId of [COMPANY.main, COMPANY.sek, COMPANY.large]) {
+      const layer = materialize(
+        bulkHistories().filter((h) => h.companyId === companyId),
+        reference,
+      );
+      expect(new Set(layer.requisitions.map((r) => r.status))).toEqual(
+        new Set(REQUISITION_STATUSES),
+      );
+    }
+  });
+
+  it('shows the newest Acme audit page the latest invitation and deactivation', () => {
+    const newest = rows.auditLog
+      .map((row, seq) => ({ row, seq }))
+      .filter(({ row }) => row.companyId === COMPANY.main)
+      .sort(
+        (a, b) =>
+          time(b.row.createdAt!) - time(a.row.createdAt!) || b.seq - a.seq,
+      )
+      .slice(0, 200)
+      .map(({ row }) => [row.action, row.details]);
+    expect(newest).toEqual(
+      expect.arrayContaining([
+        [
+          'member.invited',
+          expect.objectContaining({ email: 'paula@procurely.test' }),
+        ],
+        ['member.deactivated', { email: 'oscar@procurely.test' }],
+      ]),
+    );
+  });
+
+  it('inserts every table of the rows exactly once', async () => {
+    const inserted: unknown[][] = [];
+    const delegate = {
+      createMany: async ({ data }: { data: unknown[] }) => {
+        inserted.push(data);
+      },
+      findMany: async () => [],
+    };
+    const fake = new Proxy({}, { get: () => delegate }) as PrismaClient;
+    await insertAll(fake, rows);
+    for (const [key, table] of Object.entries(rows)) {
+      const matches = inserted.filter((data) => isDeepStrictEqual(data, table));
+      expect([key, matches.length]).toEqual([key, 1]);
+    }
+    expect(inserted).toHaveLength(Object.keys(rows).length);
+  });
+
+  describe('refuses a history the API could not have produced', () => {
+    const story = (id: string) => storyHistories.find((h) => h.id === id)!;
+    const refused = (h: RequisitionHistory, reason: RegExp) =>
+      expect(() => materialize([h], reference)).toThrow(reason);
+    const approvedOrder = (id: string) => {
+      const h = story(id);
+      if (h.outcome.status !== 'APPROVED' || !h.outcome.order)
+        throw new Error('story moved');
+      return { h, outcome: h.outcome, order: h.outcome.order };
+    };
+
+    it('when an approver decides their own requisition', () => {
+      const own = story(REQUISITION.gustavOwn);
+      refused(
+        {
+          ...own,
+          outcome: {
+            status: 'APPROVED',
+            submittedAt: new Date('2026-08-18T09:10:00Z'),
+            decision: {
+              by: own.requesterPersonId,
+              at: new Date('2026-08-19T09:00:00Z'),
+              comment: null,
+            },
+          },
+        },
+        /may not decide/,
+      );
+    });
+
+    it('when a rejection has no reason', () => {
+      const rejected = story(REQUISITION.ivanRejected);
+      if (rejected.outcome.status !== 'REJECTED')
+        throw new Error('story moved');
+      refused(
+        {
+          ...rejected,
+          outcome: {
+            ...rejected.outcome,
+            decision: { ...rejected.outcome.decision, comment: ' ' },
+          },
+        },
+        /a rejection needs a reason/,
+      );
+    });
+
+    it('when a total over the threshold is approved by nobody', () => {
+      const waiting = story(REQUISITION.ivanAtThreshold);
+      refused(
+        {
+          ...waiting,
+          outcome: {
+            status: 'APPROVED',
+            submittedAt: new Date('2026-08-05T09:10:00Z'),
+            decision: 'automatic',
+          },
+        },
+        /decided by nobody/,
+      );
+    });
+
+    it('when a delivery would exceed what was ordered', () => {
+      const { h, outcome, order } = approvedOrder(
+        REQUISITION.aliceFullyReceived,
+      );
+      refused(
+        {
+          ...h,
+          outcome: {
+            ...outcome,
+            order: {
+              ...order,
+              receipts: [
+                {
+                  ...order.receipts[0],
+                  lines: [{ position: 0, quantity: 6, note: null }],
+                },
+              ],
+            },
+          },
+        },
+        /would hold 6 of 5/,
+      );
+    });
+
+    it('when an order that is not fully received is closed', () => {
+      const { h, outcome, order } = approvedOrder(REQUISITION.paulaPartial);
+      refused(
+        {
+          ...h,
+          outcome: {
+            ...outcome,
+            order: {
+              ...order,
+              closure: {
+                by: PERSON.carol,
+                at: new Date('2026-09-02T09:00:00Z'),
+              },
+            },
+          },
+        },
+        /only a fully received order closes/,
+      );
+    });
+  });
+});

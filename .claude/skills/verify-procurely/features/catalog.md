@@ -7,7 +7,7 @@ Everyone in a company can read catalog items and prices. Buyers and admins add, 
 - `list-prices` shows A4 copy paper at Office Depot 24.99 EUR and Laptop 14" at TechWorld 1199.00 EUR on Acme.
 - `inactive-supplier` shows Recycled paper with `Supplier inactive: cannot be ordered`.
 - `buyer-add-edit-delete` as Carol.
-- `requester-readonly` as Alice; Nordic switch shows A4 copy paper at 279.00 SEK.
+- `requester-readonly` as Alice; Nordic switch shows Nordic's own items, A4 copy paper among them at 279.00 SEK.
 
 ## How to get to it (user POV)
 
@@ -22,7 +22,7 @@ Preconditions:
 - **Carol list.** Sign in as Carol. Click `Catalog`. See A4 copy paper `Office Depot · 24.99 EUR`, Laptop 14" `TechWorld · 1199.00 EUR`, Recycled paper with inactive-supplier copy. `Add item` is present.
 - **Invalid price.** Click `Add item`. A price of `12.345` shows `Enter a price like 24.99` and `Save item` disabled.
 - **Add.** Choose `Supplier TechWorld`, name `USB-C dock`, price `89.90`, `Save item`. List shows `TechWorld · 89.90 EUR`.
-- **Alice.** Sign out, Alice, `Catalog` on Acme: same seed items, no Add/Edit/Delete. Click `Nordic Supplies` then `Catalog`: only A4 copy paper `Office Depot · 279.00 SEK`.
+- **Alice.** Sign out, Alice, `Catalog` on Acme: same seed items, no Add/Edit/Delete. Click `Nordic Supplies` then `Catalog`: Nordic's nine items only, with A4 copy paper `Office Depot · 279.00 SEK` and none of Acme's `TechWorld` items.
 - **Proof.** Snapshot/screenshot of Carol's list with a new item, and Alice on Nordic with SEK prices. Optionally confirm `GET /catalog-items` per company.
 
 ## Gotchas
