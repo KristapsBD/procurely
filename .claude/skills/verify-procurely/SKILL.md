@@ -16,7 +16,7 @@ Repo root is the checkout that contains this skill. All `make` / `pnpm` commands
 This checkout already isolates Docker (project name and ports from the folder path). Metro for verification uses a per-checkout port, `API_PORT + 20000`, so it collides neither with a developer Metro on 8081 nor with another checkout's verification Metro. Launch state lives in `/tmp/procurely-verify/<compose project>/`, never shared between checkouts.
 
 ```sh
-.cursor/skills/verify-procurely/scripts/launch.sh
+.claude/skills/verify-procurely/scripts/launch.sh
 ```
 
 Ready when:
@@ -38,7 +38,7 @@ Teardown: see Cleanup. Do not start a second verification Metro for this checkou
 ## Doctor
 
 ```sh
-.cursor/skills/verify-procurely/scripts/doctor.sh
+.claude/skills/verify-procurely/scripts/doctor.sh
 ```
 
 Exit 0 only when this checkout's API is healthy, this checkout's Metro (live pid in its state dir, answering on `METRO_PORT`) answers, and `STACK_CHECKOUT` matches the current repo root. Run doctor first whenever anything looks off. Refuse to drive if doctor fails: do not click through a shared or foreign instance.
@@ -70,7 +70,7 @@ Dev login exists only while the API `NODE_ENV` is `development` or `test` (compo
 
 ## Evidence
 
-Directory: `.cursor/skills/verify-procurely/evidence/<run-id>/` (gitignored). Create the directory before driving. `<run-id>` is a timestamp plus the feature id, e.g. `20261004T120000-sign-in-company-switch`.
+Directory: `.claude/skills/verify-procurely/evidence/<run-id>/` (gitignored). Create the directory before driving. `<run-id>` is a timestamp plus the feature id, e.g. `20261004T120000-sign-in-company-switch`.
 
 Proof standards:
 
@@ -84,12 +84,12 @@ Mocks: Google OAuth may be configured in root `.env`; default proofs use seed + 
 ## Cleanup
 
 ```sh
-.cursor/skills/verify-procurely/scripts/cleanup.sh
+.claude/skills/verify-procurely/scripts/cleanup.sh
 ```
 
 Stops the Metro process this launch wrote to `/tmp/procurely-verify/<compose project>/metro.pid` (by pid, not by name) and `make down` for **this** checkout's compose project (keeps the database volume). Leaves `evidence/<run-id>/` in place.
 
-In a disposable worktree that is about to be returned, run `DISPOSABLE=1 .cursor/skills/verify-procurely/scripts/cleanup.sh`. After `make down` it also runs `docker compose down -v --rmi local` for this checkout's project, removing the database volume and the built image. Without it they stay, and are unreachable once the worktree path is deleted.
+In a disposable worktree that is about to be returned, run `DISPOSABLE=1 .claude/skills/verify-procurely/scripts/cleanup.sh`. After `make down` it also runs `docker compose down -v --rmi local` for this checkout's project, removing the database volume and the built image. Without it they stay, and are unreachable once the worktree path is deleted.
 
 If this run created extra cost centers, suppliers, or catalog items and you need a clean seed for the next proof, `make seed` before the next drive, not during cleanup of evidence.
 
@@ -97,6 +97,6 @@ If this run created extra cost centers, suppliers, or catalog items and you need
 
 | Script               | Invocation                                                                                        |
 | -------------------- | ------------------------------------------------------------------------------------------------- |
-| Launch stack + Metro | `.cursor/skills/verify-procurely/scripts/launch.sh`                                               |
-| Readiness            | `.cursor/skills/verify-procurely/scripts/doctor.sh`                                               |
-| Teardown             | `.cursor/skills/verify-procurely/scripts/cleanup.sh` (`DISPOSABLE=1` also drops volume and image) |
+| Launch stack + Metro | `.claude/skills/verify-procurely/scripts/launch.sh`                                               |
+| Readiness            | `.claude/skills/verify-procurely/scripts/doctor.sh`                                               |
+| Teardown             | `.claude/skills/verify-procurely/scripts/cleanup.sh` (`DISPOSABLE=1` also drops volume and image) |
