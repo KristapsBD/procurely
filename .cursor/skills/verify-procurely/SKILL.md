@@ -86,12 +86,14 @@ Mocks: Google OAuth may be configured in root `.env`; default proofs use seed + 
 
 Stops the Metro process this launch wrote to `/tmp/procurely-verify/metro.pid` (by pid, not by name) and `make down` for **this** checkout's compose project (keeps the database volume). Leaves `evidence/<run-id>/` in place.
 
+In a disposable worktree that is about to be returned, run `DISPOSABLE=1 .cursor/skills/verify-procurely/scripts/cleanup.sh`. After `make down` it also runs `docker compose down -v --rmi local` for this checkout's project, removing the database volume and the built image. Without it they stay, and are unreachable once the worktree path is deleted.
+
 If this run created extra cost centers, suppliers, or catalog items and you need a clean seed for the next proof, `make seed` before the next drive, not during cleanup of evidence.
 
 ## Helpers
 
-| Script               | Invocation                                           |
-| -------------------- | ---------------------------------------------------- |
-| Launch stack + Metro | `.cursor/skills/verify-procurely/scripts/launch.sh`  |
-| Readiness            | `.cursor/skills/verify-procurely/scripts/doctor.sh`  |
-| Teardown             | `.cursor/skills/verify-procurely/scripts/cleanup.sh` |
+| Script               | Invocation                                                                                        |
+| -------------------- | ------------------------------------------------------------------------------------------------- |
+| Launch stack + Metro | `.cursor/skills/verify-procurely/scripts/launch.sh`                                               |
+| Readiness            | `.cursor/skills/verify-procurely/scripts/doctor.sh`                                               |
+| Teardown             | `.cursor/skills/verify-procurely/scripts/cleanup.sh` (`DISPOSABLE=1` also drops volume and image) |

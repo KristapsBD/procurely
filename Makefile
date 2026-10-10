@@ -30,7 +30,7 @@ down: ## Stop the stack, keep the database data
 	docker compose down
 
 prune: ## List leftover procurely stacks; APPLY=1 removes the listed ones
-	@APPLY='$(APPLY)' PRUNE_PROJECTS='$(PRUNE_PROJECTS)' bash '$(CURDIR)/scripts/prune-stacks.sh'
+	@APPLY='$(APPLY)' bash '$(CURDIR)/scripts/prune-stacks.sh'
 
 reset: ## Wipe the database volume and start fresh
 	docker compose down -v
