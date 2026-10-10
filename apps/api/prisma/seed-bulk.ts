@@ -97,6 +97,7 @@ interface Plan {
   costCenters: string[];
   catalogBySupplier: { catalogItemId: string; supplierId: string }[][];
   topics: string[];
+  maxQuantity: number;
 }
 
 const itemsOf = (companyId: string) => {
@@ -137,6 +138,7 @@ const plan = (
   tag: string,
   requesters: string[],
   topics: string[],
+  maxQuantity = 14,
 ): Plan => ({
   companyId,
   tag,
@@ -145,6 +147,7 @@ const plan = (
   costCenters: centersOf(companyId),
   catalogBySupplier: itemsOf(companyId),
   topics,
+  maxQuantity,
 });
 
 const { alice, paula, frida, ivan, lukas, gustav } = PERSON;
@@ -172,6 +175,7 @@ const PLANS: Plan[] = [
       'Ersättning för trasig utrustning',
       'Material till kampanjen',
     ],
+    30,
   ),
   plan(
     COMPANY.large,
@@ -204,7 +208,7 @@ function linesFor(rng: Rng, p: Plan): LineSpec[] {
   const lines: LineSpec[] = [];
   for (let i = 0; i < count; i++) {
     const [{ catalogItemId }] = pool.splice(rng.int(0, pool.length - 1), 1);
-    lines.push({ catalogItemId, quantity: rng.int(2, 14) });
+    lines.push({ catalogItemId, quantity: rng.int(2, p.maxQuantity) });
   }
   return lines;
 }
