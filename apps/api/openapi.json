@@ -1580,6 +1580,123 @@
           "ApprovalRules"
         ]
       }
+    },
+    "/push-devices": {
+      "post": {
+        "operationId": "PushDevicesController_register",
+        "parameters": [
+          {
+            "name": "x-company-id",
+            "in": "header",
+            "description": "The company the person acts in (a company UUID).",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterPushDeviceRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "PushDevices"
+        ]
+      },
+      "delete": {
+        "operationId": "PushDevicesController_remove",
+        "parameters": [
+          {
+            "name": "x-company-id",
+            "in": "header",
+            "description": "The company the person acts in (a company UUID).",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterPushDeviceRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Stops notifications to this phone for the person. Unknown tokens are ignored.",
+        "tags": [
+          "PushDevices"
+        ]
+      }
+    },
+    "/push-devices/outbox": {
+      "get": {
+        "operationId": "PushDevicesController_outboxFor",
+        "parameters": [
+          {
+            "name": "x-company-id",
+            "in": "header",
+            "description": "The company the person acts in (a company UUID).",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PushOutboxEntry"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Development only (404 elsewhere): the notifications the API produced for the person's own\nregistered devices in this company, newest first. Lets delivery be checked without a phone.",
+        "tags": [
+          "PushDevices"
+        ]
+      }
     }
   },
   "info": {
@@ -2300,6 +2417,64 @@
         "required": [
           "requiredRole",
           "thresholdMinor"
+        ]
+      },
+      "RegisterPushDeviceRequest": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "The Expo push token, such as ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]."
+          }
+        },
+        "required": [
+          "token"
+        ]
+      },
+      "PushKind": {
+        "type": "string",
+        "enum": [
+          "approval-requested",
+          "requisition-decided"
+        ]
+      },
+      "PushOutboxEntry": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PushKind"
+              }
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "sentAt": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "requisitionId": {
+            "type": "string"
+          },
+          "companyId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "sentAt",
+          "title",
+          "body",
+          "requisitionId",
+          "companyId"
         ]
       }
     }

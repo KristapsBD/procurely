@@ -7,6 +7,7 @@ import {
   costCenters,
   memberships,
   people,
+  pushDevices,
   requisitionDecisions,
   requisitions,
   suppliers,
@@ -71,6 +72,10 @@ async function main() {
     });
     await prisma.approvalRule.createMany({
       data: approvalRules,
+      skipDuplicates: true,
+    });
+    await prisma.pushDevice.createMany({
+      data: pushDevices,
       skipDuplicates: true,
     });
     await prisma.auditLog.createMany({ data: auditLog, skipDuplicates: true });

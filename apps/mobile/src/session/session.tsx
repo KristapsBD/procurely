@@ -6,12 +6,14 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
 import type { Api } from '../api/client';
 import { ApiError } from '../api/client';
 import { isOtherCompanyQuery } from '../api/query-keys';
+import type { PushRegistrar } from '../push/registrar';
 import type { TokenStore } from './token-store';
 
 type SessionState =
@@ -49,11 +51,14 @@ export function useApi(): Api {
 export function SessionProvider(props: {
   api: Api;
   store: TokenStore;
+  push?: Pick<PushRegistrar, 'unregister'>;
   children: ReactNode;
 }) {
-  const { api, store } = props;
+  const { api, store, push } = props;
   const queryClient = useQueryClient();
   const [state, setState] = useState<SessionState>({ status: 'loading' });
+  const stateRef = useRef(state);
+  stateRef.current = state;
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(
     null,
   );
@@ -102,12 +107,14 @@ export function SessionProvider(props: {
   );
 
   const signOut = useCallback(async () => {
+    const current = stateRef.current;
+    if (current.status === 'signedIn') await push?.unregister(current.token);
     await store.clear();
     await queryClient.cancelQueries();
     queryClient.clear();
     setSelectedCompanyId(null);
     setState({ status: 'signedOut' });
-  }, [store, queryClient]);
+  }, [store, queryClient, push]);
 
   const selectCompany = useCallback(
     (companyId: string) => {

@@ -29,6 +29,7 @@ import {
   parseRejectReason,
   parseSaveRequisition,
 } from './requisition-input';
+import { ApprovalNotifier } from '../notifications/approval-notifier';
 import { RequisitionsService } from './requisitions.service';
 
 @Controller('requisitions')
@@ -39,6 +40,7 @@ export class RequisitionsController {
   constructor(
     private readonly db: TenantDb,
     private readonly requisitions: RequisitionsService,
+    private readonly notifier: ApprovalNotifier,
   ) {}
 
   /**
@@ -90,13 +92,17 @@ export class RequisitionsController {
    */
   @Post(':id/submit')
   @HttpCode(200)
-  submit(
+  async submit(
     @CompanyScope() scope: CompanyRequestScope,
     @Param('id', ParseUUIDPipe) id: string,
   ): Promise<Requisition> {
-    return this.db
+    const submitted = await this.db
       .run(scope, (tx) => this.requisitions.transition(tx, scope, id, 'submit'))
       .catch(translateDbError);
+    if (submitted.status === 'SUBMITTED') {
+      this.notifier.approvalRequested(scope, id);
+    }
+    return submitted;
   }
 
   /** Draft or submitted to cancelled. Cancelled is final. */
@@ -117,32 +123,36 @@ export class RequisitionsController {
    */
   @Post(':id/approve')
   @HttpCode(200)
-  approve(
+  async approve(
     @CompanyScope() scope: CompanyRequestScope,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: ApproveRequisitionRequest,
   ): Promise<Requisition> {
     const comment = parseApproveComment(body);
-    return this.db
+    const decided = await this.db
       .run(scope, (tx) =>
         this.requisitions.decide(tx, scope, id, 'approve', comment),
       )
       .catch(translateDbError);
+    this.notifier.decided(scope, id, 'APPROVED');
+    return decided;
   }
 
   /** Submitted to rejected, by the same deciders. The reason is required and shown to the requester. */
   @Post(':id/reject')
   @HttpCode(200)
-  reject(
+  async reject(
     @CompanyScope() scope: CompanyRequestScope,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: RejectRequisitionRequest,
   ): Promise<Requisition> {
     const reason = parseRejectReason(body);
-    return this.db
+    const decided = await this.db
       .run(scope, (tx) =>
         this.requisitions.decide(tx, scope, id, 'reject', reason),
       )
       .catch(translateDbError);
+    this.notifier.decided(scope, id, 'REJECTED');
+    return decided;
   }
 }

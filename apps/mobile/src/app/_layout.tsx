@@ -6,6 +6,9 @@ import { createApi } from '../api/client';
 import { AppProviders } from '../app-providers';
 import { Loading, styles } from '../components/ui';
 import { API_URL } from '../config';
+import { expoPushPlatform } from '../push/expo-push-platform';
+import { PushRegistration } from '../push/push-registration';
+import { createPushRegistrar } from '../push/registrar';
 import { useSession } from '../session/session';
 import { tokenStore } from '../session/token-store';
 
@@ -13,8 +16,17 @@ import { tokenStore } from '../session/token-store';
 // window that opened it, which closes the popup. Does nothing anywhere else (and on a phone).
 WebBrowser.maybeCompleteAuthSession();
 
+const noPushRegistrar = {
+  register: async () => {},
+  unregister: async () => {},
+};
+
 export default function RootLayout() {
   const api = useMemo(() => (API_URL ? createApi(API_URL) : null), []);
+  const registrar = useMemo(
+    () => (api ? createPushRegistrar(api, expoPushPlatform) : noPushRegistrar),
+    [api],
+  );
   if (!api) {
     return (
       <View style={styles.screen}>
@@ -26,8 +38,9 @@ export default function RootLayout() {
     );
   }
   return (
-    <AppProviders api={api} store={tokenStore}>
+    <AppProviders api={api} store={tokenStore} push={registrar}>
       <Routes />
+      <PushRegistration registrar={registrar} platform={expoPushPlatform} />
     </AppProviders>
   );
 }

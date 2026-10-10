@@ -306,6 +306,43 @@ export interface paths {
         patch: operations["MembersController_update"];
         trace?: never;
     };
+    "/push-devices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PushDevicesController_register"];
+        /** Stops notifications to this phone for the person. Unknown tokens are ignored. */
+        delete: operations["PushDevicesController_remove"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/push-devices/outbox": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Development only (404 elsewhere): the notifications the API produced for the person's own
+         *     registered devices in this company, newest first. Lets delivery be checked without a phone.
+         */
+        get: operations["PushDevicesController_outboxFor"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/requisitions": {
         parameters: {
             query?: never;
@@ -577,6 +614,21 @@ export interface components {
             email: string;
             id: string;
             name: string;
+        };
+        /** @enum {string} */
+        PushKind: "approval-requested" | "requisition-decided";
+        PushOutboxEntry: {
+            body: string;
+            companyId: string;
+            id: string;
+            kind: components["schemas"]["PushKind"];
+            requisitionId: string;
+            sentAt: string;
+            title: string;
+        };
+        RegisterPushDeviceRequest: {
+            /** @description The Expo push token, such as ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]. */
+            token: string;
         };
         RejectRequisitionRequest: {
             /** @description Shown to the requester. Required, not blank. */
@@ -1279,6 +1331,76 @@ export interface operations {
             };
         };
     };
+    PushDevicesController_register: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The company the person acts in (a company UUID). */
+                "x-company-id": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegisterPushDeviceRequest"];
+            };
+        };
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PushDevicesController_remove: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The company the person acts in (a company UUID). */
+                "x-company-id": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegisterPushDeviceRequest"];
+            };
+        };
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PushDevicesController_outboxFor: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The company the person acts in (a company UUID). */
+                "x-company-id": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PushOutboxEntry"][];
+                };
+            };
+        };
+    };
     RequisitionsController_list: {
         parameters: {
             query?: never;
@@ -1608,6 +1730,9 @@ export type InviteMemberRequest = components['schemas']['InviteMemberRequest'];
 export type MeResponse = components['schemas']['MeResponse'];
 export type Member = components['schemas']['Member'];
 export type Person = components['schemas']['Person'];
+export type PushKind = components['schemas']['PushKind'];
+export type PushOutboxEntry = components['schemas']['PushOutboxEntry'];
+export type RegisterPushDeviceRequest = components['schemas']['RegisterPushDeviceRequest'];
 export type RejectRequisitionRequest = components['schemas']['RejectRequisitionRequest'];
 export type Requisition = components['schemas']['Requisition'];
 export type RequisitionAction = components['schemas']['RequisitionAction'];

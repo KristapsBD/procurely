@@ -149,4 +149,13 @@ export class Actor {
   deleteApprovalRule(companyId: string, id: string) {
     return this.call('delete', `/approval-rules/${id}`, companyId);
   }
+  registerPushDevice(companyId: string, token: string) {
+    return this.call('post', '/push-devices', companyId).send({ token });
+  }
+  removePushDevice(companyId: string, token: string) {
+    return this.call('delete', '/push-devices', companyId).send({ token });
+  }
+  pushOutbox(companyId: string) {
+    return this.call('get', '/push-devices/outbox', companyId);
+  }
 }

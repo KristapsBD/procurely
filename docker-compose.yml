@@ -31,6 +31,9 @@ services:
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-}
       GOOGLE_APP_RETURN_URLS: ${GOOGLE_APP_RETURN_URLS:-}
+      # Push notifications, optional: PUSH_SENDER=expo sends through Expo (docs/push-notifications.md).
+      PUSH_SENDER: ${PUSH_SENDER:-}
+      EXPO_ACCESS_TOKEN: ${EXPO_ACCESS_TOKEN:-}
     ports:
       - '${API_PORT:-3000}:3000'
     depends_on:
