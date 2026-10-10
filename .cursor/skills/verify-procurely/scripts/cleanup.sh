@@ -22,4 +22,9 @@ if [[ -f "$STATE/metro.pid" ]]; then
 fi
 
 make down
+if [[ "${DISPOSABLE:-}" == "1" ]]; then
+  # Also drop the volume and built image; the seed can be rebuilt.
+  eval "$(make -s env)"
+  docker compose down -v --rmi local
+fi
 echo "cleanup done (evidence directories left in place)"
