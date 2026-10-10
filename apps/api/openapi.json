@@ -1111,7 +1111,7 @@
             "bearer": []
           }
         ],
-        "summary": "Newest first: the person's own requisitions; for an approver also the submitted ones routed\nto approvers and those they decided; for an admin every one of the company.",
+        "summary": "Newest first: the person's own requisitions; for an approver also the submitted ones routed\nto approvers and those they decided; for a buyer the approved ones (to order them); for an\nadmin every one of the company.",
         "tags": [
           "Requisitions"
         ]
@@ -1695,6 +1695,135 @@
         "summary": "Development only (404 elsewhere): the notifications the API produced for the person's own\nregistered devices in this company, newest first. Lets delivery be checked without a phone.",
         "tags": [
           "PushDevices"
+        ]
+      }
+    },
+    "/purchase-orders": {
+      "get": {
+        "operationId": "PurchaseOrdersController_list",
+        "parameters": [
+          {
+            "name": "x-company-id",
+            "in": "header",
+            "description": "The company the person acts in (a company UUID).",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PurchaseOrder"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Newest first. Buyers and admins get every order of the company; a requester the orders of\ntheir own requisitions; an approver those of the requisitions they decided.",
+        "tags": [
+          "PurchaseOrders"
+        ]
+      },
+      "post": {
+        "operationId": "PurchaseOrdersController_create",
+        "parameters": [
+          {
+            "name": "x-company-id",
+            "in": "header",
+            "description": "The company the person acts in (a company UUID).",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePurchaseOrderRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PurchaseOrder"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Buyers and admins only. Refused unless the requisition is approved and has no order yet,\nthe supplier is active, and every item belongs to that supplier. A requisition converts\nonce; a second attempt is a 409.",
+        "tags": [
+          "PurchaseOrders"
+        ]
+      }
+    },
+    "/purchase-orders/{id}": {
+      "get": {
+        "operationId": "PurchaseOrdersController_get",
+        "parameters": [
+          {
+            "name": "x-company-id",
+            "in": "header",
+            "description": "The company the person acts in (a company UUID).",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PurchaseOrder"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "tags": [
+          "PurchaseOrders"
         ]
       }
     }
@@ -2475,6 +2604,145 @@
           "body",
           "requisitionId",
           "companyId"
+        ]
+      },
+      "PurchaseOrderLine": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "catalogItemId": {
+            "type": "string"
+          },
+          "catalogItemName": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number",
+            "description": "A whole number, 1 or more."
+          },
+          "unitPriceMinor": {
+            "type": "number",
+            "description": "Set by the buyer when the order was made, in integer minor units."
+          },
+          "amountMinor": {
+            "type": "number",
+            "description": "quantity times unitPriceMinor."
+          }
+        },
+        "required": [
+          "id",
+          "catalogItemId",
+          "catalogItemName",
+          "quantity",
+          "unitPriceMinor",
+          "amountMinor"
+        ]
+      },
+      "PurchaseOrder": {
+        "type": "object",
+        "properties": {
+          "createdAt": {
+            "type": "string",
+            "description": "ISO 8601 timestamp.",
+            "format": "date-time"
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PurchaseOrderLine"
+            }
+          },
+          "id": {
+            "type": "string"
+          },
+          "companyId": {
+            "type": "string"
+          },
+          "requisitionId": {
+            "type": "string"
+          },
+          "requisitionJustification": {
+            "type": "string",
+            "description": "The requisition's justification, to recognise it by."
+          },
+          "supplierId": {
+            "type": "string"
+          },
+          "supplierName": {
+            "type": "string"
+          },
+          "createdByPersonId": {
+            "type": "string"
+          },
+          "createdByName": {
+            "type": "string"
+          },
+          "totalMinor": {
+            "type": "number",
+            "description": "Sum of the line amounts in integer minor units of the company currency."
+          }
+        },
+        "required": [
+          "createdAt",
+          "lines",
+          "id",
+          "companyId",
+          "requisitionId",
+          "requisitionJustification",
+          "supplierId",
+          "supplierName",
+          "createdByPersonId",
+          "createdByName",
+          "totalMinor"
+        ]
+      },
+      "PurchaseOrderLineInput": {
+        "type": "object",
+        "properties": {
+          "catalogItemId": {
+            "type": "string",
+            "description": "An item of the chosen supplier. Each item may appear once."
+          },
+          "quantity": {
+            "type": "number",
+            "description": "A whole number, 1 or more."
+          },
+          "unitPriceMinor": {
+            "type": "number",
+            "description": "Integer minor units of the company currency, zero or more."
+          }
+        },
+        "required": [
+          "catalogItemId",
+          "quantity",
+          "unitPriceMinor"
+        ]
+      },
+      "CreatePurchaseOrderRequest": {
+        "type": "object",
+        "properties": {
+          "lines": {
+            "description": "At least one line.",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PurchaseOrderLineInput"
+            }
+          },
+          "requisitionId": {
+            "type": "string",
+            "description": "An approved requisition of the company that has no purchase order yet."
+          },
+          "supplierId": {
+            "type": "string",
+            "description": "An active supplier of the company."
+          }
+        },
+        "required": [
+          "lines",
+          "requisitionId",
+          "supplierId"
         ]
       }
     }

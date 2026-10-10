@@ -306,6 +306,47 @@ export interface paths {
         patch: operations["MembersController_update"];
         trace?: never;
     };
+    "/purchase-orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Newest first. Buyers and admins get every order of the company; a requester the orders of
+         *     their own requisitions; an approver those of the requisitions they decided.
+         */
+        get: operations["PurchaseOrdersController_list"];
+        put?: never;
+        /**
+         * Buyers and admins only. Refused unless the requisition is approved and has no order yet,
+         *     the supplier is active, and every item belongs to that supplier. A requisition converts
+         *     once; a second attempt is a 409.
+         */
+        post: operations["PurchaseOrdersController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/purchase-orders/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PurchaseOrdersController_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/push-devices": {
         parameters: {
             query?: never;
@@ -352,7 +393,8 @@ export interface paths {
         };
         /**
          * Newest first: the person's own requisitions; for an approver also the submitted ones routed
-         *     to approvers and those they decided; for an admin every one of the company.
+         *     to approvers and those they decided; for a buyer the approved ones (to order them); for an
+         *     admin every one of the company.
          */
         get: operations["RequisitionsController_list"];
         put?: never;
@@ -572,6 +614,14 @@ export interface components {
             code: string;
             name: string;
         };
+        CreatePurchaseOrderRequest: {
+            /** @description At least one line. */
+            lines: components["schemas"]["PurchaseOrderLineInput"][];
+            /** @description An approved requisition of the company that has no purchase order yet. */
+            requisitionId: string;
+            /** @description An active supplier of the company. */
+            supplierId: string;
+        };
         CreateSupplierRequest: {
             name: string;
         };
@@ -614,6 +664,44 @@ export interface components {
             email: string;
             id: string;
             name: string;
+        };
+        PurchaseOrder: {
+            companyId: string;
+            /**
+             * Format: date-time
+             * @description ISO 8601 timestamp.
+             */
+            createdAt: string;
+            createdByName: string;
+            createdByPersonId: string;
+            id: string;
+            lines: components["schemas"]["PurchaseOrderLine"][];
+            requisitionId: string;
+            /** @description The requisition's justification, to recognise it by. */
+            requisitionJustification: string;
+            supplierId: string;
+            supplierName: string;
+            /** @description Sum of the line amounts in integer minor units of the company currency. */
+            totalMinor: number;
+        };
+        PurchaseOrderLine: {
+            /** @description quantity times unitPriceMinor. */
+            amountMinor: number;
+            catalogItemId: string;
+            catalogItemName: string;
+            id: string;
+            /** @description A whole number, 1 or more. */
+            quantity: number;
+            /** @description Set by the buyer when the order was made, in integer minor units. */
+            unitPriceMinor: number;
+        };
+        PurchaseOrderLineInput: {
+            /** @description An item of the chosen supplier. Each item may appear once. */
+            catalogItemId: string;
+            /** @description A whole number, 1 or more. */
+            quantity: number;
+            /** @description Integer minor units of the company currency, zero or more. */
+            unitPriceMinor: number;
         };
         /** @enum {string} */
         PushKind: "approval-requested" | "requisition-decided";
@@ -1331,6 +1419,78 @@ export interface operations {
             };
         };
     };
+    PurchaseOrdersController_list: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The company the person acts in (a company UUID). */
+                "x-company-id": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseOrder"][];
+                };
+            };
+        };
+    };
+    PurchaseOrdersController_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The company the person acts in (a company UUID). */
+                "x-company-id": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePurchaseOrderRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseOrder"];
+                };
+            };
+        };
+    };
+    PurchaseOrdersController_get: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The company the person acts in (a company UUID). */
+                "x-company-id": string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurchaseOrder"];
+                };
+            };
+        };
+    };
     PushDevicesController_register: {
         parameters: {
             query?: never;
@@ -1722,6 +1882,7 @@ export type CostCenter = components['schemas']['CostCenter'];
 export type CreateApprovalRuleRequest = components['schemas']['CreateApprovalRuleRequest'];
 export type CreateCatalogItemRequest = components['schemas']['CreateCatalogItemRequest'];
 export type CreateCostCenterRequest = components['schemas']['CreateCostCenterRequest'];
+export type CreatePurchaseOrderRequest = components['schemas']['CreatePurchaseOrderRequest'];
 export type CreateSupplierRequest = components['schemas']['CreateSupplierRequest'];
 export type DevLoginRequest = components['schemas']['DevLoginRequest'];
 export type GoogleSessionRequest = components['schemas']['GoogleSessionRequest'];
@@ -1730,6 +1891,9 @@ export type InviteMemberRequest = components['schemas']['InviteMemberRequest'];
 export type MeResponse = components['schemas']['MeResponse'];
 export type Member = components['schemas']['Member'];
 export type Person = components['schemas']['Person'];
+export type PurchaseOrder = components['schemas']['PurchaseOrder'];
+export type PurchaseOrderLine = components['schemas']['PurchaseOrderLine'];
+export type PurchaseOrderLineInput = components['schemas']['PurchaseOrderLineInput'];
 export type PushKind = components['schemas']['PushKind'];
 export type PushOutboxEntry = components['schemas']['PushOutboxEntry'];
 export type RegisterPushDeviceRequest = components['schemas']['RegisterPushDeviceRequest'];

@@ -4,6 +4,7 @@ import type {
   CostCenter,
   MeResponse,
   Member,
+  PurchaseOrder,
   Requisition,
   Role,
   SessionResponse,
@@ -105,6 +106,35 @@ export function requisition(
   };
 }
 
+/** A purchase order of `req` from `supplier`, one line per item at the given unit price. */
+export function purchaseOrder(
+  req: Requisition,
+  s: Supplier,
+  lines: { item: CatalogItem; quantity: number; unitPriceMinor: number }[],
+): PurchaseOrder {
+  const priced = lines.map(({ item, quantity, unitPriceMinor }) => ({
+    id: `po-line-${item.id}`,
+    catalogItemId: item.id,
+    catalogItemName: item.name,
+    quantity,
+    unitPriceMinor,
+    amountMinor: quantity * unitPriceMinor,
+  }));
+  return {
+    id: `po-${req.id}`,
+    companyId: req.companyId,
+    requisitionId: req.id,
+    requisitionJustification: req.justification,
+    supplierId: s.id,
+    supplierName: s.name,
+    createdByPersonId: 'person-carol',
+    createdByName: 'Carol',
+    createdAt: '2026-10-10T12:00:00.000Z',
+    lines: priced,
+    totalMinor: priced.reduce((sum, l) => sum + l.amountMinor, 0),
+  };
+}
+
 /**
  * Presses a button that starts a write, and lets the write run before the test goes on. A plain
  * press followed by waitFor can starve the mutation's promise chain for seconds on a slow run.
@@ -155,6 +185,8 @@ export function fakeApi(overrides: Partial<Api> = {}): Api {
     cancelRequisition: notFaked,
     approveRequisition: notFaked,
     rejectRequisition: notFaked,
+    purchaseOrders: async () => [],
+    createPurchaseOrder: notFaked,
     approvalRules: async () => [],
     createApprovalRule: notFaked,
     deleteApprovalRule: notFaked,

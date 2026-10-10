@@ -439,12 +439,17 @@ describe('requisitions', () => {
       await alice.getRequisition(COMPANY.main, own.id).expect(404);
     });
 
-    it('shows buyers and approvers nothing and lets them raise nothing', async () => {
+    it('shows approvers nothing, buyers only approved requisitions, and lets them raise nothing', async () => {
       const alices = await draftOf(await as(PERSON.alice));
       for (const person of [PERSON.carol, PERSON.bob]) {
         const actor = await as(person);
+        const listed = (await actor.listRequisitions(COMPANY.main).expect(200))
+          .body as Requisition[];
+        expect(listed.map((r) => r.id)).not.toContain(alices.id);
         expect(
-          (await actor.listRequisitions(COMPANY.main).expect(200)).body,
+          listed.filter(
+            (r) => person === PERSON.bob || r.status !== 'APPROVED',
+          ),
         ).toEqual([]);
         await actor.getRequisition(COMPANY.main, alices.id).expect(404);
         await actor
@@ -512,14 +517,24 @@ describe('requisitions', () => {
           )
           .then((rows) => rows[0].n);
 
-      it('hides every requisition and line from buyers and approvers', async () => {
+      it('hides every requisition and line from approvers, and all but approved ones from buyers', async () => {
         await draftOf(await as(PERSON.alice));
-        for (const person of [PERSON.carol, PERSON.bob]) {
-          await actingAs(person, async (tx) => {
-            expect(await count(tx, 'requisitions')).toBe(0);
-            expect(await count(tx, 'requisition_lines')).toBe(0);
-          });
-        }
+        await actingAs(PERSON.bob, async (tx) => {
+          expect(await count(tx, 'requisitions')).toBe(0);
+          expect(await count(tx, 'requisition_lines')).toBe(0);
+        });
+        await actingAs(PERSON.carol, async (tx) => {
+          expect(
+            await count(tx, "requisitions WHERE status <> 'APPROVED'"),
+          ).toBe(0);
+          expect(
+            await count(
+              tx,
+              `requisition_lines l WHERE NOT EXISTS (
+                SELECT 1 FROM requisitions r WHERE r.id = l.requisition_id AND r.status = 'APPROVED')`,
+            ),
+          ).toBe(0);
+        });
         await actingAs(PERSON.dave, async (tx) => {
           expect(await count(tx, 'requisition_lines')).toBeGreaterThan(0);
         });

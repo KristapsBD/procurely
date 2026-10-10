@@ -45,7 +45,8 @@ export class RequisitionsController {
 
   /**
    * Newest first: the person's own requisitions; for an approver also the submitted ones routed
-   * to approvers and those they decided; for an admin every one of the company.
+   * to approvers and those they decided; for a buyer the approved ones (to order them); for an
+   * admin every one of the company.
    */
   @Get()
   list(@CompanyScope() scope: CompanyRequestScope): Promise<Requisition[]> {

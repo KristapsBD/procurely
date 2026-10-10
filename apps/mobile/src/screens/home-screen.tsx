@@ -59,6 +59,10 @@ export function HomeScreen() {
                   onPress={() => router.push('/requisitions')}
                 />
               )}
+              <Button
+                label="Purchase orders"
+                onPress={() => router.push('/purchase-orders')}
+              />
               {canDecideRequisitions(active.role) && (
                 <Button
                   label="Approvals"

@@ -8,6 +8,7 @@ import {
   memberships,
   people,
   pushDevices,
+  purchaseOrders,
   requisitionDecisions,
   requisitions,
   suppliers,
@@ -44,6 +45,25 @@ async function seedRequisitions(prisma: PrismaClient) {
   }
 }
 
+async function seedPurchaseOrders(prisma: PrismaClient) {
+  for (const { lines, ...order } of purchaseOrders) {
+    await prisma.purchaseOrder.createMany({
+      data: [order],
+      skipDuplicates: true,
+    });
+    await prisma.purchaseOrderLine.createMany({
+      data: lines.map((line, position) => ({
+        ...line,
+        companyId: order.companyId,
+        purchaseOrderId: order.id,
+        position,
+        amountMinor: line.quantity * line.unitPriceMinor,
+      })),
+      skipDuplicates: true,
+    });
+  }
+}
+
 // Runs as the database owner (DIRECT_URL): the API role cannot write these tables.
 async function main() {
   const prisma = new PrismaClient({
@@ -70,6 +90,7 @@ async function main() {
       data: requisitionDecisions,
       skipDuplicates: true,
     });
+    await seedPurchaseOrders(prisma);
     await prisma.approvalRule.createMany({
       data: approvalRules,
       skipDuplicates: true,

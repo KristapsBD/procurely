@@ -352,3 +352,58 @@ export class PushOutboxEntry {
   requisitionId!: string;
   companyId!: string;
 }
+
+export class PurchaseOrderLine {
+  id!: string;
+  catalogItemId!: string;
+  catalogItemName!: string;
+  /** A whole number, 1 or more. */
+  quantity!: number;
+  /** Set by the buyer when the order was made, in integer minor units. */
+  unitPriceMinor!: number;
+  /** quantity times unitPriceMinor. */
+  amountMinor!: number;
+}
+
+/**
+ * A buyer's order of an approved requisition from one supplier. Never changed afterwards. A
+ * requisition becomes at most one purchase order.
+ */
+export class PurchaseOrder {
+  id!: string;
+  companyId!: string;
+  requisitionId!: string;
+  /** The requisition's justification, to recognise it by. */
+  requisitionJustification!: string;
+  supplierId!: string;
+  supplierName!: string;
+  createdByPersonId!: string;
+  createdByName!: string;
+  /** ISO 8601 timestamp. */
+  @ApiProperty({ format: 'date-time' })
+  createdAt!: string;
+  @ApiProperty({ type: [PurchaseOrderLine] })
+  lines!: PurchaseOrderLine[];
+  /** Sum of the line amounts in integer minor units of the company currency. */
+  totalMinor!: number;
+}
+
+export class PurchaseOrderLineInput {
+  /** An item of the chosen supplier. Each item may appear once. */
+  catalogItemId!: string;
+  /** A whole number, 1 or more. */
+  quantity!: number;
+  /** Integer minor units of the company currency, zero or more. */
+  unitPriceMinor!: number;
+}
+
+/** Orders an approved requisition from an active supplier of the company. Buyers and admins only. */
+export class CreatePurchaseOrderRequest {
+  /** An approved requisition of the company that has no purchase order yet. */
+  requisitionId!: string;
+  /** An active supplier of the company. */
+  supplierId!: string;
+  /** At least one line. */
+  @ApiProperty({ type: [PurchaseOrderLineInput] })
+  lines!: PurchaseOrderLineInput[];
+}

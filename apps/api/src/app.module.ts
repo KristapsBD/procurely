@@ -26,6 +26,8 @@ import {
   PUSH_SENDER,
 } from './notifications/push-sender';
 import { PrismaService } from './prisma.service';
+import { PurchaseOrdersController } from './purchase-orders/purchase-orders.controller';
+import { PurchaseOrdersService } from './purchase-orders/purchase-orders.service';
 import { RequisitionsController } from './requisitions/requisitions.controller';
 import { RequisitionsService } from './requisitions/requisitions.service';
 import { SuppliersController } from './suppliers/suppliers.controller';
@@ -47,6 +49,7 @@ import { TenantDb } from './tenancy/tenant-db.service';
     RequisitionsController,
     ApprovalRulesController,
     PushDevicesController,
+    PurchaseOrdersController,
   ],
   providers: [
     PrismaService,
@@ -57,6 +60,7 @@ import { TenantDb } from './tenancy/tenant-db.service';
     RequisitionsService,
     PushOutbox,
     ApprovalNotifier,
+    PurchaseOrdersService,
     SessionTokens,
     Sessions,
     SessionGuard,
