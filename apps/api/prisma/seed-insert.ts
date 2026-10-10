@@ -1,7 +1,7 @@
 import type { PrismaClient } from '@prisma/client';
 import type { SeedRows } from './seed-types';
 
-async function missing<T extends { id?: string }>(
+async function notYetInserted<T extends { id?: string }>(
   rows: T[],
   existing: Promise<{ id: string }[]>,
 ): Promise<T[]> {
@@ -60,14 +60,14 @@ export async function insertAll(prisma: PrismaClient, rows: SeedRows) {
     skipDuplicates: true,
   });
   await prisma.goodsReceiptLine.createMany({
-    data: await missing(
+    data: await notYetInserted(
       rows.goodsReceiptLines,
       prisma.goodsReceiptLine.findMany({ select: { id: true } }),
     ),
     skipDuplicates: true,
   });
   await prisma.purchaseOrderClosure.createMany({
-    data: await missing(
+    data: await notYetInserted(
       rows.purchaseOrderClosures,
       prisma.purchaseOrderClosure.findMany({ select: { id: true } }),
     ),
