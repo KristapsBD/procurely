@@ -9,6 +9,7 @@ import {
   type CreateApprovalRuleRequest,
   type CreateCatalogItemRequest,
   type CreateCostCenterRequest,
+  type CreatePurchaseOrderRequest,
   type CreateSupplierRequest,
   type DevLoginRequest,
   type GoogleSessionRequest,
@@ -16,6 +17,7 @@ import {
   type MeResponse,
   type Member,
   type RegisterPushDeviceRequest,
+  type PurchaseOrder,
   type RejectRequisitionRequest,
   type Requisition,
   type SaveRequisitionRequest,
@@ -88,7 +90,7 @@ export interface Api {
     companyId: string,
     id: string,
   ): Promise<void>;
-  /** The person's own requisitions; an admin gets every one of the company. */
+  /** The person's own requisitions; an admin gets every one of the company, a buyer the approved ones. */
   requisitions(token: string, companyId: string): Promise<Requisition[]>;
   createRequisition(
     token: string,
@@ -126,6 +128,17 @@ export interface Api {
     id: string,
     body: RejectRequisitionRequest,
   ): Promise<Requisition>;
+  /**
+   * Newest first: a buyer or admin gets every order of the company, a requester those of their
+   * own requisitions, an approver those of requisitions they decided.
+   */
+  purchaseOrders(token: string, companyId: string): Promise<PurchaseOrder[]>;
+  /** Buyers and admins only; the requisition must be approved and not yet ordered. */
+  createPurchaseOrder(
+    token: string,
+    companyId: string,
+    body: CreatePurchaseOrderRequest,
+  ): Promise<PurchaseOrder>;
   /** Lowest threshold first. Every member reads them; only admins change them. */
   approvalRules(token: string, companyId: string): Promise<ApprovalRule[]>;
   createApprovalRule(
@@ -281,6 +294,10 @@ export function createApi(baseUrl: string, fetchFn: typeof fetch = fetch): Api {
       post(token, companyId, `/requisitions/${id}/approve`, body),
     rejectRequisition: (token, companyId, id, body) =>
       post(token, companyId, `/requisitions/${id}/reject`, body),
+    purchaseOrders: (token, companyId) =>
+      get(token, companyId, '/purchase-orders'),
+    createPurchaseOrder: (token, companyId, body) =>
+      post(token, companyId, '/purchase-orders', body),
     approvalRules: (token, companyId) =>
       get(token, companyId, '/approval-rules'),
     createApprovalRule: (token, companyId, body) =>

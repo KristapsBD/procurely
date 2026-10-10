@@ -304,6 +304,29 @@ export const requisitionDecisions = [
   },
 ];
 
+export const PURCHASE_ORDER = {
+  fridaPaper: '00000000-0000-4000-8000-000000000101',
+} as const;
+
+// The SEK admin's order of Frida's approved requisition, so every table has a row for the RLS
+// audit. Tests make their own.
+export const purchaseOrders = [
+  {
+    id: PURCHASE_ORDER.fridaPaper,
+    companyId: COMPANY.sek,
+    requisitionId: REQUISITION.fridaApproved,
+    supplierId: SUPPLIER.sekOffice,
+    createdByPersonId: PERSON.erik,
+    lines: [
+      {
+        catalogItemId: CATALOG_ITEM.sekPaper,
+        quantity: 1,
+        unitPriceMinor: 27900,
+      },
+    ],
+  },
+];
+
 // Acme Trading and Nordic Supplies have no approval rules: an admin decides their requisitions.
 // One Megacorp rule keeps the table non-empty for the RLS audit.
 export const approvalRules = [

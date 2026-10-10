@@ -140,6 +140,15 @@ export class Actor {
       body,
     );
   }
+  listPurchaseOrders(companyId: string) {
+    return this.call('get', '/purchase-orders', companyId);
+  }
+  getPurchaseOrder(companyId: string, id: string) {
+    return this.call('get', `/purchase-orders/${id}`, companyId);
+  }
+  createPurchaseOrder(companyId: string, body: object) {
+    return this.call('post', '/purchase-orders', companyId).send(body);
+  }
   listApprovalRules(companyId: string) {
     return this.call('get', '/approval-rules', companyId);
   }

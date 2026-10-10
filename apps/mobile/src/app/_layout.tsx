@@ -62,6 +62,10 @@ function Routes() {
         <Stack.Screen name="suppliers" options={{ title: 'Suppliers' }} />
         <Stack.Screen name="catalog" options={{ title: 'Catalog' }} />
         <Stack.Screen name="requisitions" options={{ title: 'Requisitions' }} />
+        <Stack.Screen
+          name="purchase-orders"
+          options={{ title: 'Purchase orders' }}
+        />
         <Stack.Screen name="approvals" options={{ title: 'Approvals' }} />
         <Stack.Screen
           name="approval-rules"

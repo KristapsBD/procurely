@@ -180,7 +180,8 @@ async function actorOf(tx: Tx, scope: CompanyRequestScope): Promise<Actor> {
 
 /**
  * Requisitions the person may read: their own, all of the company's for an admin, and for an
- * approver the submitted ones routed to approvers and those they decided. Every method runs
+ * approver the submitted ones routed to approvers and those they decided, and for a buyer the
+ * approved ones. Every method runs
  * inside the caller's TenantDb.run, so a change and its audit entry share one transaction.
  * Row-level security decides who sees and writes which rows; the requisition lifecycle module
  * decides which change is legal in which status, and who decides by the approval rules.

@@ -4,6 +4,7 @@ import type {
   CompanyMembership,
   CostCenter,
   Member,
+  PurchaseOrder,
   Requisition,
   Supplier,
 } from '@procurely/shared-types';
@@ -95,6 +96,16 @@ export function useRequisitions(companyId: string) {
   return useQuery<Requisition[]>({
     queryKey: queryKeys.requisitions(companyId),
     queryFn: () => api.requisitions(required(token), companyId),
+    enabled: token !== null,
+  });
+}
+
+export function usePurchaseOrders(companyId: string) {
+  const api = useApi();
+  const token = useToken();
+  return useQuery<PurchaseOrder[]>({
+    queryKey: queryKeys.purchaseOrders(companyId),
+    queryFn: () => api.purchaseOrders(required(token), companyId),
     enabled: token !== null,
   });
 }

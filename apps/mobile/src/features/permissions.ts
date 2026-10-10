@@ -8,9 +8,14 @@ export function canManagePurchasing(role: Role): boolean {
   return role === 'BUYER' || role === 'ADMIN';
 }
 
+/** Only buyers and admins turn approved requisitions into purchase orders. */
+export function canRaisePurchaseOrders(role: Role): boolean {
+  return role === 'BUYER' || role === 'ADMIN';
+}
+
 /**
  * Requesters and admins raise requisitions and see their own (an admin sees all of the
- * company's). Buyers and approvers see none.
+ * company's). Approvers see none; buyers see the approved ones, to order them.
  */
 export function canRaiseRequisitions(role: Role): boolean {
   return role === 'REQUESTER' || role === 'ADMIN';
