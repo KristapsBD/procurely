@@ -24,6 +24,7 @@ import type {
   At,
   OrderSpec,
   Outcome,
+  ReceiptSpec,
   Reference,
   RequisitionHistory,
   SeedRows,
@@ -513,6 +514,34 @@ interface Receivable {
   received: number;
 }
 
+const statusNow = (poLines: Receivable[]) =>
+  statusOf(
+    poLines.map((l) => ({
+      quantity: l.quantity,
+      receivedQuantity: l.received,
+    })),
+    false,
+  );
+
+function applyEntry(
+  receiptId: string,
+  poLines: Receivable[],
+  entry: ReceiptSpec['lines'][number],
+): void {
+  const line = poLines[entry.position];
+  must(line, `${receiptId}: no order line ${entry.position}`);
+  must(entry.quantity !== 0, `${receiptId}: a zero receipt`);
+  must(
+    entry.quantity > 0 || entry.note?.trim(),
+    `${receiptId}: a correction needs a note`,
+  );
+  line.received += entry.quantity;
+  must(
+    line.received >= 0 && line.received <= line.quantity,
+    `${receiptId}: line ${entry.position} would hold ${line.received} of ${line.quantity}`,
+  );
+}
+
 function receiptRows(
   ctx: Context,
   sink: Sink,
@@ -526,34 +555,9 @@ function receiptRows(
     previous = r.at;
     must(canBuy(ctx, h.companyId, r.by), `${spec.id}: ${r.by} may not receive`);
     must(r.lines.length > 0, `${r.id} has no lines`);
-    const before = statusOf(
-      poLines.map((l) => ({
-        quantity: l.quantity,
-        receivedQuantity: l.received,
-      })),
-      false,
-    );
-    for (const entry of r.lines) {
-      const line = poLines[entry.position];
-      must(line, `${r.id}: no order line ${entry.position}`);
-      must(entry.quantity !== 0, `${r.id}: a zero receipt`);
-      must(
-        entry.quantity > 0 || entry.note?.trim(),
-        `${r.id}: a correction needs a note`,
-      );
-      line.received += entry.quantity;
-      must(
-        line.received >= 0 && line.received <= line.quantity,
-        `${r.id}: line ${entry.position} would hold ${line.received} of ${line.quantity}`,
-      );
-    }
-    const after = statusOf(
-      poLines.map((l) => ({
-        quantity: l.quantity,
-        receivedQuantity: l.received,
-      })),
-      false,
-    );
+    const before = statusNow(poLines);
+    r.lines.forEach((entry) => applyEntry(r.id, poLines, entry));
+    const after = statusNow(poLines);
     sink.rows.goodsReceipts.push({
       id: r.id,
       companyId: h.companyId,
@@ -607,13 +611,7 @@ function closureRows(
     canBuy(ctx, h.companyId, closure.by),
     `${spec.id}: ${closure.by} may not close`,
   );
-  const status = statusOf(
-    poLines.map((l) => ({
-      quantity: l.quantity,
-      receivedQuantity: l.received,
-    })),
-    false,
-  );
+  const status = statusNow(poLines);
   must(
     status === 'FULLY_RECEIVED',
     `${spec.id}: only a fully received order closes, not ${status}`,

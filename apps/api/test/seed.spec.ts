@@ -3,6 +3,7 @@ import { statusOf } from '../src/purchase-orders/purchase-order-status';
 import { BULK_SEED, bulkHistories } from '../prisma/seed-bulk';
 import {
   COMPANY,
+  PERSON,
   REQUISITION,
   reference,
   storyHistories,
@@ -163,5 +164,91 @@ describe('seed', () => {
         ['member.deactivated', { email: 'oscar@procurely.test' }],
       ]),
     );
+  });
+
+  describe('refuses a history the API could not have produced', () => {
+    const story = (id: string) => storyHistories.find((h) => h.id === id)!;
+    const refused = (h: RequisitionHistory, reason: RegExp) =>
+      expect(() => materialize([h], reference)).toThrow(reason);
+
+    it('when an approver decides their own requisition', () => {
+      const own = story(REQUISITION.gustavOwn);
+      refused(
+        {
+          ...own,
+          outcome: {
+            status: 'APPROVED',
+            at: new Date('2026-08-18T09:10:00Z'),
+            decision: {
+              by: own.requesterPersonId,
+              at: new Date('2026-08-19T09:00:00Z'),
+              comment: null,
+            },
+          },
+        },
+        /may not decide/,
+      );
+    });
+
+    it('when a rejection has no reason', () => {
+      const rejected = story(REQUISITION.ivanRejected);
+      if (rejected.outcome.status !== 'REJECTED')
+        throw new Error('story moved');
+      refused(
+        {
+          ...rejected,
+          outcome: {
+            ...rejected.outcome,
+            decision: { ...rejected.outcome.decision!, comment: ' ' },
+          },
+        },
+        /a rejection needs a reason/,
+      );
+    });
+
+    it('when a total over the threshold is approved by nobody', () => {
+      const waiting = story(REQUISITION.ivanAtThreshold);
+      refused(
+        {
+          ...waiting,
+          outcome: { status: 'APPROVED', at: new Date('2026-08-05T09:10:00Z') },
+        },
+        /decided by nobody/,
+      );
+    });
+
+    it('when a delivery would exceed what was ordered', () => {
+      const ordered = story(REQUISITION.aliceFullyReceived);
+      const order = ordered.order!;
+      refused(
+        {
+          ...ordered,
+          order: {
+            ...order,
+            receipts: [
+              {
+                ...order.receipts[0],
+                lines: [{ position: 0, quantity: 6, note: null }],
+              },
+            ],
+          },
+        },
+        /would hold 6 of 5/,
+      );
+    });
+
+    it('when an order that is not fully received is closed', () => {
+      const partial = story(REQUISITION.paulaPartial);
+      refused(
+        {
+          ...partial,
+          order: {
+            ...partial.order!,
+            closure: { by: PERSON.carol, at: new Date('2026-09-02T09:00:00Z') },
+          },
+        },
+        /only a fully received order closes/,
+      );
+    });
   });
 });
