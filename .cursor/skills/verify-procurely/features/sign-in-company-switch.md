@@ -11,7 +11,7 @@ A development bundle lets a person sign in as a seeded user, see the companies t
 
 ## How to get to it (user POV)
 
-- Open the web app at `http://127.0.0.1:8091` (redirects to Sign in when signed out).
+- Open the web app at `http://127.0.0.1:$METRO_PORT` (redirects to Sign in when signed out).
 - Choose `Sign in as Alice`, `Sign in as Carol`, `Sign in as Nomad`, or `Sign in as Mallory`.
 - Choose `Sign in with id` after filling `Person id`.
 - On home, choose a company button (`Acme Trading`, `Nordic Supplies`) then `Sign out`.
@@ -21,7 +21,7 @@ A development bundle lets a person sign in as a seeded user, see the companies t
 Preconditions:
 
 - Doctor is green. Database is freshly seeded.
-- Web app is at `http://127.0.0.1:8091`.
+- Web app is at `http://127.0.0.1:$METRO_PORT`.
 - Not already signed in (Sign in screen visible). If a session is restored, click `Sign out` first.
 
 - **Sign in as Alice.** Click `Sign in as Alice`. Home heading is `Signed in as Alice Requester`. Company buttons include `Acme Trading` and `Nordic Supplies`. Company line is `Acme Trading (EUR), you are requester`. Cost centers include IT, MKT, OPS.

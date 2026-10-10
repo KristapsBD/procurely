@@ -27,7 +27,7 @@ Preconditions:
 - **Change role.** Click `Change role of new.hire`. Click `Set new.hire to Approver`. Role reads Approver.
 - **Deactivate, reactivate.** Click `Deactivate new.hire`. Status is Inactive. Click `Reactivate new.hire`. Status is Active.
 - **Last admin.** Click `Deactivate Dave Admin`. The message `A company needs at least one active admin` is visible and Dave stays Active, role Admin. Click `Change role of Dave Admin`, then `Set Dave Admin to Buyer`. The same message, and Dave is still Admin.
-- **Alice.** Sign out, Alice. No `Members` button. Open `http://127.0.0.1:8091/members`. The message `Not allowed for your role in this company` is visible. Alice's name is not listed as a roster.
+- **Alice.** Sign out, Alice. No `Members` button. Open `http://127.0.0.1:$METRO_PORT/members`. The message `Not allowed for your role in this company` is visible. Alice's name is not listed as a roster.
 - **Bob and Carol.** Each has no `Members` button on home.
 - **Erik.** Sign out. Sign in with Erik's person id. Company line `Nordic Supplies (SEK), you are admin`. Click `Members`. Alice Requester with `Role: Approver`, Erik Admin, Frida Requester. No Carol Buyer, no Oscar Deactivated, no Dave Admin.
 - **Proof.** Snapshot and screenshot of Dave's list after the invite, of the last-admin message with Dave still Active, of Alice's home without `Members`, and of Erik's Nordic list.

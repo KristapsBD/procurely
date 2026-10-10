@@ -5,15 +5,15 @@ Maintained source for verifying user-facing behavior of the Expo **web** app aga
 ## Baseline preconditions
 
 - Launch with `.cursor/skills/verify-procurely/scripts/launch.sh` from the repo root.
-- Source `/tmp/procurely-verify/env.sh`.
-- Run `.cursor/skills/verify-procurely/scripts/doctor.sh` and require this checkout's `STACK_CHECKOUT`, a healthy API, and Metro on `8091`.
+- Source the env file launch wrote under `/tmp/procurely-verify/<compose project>/env.sh` (exports `METRO_PORT`).
+- Run `.cursor/skills/verify-procurely/scripts/doctor.sh` and require this checkout's `STACK_CHECKOUT`, a healthy API, and this checkout's Metro on `$METRO_PORT`.
 - Seed is the compose seed (`make seed`): companies Acme Trading (EUR), Nordic Supplies (SEK), Megacorp Industries, Fresh Start Ltd.
 - Drive only the instance this launch started. Do not use a developer Metro on 8081 or another clone's stack.
 - Start recipes from a freshly seeded database unless the feature file says otherwise.
 
 ## Driving conventions
 
-- Open `http://127.0.0.1:8091`.
+- Open `http://127.0.0.1:$METRO_PORT`.
 - Click by accessible name (`accessibilityLabel` / button `label`).
 - Take a new accessibility snapshot before every click.
 - After a mutation, `make seed` before the next unrelated feature unless the recipe restores state itself.

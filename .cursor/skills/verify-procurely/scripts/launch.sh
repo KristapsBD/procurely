@@ -2,10 +2,6 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../../../.." && pwd)"
 cd "$ROOT"
-STATE=/tmp/procurely-verify
-mkdir -p "$STATE"
-METRO_PORT=8091
-
 if [[ ! -d node_modules ]]; then
   pnpm install
 fi
@@ -13,6 +9,10 @@ fi
 make up
 make seed
 eval "$(make -s env)"
+# State and Metro port are per checkout: concurrent worktrees must not share a pid file or port.
+STATE="/tmp/procurely-verify/$COMPOSE_PROJECT_NAME"
+METRO_PORT=$((API_PORT + 20000))
+mkdir -p "$STATE"
 printf '%s\n' "export STACK_CHECKOUT='$STACK_CHECKOUT' COMPOSE_PROJECT_NAME=$COMPOSE_PROJECT_NAME API_PORT=$API_PORT DB_PORT=$DB_PORT DATABASE_URL='$DATABASE_URL' DIRECT_URL='$DIRECT_URL' METRO_PORT=$METRO_PORT EXPO_PUBLIC_API_URL=http://localhost:$API_PORT" >"$STATE/env.sh"
 
 if [[ -f "$STATE/metro.pid" ]] && kill -0 "$(cat "$STATE/metro.pid")" 2>/dev/null; then
