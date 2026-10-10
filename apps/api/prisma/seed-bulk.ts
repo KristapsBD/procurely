@@ -17,7 +17,7 @@ import {
   memberships,
   suppliers,
 } from './seed-data';
-import { DAY, HOUR, MINUTE, Rng, plus, seedId } from './seed-kit';
+import { DAY, HOUR, MINUTE, Rng, plus, rulesAsOf, seedId } from './seed-kit';
 import type {
   LineSpec,
   Outcome,
@@ -190,15 +190,6 @@ const PLANS: Plan[] = [
     ],
   ),
 ];
-
-function rulesAsOf(companyId: string, instant: Date) {
-  return approvalRules
-    .filter((r) => r.companyId === companyId && r.createdAt <= instant)
-    .map((r) => ({
-      thresholdMinor: r.thresholdMinor,
-      requiredRole: r.requiredRole,
-    }));
-}
 
 const priceOf = new Map(catalogItems.map((i) => [i.id, i.unitPriceMinor]));
 
@@ -457,7 +448,7 @@ function historyOf(
   const lines = linesFor(rng, p);
   const submitAt = plus(createdAt, rng.int(5, 120) * MINUTE);
   const requirement = approvalRequirement(
-    rulesAsOf(p.companyId, submitAt),
+    rulesAsOf(approvalRules, p.companyId, submitAt),
     totalOf(lines),
   );
   const deciders = decidersFor(p, requirement, requester);

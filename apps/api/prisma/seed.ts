@@ -2,24 +2,6 @@ import { PrismaClient } from '@prisma/client';
 import { seedRows } from './seed-rows';
 import type { SeedRows } from './seed-types';
 
-const CHUNK = 5000;
-
-type Delegate = {
-  createMany(args: {
-    data: never[];
-    skipDuplicates: boolean;
-  }): Promise<unknown>;
-};
-
-async function insertChunks(delegate: Delegate, rows: unknown[]) {
-  for (let i = 0; i < rows.length; i += CHUNK) {
-    await delegate.createMany({
-      data: rows.slice(i, i + CHUNK) as never[],
-      skipDuplicates: true,
-    });
-  }
-}
-
 // The BEFORE INSERT triggers of these two tables fire before ON CONFLICT can skip a duplicate, so a
 // second seed run would be refused. Rows already present are left out instead.
 async function missing<T extends { id?: string }>(
@@ -32,35 +14,77 @@ async function missing<T extends { id?: string }>(
 
 /** One createMany per table, in foreign-key order. A run on a seeded database changes nothing. */
 export async function insertAll(prisma: PrismaClient, rows: SeedRows) {
-  await insertChunks(prisma.company, rows.companies);
-  await insertChunks(prisma.person, rows.people);
-  await insertChunks(prisma.membership, rows.memberships);
-  await insertChunks(prisma.costCenter, rows.costCenters);
-  await insertChunks(prisma.supplier, rows.suppliers);
-  await insertChunks(prisma.catalogItem, rows.catalogItems);
-  await insertChunks(prisma.approvalRule, rows.approvalRules);
-  await insertChunks(prisma.requisition, rows.requisitions);
-  await insertChunks(prisma.requisitionLine, rows.requisitionLines);
-  await insertChunks(prisma.requisitionDecision, rows.requisitionDecisions);
-  await insertChunks(prisma.purchaseOrder, rows.purchaseOrders);
-  await insertChunks(prisma.purchaseOrderLine, rows.purchaseOrderLines);
-  await insertChunks(prisma.goodsReceipt, rows.goodsReceipts);
-  await insertChunks(
-    prisma.goodsReceiptLine,
-    await missing(
+  await prisma.company.createMany({
+    data: rows.companies,
+    skipDuplicates: true,
+  });
+  await prisma.person.createMany({ data: rows.people, skipDuplicates: true });
+  await prisma.membership.createMany({
+    data: rows.memberships,
+    skipDuplicates: true,
+  });
+  await prisma.costCenter.createMany({
+    data: rows.costCenters,
+    skipDuplicates: true,
+  });
+  await prisma.supplier.createMany({
+    data: rows.suppliers,
+    skipDuplicates: true,
+  });
+  await prisma.catalogItem.createMany({
+    data: rows.catalogItems,
+    skipDuplicates: true,
+  });
+  await prisma.approvalRule.createMany({
+    data: rows.approvalRules,
+    skipDuplicates: true,
+  });
+  await prisma.requisition.createMany({
+    data: rows.requisitions,
+    skipDuplicates: true,
+  });
+  await prisma.requisitionLine.createMany({
+    data: rows.requisitionLines,
+    skipDuplicates: true,
+  });
+  await prisma.requisitionDecision.createMany({
+    data: rows.requisitionDecisions,
+    skipDuplicates: true,
+  });
+  await prisma.purchaseOrder.createMany({
+    data: rows.purchaseOrders,
+    skipDuplicates: true,
+  });
+  await prisma.purchaseOrderLine.createMany({
+    data: rows.purchaseOrderLines,
+    skipDuplicates: true,
+  });
+  await prisma.goodsReceipt.createMany({
+    data: rows.goodsReceipts,
+    skipDuplicates: true,
+  });
+  await prisma.goodsReceiptLine.createMany({
+    data: await missing(
       rows.goodsReceiptLines,
       prisma.goodsReceiptLine.findMany({ select: { id: true } }),
     ),
-  );
-  await insertChunks(
-    prisma.purchaseOrderClosure,
-    await missing(
+    skipDuplicates: true,
+  });
+  await prisma.purchaseOrderClosure.createMany({
+    data: await missing(
       rows.purchaseOrderClosures,
       prisma.purchaseOrderClosure.findMany({ select: { id: true } }),
     ),
-  );
-  await insertChunks(prisma.pushDevice, rows.pushDevices);
-  await insertChunks(prisma.auditLog, rows.auditLog);
+    skipDuplicates: true,
+  });
+  await prisma.pushDevice.createMany({
+    data: rows.pushDevices,
+    skipDuplicates: true,
+  });
+  await prisma.auditLog.createMany({
+    data: rows.auditLog,
+    skipDuplicates: true,
+  });
 }
 
 // Runs as the database owner (DIRECT_URL): the API role cannot write these tables.

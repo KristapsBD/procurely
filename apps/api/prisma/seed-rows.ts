@@ -19,7 +19,7 @@ import {
 import { statusOf } from '../src/purchase-orders/purchase-order-status';
 import { bulkHistories } from './seed-bulk';
 import { reference, storyHistories } from './seed-data';
-import { membershipId, seedId } from './seed-kit';
+import { membershipId, rulesAsOf, seedId } from './seed-kit';
 import type {
   At,
   OrderSpec,
@@ -92,12 +92,7 @@ function contextOf(ref: Reference): Context {
     },
     supplierActive: (supplierId) => suppliers.get(supplierId)?.active !== false,
     rulesAsOf: (companyId, instant) =>
-      ref.approvalRules
-        .filter((r) => r.companyId === companyId && r.createdAt <= instant)
-        .map((r) => ({
-          thresholdMinor: r.thresholdMinor,
-          requiredRole: r.requiredRole,
-        })),
+      rulesAsOf(ref.approvalRules, companyId, instant),
   };
 }
 

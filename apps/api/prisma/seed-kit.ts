@@ -1,4 +1,6 @@
 import { createHash } from 'node:crypto';
+import type { ApprovalRuleState } from '../src/requisitions/requisition-lifecycle';
+import type { ApprovalRuleSeed } from './seed-types';
 
 /**
  * A UUID derived from a namespace and parts, so every seeded row has the same id on every machine
@@ -74,4 +76,18 @@ export const DAY = 24 * HOUR;
 
 export function plus(instant: Date, ms: number): Date {
   return new Date(instant.getTime() + ms);
+}
+
+/** A company's rules as they stood at an instant: a route is fixed by the rules at submit. */
+export function rulesAsOf(
+  rules: readonly ApprovalRuleSeed[],
+  companyId: string,
+  instant: Date,
+): ApprovalRuleState[] {
+  return rules
+    .filter((r) => r.companyId === companyId && r.createdAt <= instant)
+    .map((r) => ({
+      thresholdMinor: r.thresholdMinor,
+      requiredRole: r.requiredRole,
+    }));
 }
