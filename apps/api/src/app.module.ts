@@ -17,6 +17,14 @@ import { HealthController } from './health/health.controller';
 import { MeController } from './me/me.controller';
 import { MembersController } from './members/members.controller';
 import { MembersService } from './members/members.service';
+import { ApprovalNotifier } from './notifications/approval-notifier';
+import { PushDevicesController } from './notifications/push-devices.controller';
+import { PushOutbox } from './notifications/push-outbox';
+import {
+  ExpoPushSender,
+  NoPushSender,
+  PUSH_SENDER,
+} from './notifications/push-sender';
 import { PrismaService } from './prisma.service';
 import { RequisitionsController } from './requisitions/requisitions.controller';
 import { RequisitionsService } from './requisitions/requisitions.service';
@@ -38,6 +46,7 @@ import { TenantDb } from './tenancy/tenant-db.service';
     CatalogItemsController,
     RequisitionsController,
     ApprovalRulesController,
+    PushDevicesController,
   ],
   providers: [
     PrismaService,
@@ -46,11 +55,21 @@ import { TenantDb } from './tenancy/tenant-db.service';
     SuppliersService,
     CatalogItemsService,
     RequisitionsService,
+    PushOutbox,
+    ApprovalNotifier,
     SessionTokens,
     Sessions,
     SessionGuard,
     GoogleSignIn,
     { provide: APP_CONFIG, useFactory: () => loadConfig() },
+    {
+      provide: PUSH_SENDER,
+      inject: [APP_CONFIG],
+      useFactory: (config: AppConfig) =>
+        config.expoPush
+          ? new ExpoPushSender(config.expoPush.accessToken)
+          : new NoPushSender(),
+    },
     {
       provide: GOOGLE_ENDPOINTS,
       inject: [APP_CONFIG],

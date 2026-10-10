@@ -327,3 +327,28 @@ export class SaveRequisitionRequest {
   @ApiProperty({ type: [RequisitionLineInput] })
   lines!: RequisitionLineInput[];
 }
+
+/** What a notification tells the app to open. Carries ids only, never names or amounts. */
+export const PUSH_KINDS = [
+  'approval-requested',
+  'requisition-decided',
+] as const;
+export type PushKind = (typeof PUSH_KINDS)[number];
+
+/** Binds a phone to the person and the company they act in on it (the company header). */
+export class RegisterPushDeviceRequest {
+  /** The Expo push token, such as ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]. */
+  token!: string;
+}
+
+/** A notification the development outbox recorded for one of the person's own devices. */
+export class PushOutboxEntry {
+  id!: string;
+  sentAt!: string;
+  title!: string;
+  body!: string;
+  @ApiProperty({ enum: PUSH_KINDS, enumName: 'PushKind' })
+  kind!: PushKind;
+  requisitionId!: string;
+  companyId!: string;
+}

@@ -13,6 +13,13 @@ export interface AppConfig {
   sessionTtlSeconds: number;
   /** Google sign-in; null when it is not configured (the API still starts, without it). */
   google: GoogleConfig | null;
+  /** Push notifications through Expo's push service; null sends nothing (see docs/push-notifications.md). */
+  expoPush: ExpoPushConfig | null;
+}
+
+export interface ExpoPushConfig {
+  /** Optional: only when the Expo project enabled "enhanced security for push notifications". */
+  accessToken: string | null;
 }
 
 /** A Google OAuth client of type "Web application" (see docs/google-sign-in.md). */
@@ -60,6 +67,11 @@ function loadGoogleConfig(env: NodeJS.ProcessEnv): GoogleConfig | null {
   };
 }
 
+function loadExpoPushConfig(env: NodeJS.ProcessEnv): ExpoPushConfig | null {
+  if (env.PUSH_SENDER?.trim() !== 'expo') return null;
+  return { accessToken: env.EXPO_ACCESS_TOKEN?.trim() || null };
+}
+
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   const devMode = env.NODE_ENV === 'development' || env.NODE_ENV === 'test';
   const sessionSecret =
@@ -75,5 +87,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     sessionSecret,
     sessionTtlSeconds: 60 * 60,
     google: loadGoogleConfig(env),
+    expoPush: loadExpoPushConfig(env),
   };
 }
