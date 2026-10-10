@@ -15,6 +15,7 @@ import {
   type InviteMemberRequest,
   type MeResponse,
   type Member,
+  type RegisterPushDeviceRequest,
   type RejectRequisitionRequest,
   type Requisition,
   type SaveRequisitionRequest,
@@ -136,6 +137,17 @@ export interface Api {
     token: string,
     companyId: string,
     id: string,
+  ): Promise<void>;
+  /** Binds this phone to the person and the company, for notifications. Moves it if bound. */
+  registerPushDevice(
+    token: string,
+    companyId: string,
+    pushToken: string,
+  ): Promise<void>;
+  removePushDevice(
+    token: string,
+    companyId: string,
+    pushToken: string,
   ): Promise<void>;
   /** Admins see the whole roster. Anyone else sees at most their own membership. */
   members(token: string, companyId: string): Promise<Member[]>;
@@ -280,5 +292,13 @@ export function createApi(baseUrl: string, fetchFn: typeof fetch = fetch): Api {
       post(token, companyId, '/members', body),
     updateMember: (token, companyId, id, body) =>
       patch(token, companyId, `/members/${id}`, body),
+    registerPushDevice: (token, companyId, pushToken) =>
+      post(token, companyId, '/push-devices', {
+        token: pushToken,
+      } satisfies RegisterPushDeviceRequest),
+    removePushDevice: (token, companyId, pushToken) =>
+      del(token, companyId, '/push-devices', {
+        token: pushToken,
+      } satisfies RegisterPushDeviceRequest),
   };
 }

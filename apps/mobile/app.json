@@ -9,6 +9,11 @@
     "newArchEnabled": true,
     "ios": { "supportsTablet": false },
     "web": { "bundler": "metro", "output": "single" },
-    "plugins": ["expo-router", "expo-secure-store", "expo-web-browser"]
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-web-browser",
+      "expo-notifications"
+    ]
   }
 }

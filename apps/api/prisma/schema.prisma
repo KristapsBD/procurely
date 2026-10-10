@@ -58,6 +58,7 @@ model Company {
   auditLog      AuditLog[]
   approvalRules ApprovalRule[]
   decisions     RequisitionDecision[]
+  pushDevices   PushDevice[]
 
   @@map("companies")
 }
@@ -72,6 +73,7 @@ model Person {
   requisitions Requisition[]
   auditLog     AuditLog[]
   decisions    RequisitionDecision[]
+  pushDevices  PushDevice[]
 
   @@map("people")
 }
@@ -238,4 +240,20 @@ model AuditLog {
 
   @@index([companyId, createdAt])
   @@map("audit_log")
+}
+
+/// The Expo push token of a phone, bound to the person and the one company they act in on it. A
+/// token is a device, so it is unique: registering it again moves it. Written only by the
+/// register_push_device() function.
+model PushDevice {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId String   @map("company_id") @db.Uuid
+  personId  String   @map("person_id") @db.Uuid
+  token     String   @unique
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(3)
+  company   Company  @relation(fields: [companyId], references: [id])
+  person    Person   @relation(fields: [personId], references: [id])
+
+  @@index([companyId, personId])
+  @@map("push_devices")
 }

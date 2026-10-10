@@ -14,6 +14,7 @@ import { act, fireEvent } from '@testing-library/react-native';
 import type { ReactNode } from 'react';
 import type { Api } from '../api/client';
 import { AppProviders } from '../app-providers';
+import type { PushRegistrar } from '../push/registrar';
 import { useSession } from '../session/session';
 import type { TokenStore } from '../session/token-store';
 
@@ -160,6 +161,8 @@ export function fakeApi(overrides: Partial<Api> = {}): Api {
     members: async () => [],
     inviteMember: notFaked,
     updateMember: notFaked,
+    registerPushDevice: async () => {},
+    removePushDevice: async () => {},
     ...overrides,
   };
 }
@@ -183,12 +186,14 @@ function WhenSignedIn(props: { children: ReactNode }) {
 export function TestApp(props: {
   api: Api;
   store?: TokenStore;
+  push?: Pick<PushRegistrar, 'unregister'>;
   children: ReactNode;
 }) {
   return (
     <AppProviders
       api={props.api}
       store={props.store ?? memoryStore('token-alice')}
+      push={props.push}
       queryClient={
         new QueryClient({
           // No garbage-collection timers: they would outlive the test and keep Jest running.
