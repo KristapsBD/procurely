@@ -1,4 +1,6 @@
 import { createHash } from 'node:crypto';
+import { isDeepStrictEqual } from 'node:util';
+import type { PrismaClient } from '@prisma/client';
 import { statusOf } from '../src/purchase-orders/purchase-order-status';
 import { BULK_SEED, bulkHistories } from '../prisma/seed-bulk';
 import {
@@ -8,6 +10,7 @@ import {
   reference,
   storyHistories,
 } from '../prisma/seed-data';
+import { insertAll } from '../prisma/seed-insert';
 import { materialize, seedRows } from '../prisma/seed-rows';
 import type { RequisitionHistory, SeedRows } from '../prisma/seed-types';
 
@@ -164,6 +167,23 @@ describe('seed', () => {
         ['member.deactivated', { email: 'oscar@procurely.test' }],
       ]),
     );
+  });
+
+  it('inserts every table of the rows exactly once', async () => {
+    const inserted: unknown[][] = [];
+    const delegate = {
+      createMany: async ({ data }: { data: unknown[] }) => {
+        inserted.push(data);
+      },
+      findMany: async () => [],
+    };
+    const fake = new Proxy({}, { get: () => delegate }) as PrismaClient;
+    await insertAll(fake, rows);
+    for (const [key, table] of Object.entries(rows)) {
+      const matches = inserted.filter((data) => isDeepStrictEqual(data, table));
+      expect([key, matches.length]).toEqual([key, 1]);
+    }
+    expect(inserted).toHaveLength(Object.keys(rows).length);
   });
 
   describe('refuses a history the API could not have produced', () => {
