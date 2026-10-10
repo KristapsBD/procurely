@@ -9,7 +9,9 @@ import {
   type CreateApprovalRuleRequest,
   type CreateCatalogItemRequest,
   type CreateCostCenterRequest,
+  type CreateGoodsReceiptRequest,
   type CreatePurchaseOrderRequest,
+  type GoodsReceipt,
   type CreateSupplierRequest,
   type DevLoginRequest,
   type GoogleSessionRequest,
@@ -138,6 +140,28 @@ export interface Api {
     token: string,
     companyId: string,
     body: CreatePurchaseOrderRequest,
+  ): Promise<PurchaseOrder>;
+  /** Newest first. Whoever reads the order reads its receipts. */
+  goodsReceipts(
+    token: string,
+    companyId: string,
+    purchaseOrderId: string,
+  ): Promise<GoodsReceipt[]>;
+  /**
+   * Buyers and admins only. A negative quantity with a note corrects an earlier entry. The API
+   * refuses (409) receiving more than was ordered, and anything on a closed order.
+   */
+  recordGoodsReceipt(
+    token: string,
+    companyId: string,
+    purchaseOrderId: string,
+    body: CreateGoodsReceiptRequest,
+  ): Promise<GoodsReceipt>;
+  /** Buyers and admins only, for a fully received order. */
+  closePurchaseOrder(
+    token: string,
+    companyId: string,
+    purchaseOrderId: string,
   ): Promise<PurchaseOrder>;
   /** Lowest threshold first. Every member reads them; only admins change them. */
   approvalRules(token: string, companyId: string): Promise<ApprovalRule[]>;
@@ -298,6 +322,12 @@ export function createApi(baseUrl: string, fetchFn: typeof fetch = fetch): Api {
       get(token, companyId, '/purchase-orders'),
     createPurchaseOrder: (token, companyId, body) =>
       post(token, companyId, '/purchase-orders', body),
+    goodsReceipts: (token, companyId, id) =>
+      get(token, companyId, `/purchase-orders/${id}/receipts`),
+    recordGoodsReceipt: (token, companyId, id, body) =>
+      post(token, companyId, `/purchase-orders/${id}/receipts`, body),
+    closePurchaseOrder: (token, companyId, id) =>
+      post(token, companyId, `/purchase-orders/${id}/close`),
     approvalRules: (token, companyId) =>
       get(token, companyId, '/approval-rules'),
     createApprovalRule: (token, companyId, body) =>

@@ -149,6 +149,19 @@ export class Actor {
   createPurchaseOrder(companyId: string, body: object) {
     return this.call('post', '/purchase-orders', companyId).send(body);
   }
+  listGoodsReceipts(companyId: string, orderId: string) {
+    return this.call('get', `/purchase-orders/${orderId}/receipts`, companyId);
+  }
+  recordGoodsReceipt(companyId: string, orderId: string, body: object) {
+    return this.call(
+      'post',
+      `/purchase-orders/${orderId}/receipts`,
+      companyId,
+    ).send(body);
+  }
+  closePurchaseOrder(companyId: string, orderId: string) {
+    return this.call('post', `/purchase-orders/${orderId}/close`, companyId);
+  }
   listApprovalRules(companyId: string) {
     return this.call('get', '/approval-rules', companyId);
   }

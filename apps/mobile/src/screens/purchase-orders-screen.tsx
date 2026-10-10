@@ -7,9 +7,11 @@ import {
   useRequisitions,
   useSignOutWhenUnauthorized,
 } from '../features/data';
+import { statusLabel } from '../features/goods-receipts';
 import { formatMoney } from '../features/money';
 import { canRaisePurchaseOrders } from '../features/permissions';
 import { orderable } from '../features/purchase-orders';
+import { GoodsReceiptPanel } from './goods-receipt-panel';
 import { PurchaseOrderForm } from './purchase-order-form';
 import { CompanyLine, WithActiveCompany } from './with-active-company';
 
@@ -106,7 +108,7 @@ function OrderList(props: {
         <View key={o.id} style={styles.card}>
           <Text style={styles.body}>{o.requisitionJustification}</Text>
           <Text style={styles.muted}>
-            {`${o.supplierName} · ${formatMoney(o.totalMinor, props.company.currency)}`}
+            {`${o.supplierName} · ${formatMoney(o.totalMinor, props.company.currency)} · ${statusLabel(o.status)}`}
           </Text>
           <Button
             label="Open"
@@ -154,14 +156,21 @@ function OrderDetail(props: {
       <Text style={styles.muted}>
         {`${o.supplierName} · ordered by ${o.createdByName}`}
       </Text>
+      <Text style={styles.body}>{`Status: ${statusLabel(o.status)}`}</Text>
+      {o.closedAt && (
+        <Text style={styles.muted}>
+          {`Closed by ${o.closedByName} on ${new Date(o.closedAt).toLocaleDateString()}`}
+        </Text>
+      )}
       {o.lines.map((l) => (
         <Text key={l.id} style={styles.body}>
-          {`${l.quantity} × ${l.catalogItemName} at ${formatMoney(l.unitPriceMinor, currency)} = ${formatMoney(l.amountMinor, currency)}`}
+          {`${l.quantity} × ${l.catalogItemName} at ${formatMoney(l.unitPriceMinor, currency)} = ${formatMoney(l.amountMinor, currency)} (${l.receivedQuantity} received)`}
         </Text>
       ))}
       <Text style={styles.body}>
         {`Total ${formatMoney(o.totalMinor, currency)}`}
       </Text>
+      <GoodsReceiptPanel company={props.company} order={o} />
       <Button label="Back to purchase orders" onPress={props.onBack} />
     </View>
   );

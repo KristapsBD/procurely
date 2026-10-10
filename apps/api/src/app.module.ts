@@ -26,6 +26,7 @@ import {
   PUSH_SENDER,
 } from './notifications/push-sender';
 import { PrismaService } from './prisma.service';
+import { GoodsReceiptsService } from './purchase-orders/goods-receipts.service';
 import { PurchaseOrdersController } from './purchase-orders/purchase-orders.controller';
 import { PurchaseOrdersService } from './purchase-orders/purchase-orders.service';
 import { RequisitionsController } from './requisitions/requisitions.controller';
@@ -61,6 +62,7 @@ import { TenantDb } from './tenancy/tenant-db.service';
     PushOutbox,
     ApprovalNotifier,
     PurchaseOrdersService,
+    GoodsReceiptsService,
     SessionTokens,
     Sessions,
     SessionGuard,

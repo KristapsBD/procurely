@@ -8,7 +8,12 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth } from '@nestjs/swagger';
-import { CreatePurchaseOrderRequest, PurchaseOrder } from '../contract/api.dto';
+import {
+  CreateGoodsReceiptRequest,
+  CreatePurchaseOrderRequest,
+  GoodsReceipt,
+  PurchaseOrder,
+} from '../contract/api.dto';
 import { ApiCompanyHeader } from '../contract/decorators';
 import { SessionGuard } from '../auth/session.guard';
 import { translateDbError } from '../tenancy/db-errors';
@@ -17,6 +22,8 @@ import {
   type CompanyRequestScope,
 } from '../tenancy/request-scope';
 import { TenantDb } from '../tenancy/tenant-db.service';
+import { parseCreateGoodsReceipt } from './goods-receipt-input';
+import { GoodsReceiptsService } from './goods-receipts.service';
 import { parseCreatePurchaseOrder } from './purchase-order-input';
 import { PurchaseOrdersService } from './purchase-orders.service';
 
@@ -28,6 +35,7 @@ export class PurchaseOrdersController {
   constructor(
     private readonly db: TenantDb,
     private readonly purchaseOrders: PurchaseOrdersService,
+    private readonly receipts: GoodsReceiptsService,
   ) {}
 
   /**
@@ -60,6 +68,44 @@ export class PurchaseOrdersController {
     const input = parseCreatePurchaseOrder(body);
     return this.db
       .run(scope, (tx) => this.purchaseOrders.create(tx, scope, input))
+      .catch(translateDbError);
+  }
+
+  /** Newest first. Whoever may read the order reads its receipts. */
+  @Get(':id/receipts')
+  listReceipts(
+    @CompanyScope() scope: CompanyRequestScope,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<GoodsReceipt[]> {
+    return this.db.run(scope, (tx) => this.receipts.list(tx, id));
+  }
+
+  /**
+   * Confirms a delivery against order lines. Buyers and admins only. The order moves to
+   * partially or fully received by itself. Refused with 409 when a line would be over-received,
+   * a correction would go below zero, or the order is closed. Receipts cannot be edited or
+   * deleted: correct one with a later entry of negative quantity and a note.
+   */
+  @Post(':id/receipts')
+  recordReceipt(
+    @CompanyScope() scope: CompanyRequestScope,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: CreateGoodsReceiptRequest,
+  ): Promise<GoodsReceipt> {
+    const input = parseCreateGoodsReceipt(body);
+    return this.db
+      .run(scope, (tx) => this.receipts.create(tx, scope, id, input))
+      .catch(translateDbError);
+  }
+
+  /** Buyers and admins only, and only for a fully received order. Final. */
+  @Post(':id/close')
+  close(
+    @CompanyScope() scope: CompanyRequestScope,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<PurchaseOrder> {
+    return this.db
+      .run(scope, (tx) => this.receipts.close(tx, scope, id))
       .catch(translateDbError);
   }
 }

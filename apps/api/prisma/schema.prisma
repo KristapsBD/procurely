@@ -65,17 +65,19 @@ model Company {
 }
 
 model Person {
-  id             String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email          String                @unique
+  id             String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email          String                 @unique
   name           String
   /// Google's stable subject identifier, set at the first Google sign-in. Null until then.
-  googleSub      String?               @unique @map("google_sub")
+  googleSub      String?                @unique @map("google_sub")
   memberships    Membership[]
   requisitions   Requisition[]
   auditLog       AuditLog[]
   decisions      RequisitionDecision[]
   pushDevices    PushDevice[]
   purchaseOrders PurchaseOrder[]
+  goodsReceipts  GoodsReceipt[]
+  closures       PurchaseOrderClosure[]
 
   @@map("people")
 }
@@ -231,18 +233,21 @@ model RequisitionDecision {
 /// A buyer's order of an approved requisition from one supplier. Never changed or deleted. Its
 /// total is the sum of its line amounts, computed on read.
 model PurchaseOrder {
-  id                String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  companyId         String              @map("company_id") @db.Uuid
+  id                String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId         String                 @map("company_id") @db.Uuid
   /// Unique: a requisition converts once.
-  requisitionId     String              @unique @map("requisition_id") @db.Uuid
-  supplierId        String              @map("supplier_id") @db.Uuid
-  createdByPersonId String              @map("created_by_person_id") @db.Uuid
-  createdAt         DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
-  company           Company             @relation(fields: [companyId], references: [id])
-  requisition       Requisition         @relation(fields: [companyId, requisitionId], references: [companyId, id])
-  supplier          Supplier            @relation(fields: [companyId, supplierId], references: [companyId, id])
-  createdBy         Person              @relation(fields: [createdByPersonId], references: [id])
+  requisitionId     String                 @unique @map("requisition_id") @db.Uuid
+  supplierId        String                 @map("supplier_id") @db.Uuid
+  createdByPersonId String                 @map("created_by_person_id") @db.Uuid
+  createdAt         DateTime               @default(now()) @map("created_at") @db.Timestamptz(3)
+  company           Company                @relation(fields: [companyId], references: [id])
+  requisition       Requisition            @relation(fields: [companyId, requisitionId], references: [companyId, id])
+  supplier          Supplier               @relation(fields: [companyId, supplierId], references: [companyId, id])
+  createdBy         Person                 @relation(fields: [createdByPersonId], references: [id])
   lines             PurchaseOrderLine[]
+  receipts          GoodsReceipt[]
+  /// At most one: purchase_order_closures.purchase_order_id is unique.
+  closures          PurchaseOrderClosure[]
 
   @@unique([companyId, id])
   @@index([companyId, createdAt])
@@ -252,21 +257,77 @@ model PurchaseOrder {
 /// One catalog item on a purchase order. Unlike a requisition line, the unit price is the
 /// buyer's to set (it starts from the requisition line's price).
 model PurchaseOrderLine {
-  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  companyId       String        @map("company_id") @db.Uuid
-  purchaseOrderId String        @map("purchase_order_id") @db.Uuid
+  id              String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId       String             @map("company_id") @db.Uuid
+  purchaseOrderId String             @map("purchase_order_id") @db.Uuid
   /// Order of the line within its purchase order, from 0.
   position        Int
-  catalogItemId   String        @map("catalog_item_id") @db.Uuid
+  catalogItemId   String             @map("catalog_item_id") @db.Uuid
   quantity        Int
-  unitPriceMinor  Int           @map("unit_price_minor")
+  unitPriceMinor  Int                @map("unit_price_minor")
   /// quantity * unitPriceMinor, enforced by a check constraint.
-  amountMinor     Int           @map("amount_minor")
-  purchaseOrder   PurchaseOrder @relation(fields: [companyId, purchaseOrderId], references: [companyId, id])
-  catalogItem     CatalogItem   @relation(fields: [companyId, catalogItemId], references: [companyId, id])
+  amountMinor     Int                @map("amount_minor")
+  purchaseOrder   PurchaseOrder      @relation(fields: [companyId, purchaseOrderId], references: [companyId, id])
+  catalogItem     CatalogItem        @relation(fields: [companyId, catalogItemId], references: [companyId, id])
+  receiptLines    GoodsReceiptLine[]
 
   @@unique([purchaseOrderId, position])
+  // Target of the foreign key that keeps a receipt line on its own order.
+  @@unique([purchaseOrderId, id])
   @@map("purchase_order_lines")
+}
+
+/// One delivery a buyer confirmed against a purchase order. Never changed or deleted: a mistake
+/// is corrected by a later receipt whose line has a negative quantity.
+model GoodsReceipt {
+  id                 String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId          String             @map("company_id") @db.Uuid
+  purchaseOrderId    String             @map("purchase_order_id") @db.Uuid
+  receivedByPersonId String             @map("received_by_person_id") @db.Uuid
+  receivedAt         DateTime           @default(now()) @map("received_at") @db.Timestamptz(3)
+  purchaseOrder      PurchaseOrder      @relation(fields: [companyId, purchaseOrderId], references: [companyId, id])
+  receivedBy         Person             @relation(fields: [receivedByPersonId], references: [id])
+  lines              GoodsReceiptLine[]
+
+  // Target of the foreign key that keeps a receipt line on its receipt's company and order.
+  @@unique([companyId, purchaseOrderId, id])
+  @@index([purchaseOrderId, receivedAt])
+  @@map("goods_receipts")
+}
+
+/// Quantity received on one purchase order line. Positive for a delivery, negative (with a note)
+/// for a correction. Check constraints and a trigger keep the line's net total between zero and
+/// the ordered quantity.
+model GoodsReceiptLine {
+  id                  String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId           String            @map("company_id") @db.Uuid
+  goodsReceiptId      String            @map("goods_receipt_id") @db.Uuid
+  purchaseOrderId     String            @map("purchase_order_id") @db.Uuid
+  purchaseOrderLineId String            @map("purchase_order_line_id") @db.Uuid
+  quantity            Int
+  /// Optional: damage, shortfall, why a correction. Required when the quantity is negative.
+  note                String?
+  // The receipt belongs to the same company and the same order as the line.
+  receipt             GoodsReceipt      @relation(fields: [companyId, purchaseOrderId, goodsReceiptId], references: [companyId, purchaseOrderId, id])
+  purchaseOrderLine   PurchaseOrderLine @relation(fields: [purchaseOrderId, purchaseOrderLineId], references: [purchaseOrderId, id])
+
+  @@unique([goodsReceiptId, purchaseOrderLineId])
+  @@index([purchaseOrderLineId])
+  @@map("goods_receipt_lines")
+}
+
+/// A buyer's record that an order is complete. Exists only for a fully received order and is
+/// never removed; it is what moves the order to CLOSED.
+model PurchaseOrderClosure {
+  id               String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companyId        String        @map("company_id") @db.Uuid
+  purchaseOrderId  String        @unique @map("purchase_order_id") @db.Uuid
+  closedByPersonId String        @map("closed_by_person_id") @db.Uuid
+  closedAt         DateTime      @default(now()) @map("closed_at") @db.Timestamptz(3)
+  purchaseOrder    PurchaseOrder @relation(fields: [companyId, purchaseOrderId], references: [companyId, id])
+  closedBy         Person        @relation(fields: [closedByPersonId], references: [id])
+
+  @@map("purchase_order_closures")
 }
 
 /// Append-only: the API role can insert and select (admins only) but never update or delete.

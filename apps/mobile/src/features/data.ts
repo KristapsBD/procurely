@@ -4,6 +4,7 @@ import type {
   CompanyMembership,
   CostCenter,
   Member,
+  GoodsReceipt,
   PurchaseOrder,
   Requisition,
   Supplier,
@@ -106,6 +107,17 @@ export function usePurchaseOrders(companyId: string) {
   return useQuery<PurchaseOrder[]>({
     queryKey: queryKeys.purchaseOrders(companyId),
     queryFn: () => api.purchaseOrders(required(token), companyId),
+    enabled: token !== null,
+  });
+}
+
+export function useGoodsReceipts(companyId: string, purchaseOrderId: string) {
+  const api = useApi();
+  const token = useToken();
+  return useQuery<GoodsReceipt[]>({
+    queryKey: queryKeys.goodsReceipts(companyId, purchaseOrderId),
+    queryFn: () =>
+      api.goodsReceipts(required(token), companyId, purchaseOrderId),
     enabled: token !== null,
   });
 }

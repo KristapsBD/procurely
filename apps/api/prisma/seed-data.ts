@@ -327,6 +327,26 @@ export const purchaseOrders = [
   },
 ];
 
+// The order was delivered in full and closed, so the receipt and closure tables have rows for the
+// RLS audit too. Tests make their own.
+export const goodsReceipts = [
+  {
+    id: '00000000-0000-4000-8000-000000000111',
+    companyId: COMPANY.sek,
+    purchaseOrderId: PURCHASE_ORDER.fridaPaper,
+    receivedByPersonId: PERSON.erik,
+    lines: [{ position: 0, quantity: 1, note: null }],
+  },
+];
+
+export const purchaseOrderClosures = [
+  {
+    companyId: COMPANY.sek,
+    purchaseOrderId: PURCHASE_ORDER.fridaPaper,
+    closedByPersonId: PERSON.erik,
+  },
+];
+
 // Acme Trading and Nordic Supplies have no approval rules: an admin decides their requisitions.
 // One Megacorp rule keeps the table non-empty for the RLS audit.
 export const approvalRules = [

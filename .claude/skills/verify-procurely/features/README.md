@@ -33,4 +33,5 @@ Maintained source for verifying user-facing behavior of the Expo **web** app aga
 - [Requisitions](./requisitions.md) — create, edit, submit, cancel; admin read-only; no entry for buyers and approvers.
 - [Approvals](./approvals.md) — admin approval rules, auto-approval under the threshold, approver inbox approve/reject, no self-approval.
 - [Purchase orders](./purchase-orders.md) — buyer/admin creates an order from an approved requisition for an active supplier; converts once; role-scoped list.
+- [Goods receipts](./goods-receipts.md) — buyer/admin confirms deliveries per order line, partial and full; over-receiving refused; status follows; correction by a later entry; close a fully received order.
 - [Members](./members.md) — admin list, invite, role, deactivate; no entry for other roles.
