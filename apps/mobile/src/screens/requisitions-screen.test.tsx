@@ -1,5 +1,6 @@
 import type { Requisition, Role } from '@procurely/shared-types';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { ActiveCompanyChip } from '../components/active-company-chip';
 import { ApiError, type Api } from '../api/client';
 import {
   TestApp,
@@ -9,6 +10,7 @@ import {
   fakeApi,
   membership,
   pressToWrite,
+  purchaseOrder,
   requisition,
   supplier,
   switchCompany,
@@ -79,7 +81,9 @@ function renderAs(
   return api;
 }
 
-const button = (name: string) => screen.findByRole('button', { name });
+const button = (name: string | RegExp) => screen.findByRole('button', { name });
+const openRow = async (title: string) =>
+  fireEvent.press(await button(new RegExp(title)));
 const noButton = (name: string) =>
   expect(screen.queryByRole('button', { name })).toBeNull();
 
@@ -87,7 +91,10 @@ describe('RequisitionsScreen', () => {
   it('lists a requester’s requisitions with status and total', async () => {
     renderAs('REQUESTER');
     expect(await screen.findByText('Printer paper')).toBeTruthy();
-    expect(screen.getByText('Draft · €74.97 · Alice')).toBeTruthy();
+    expect(await screen.findByText('Alice · OPS')).toBeTruthy();
+    expect(screen.getByText('€74.97')).toBeTruthy();
+    expect(screen.getByText('Draft')).toBeTruthy();
+    expect(screen.queryByText(/Draft · /)).toBeNull();
     expect(await button('New requisition')).toBeTruthy();
   });
 
@@ -113,16 +120,14 @@ describe('RequisitionsScreen', () => {
       justification: 'Printer paper',
       lines: [{ catalogItemId: paper.id, quantity: 3 }],
     });
-    expect(await screen.findByText('Total €74.97')).toBeTruthy();
-    expect(screen.getByText('Cost center: OPS')).toBeTruthy();
+    expect(await screen.findByText('Total')).toBeTruthy();
     expect(
-      screen.getByText('3 × A4 copy paper at €24.99 = €74.97'),
+      screen.getByText('Requested by Alice · OPS · OPS name'),
     ).toBeTruthy();
+    expect(screen.getByText('Qty 3 × €24.99')).toBeTruthy();
 
     await pressToWrite(await button('Submit'));
-    expect(
-      await screen.findByText('Submitted · requested by Alice'),
-    ).toBeTruthy();
+    expect(await screen.findByText('Waiting for a decision')).toBeTruthy();
     noButton('Edit draft');
     noButton('Submit');
     expect(await button('Cancel requisition')).toBeTruthy();
@@ -145,7 +150,7 @@ describe('RequisitionsScreen', () => {
 
   it('replaces a draft’s lines when it is edited', async () => {
     const api = renderAs('REQUESTER');
-    fireEvent.press(await button('Open Printer paper'));
+    await openRow('Printer paper');
     fireEvent.press(await button('Edit draft'));
     fireEvent.changeText(
       await screen.findByLabelText('Quantity of A4 copy paper'),
@@ -170,7 +175,7 @@ describe('RequisitionsScreen', () => {
         throw new ApiError(409, 'Cannot submit without a justification');
       },
     });
-    fireEvent.press(await button('Open Printer paper'));
+    await openRow('Printer paper');
     await pressToWrite(await button('Submit'));
     expect(
       await screen.findByText('Cannot submit without a justification'),
@@ -185,12 +190,14 @@ describe('RequisitionsScreen', () => {
         actions: [],
       }),
     ]);
-    fireEvent.press(await button('Open Team laptops'));
-    expect(await screen.findByText('Draft · requested by Rita')).toBeTruthy();
+    await openRow('Team laptops');
+    expect(
+      await screen.findByText('Requested by Rita · no cost center yet'),
+    ).toBeTruthy();
     noButton('Edit draft');
     noButton('Submit');
     noButton('Cancel requisition');
-    fireEvent.press(await button('Back to requisitions'));
+    fireEvent.press(await button('Back to Requests'));
     expect(await button('New requisition')).toBeTruthy();
   });
 
@@ -209,11 +216,9 @@ describe('RequisitionsScreen', () => {
       requisitions: async () => [current],
       submitRequisition: async () => (current = approved),
     });
-    fireEvent.press(await button('Open Printer paper'));
+    await openRow('Printer paper');
     await pressToWrite(await button('Submit'));
-    expect(
-      await screen.findByText('Approved · requested by Alice'),
-    ).toBeTruthy();
+    expect(await screen.findAllByText('Approved')).toHaveLength(2);
     expect(screen.getByText(reason)).toBeTruthy();
     noButton('Cancel requisition');
   });
@@ -228,7 +233,7 @@ describe('RequisitionsScreen', () => {
     renderAs('REQUESTER', [
       decided({ status: 'SUBMITTED', actions: ['cancel'] }),
     ]);
-    fireEvent.press(await button('Open Printer paper'));
+    await openRow('Printer paper');
     expect(
       await screen.findByText(
         'The company has no approval rule, so an admin decides.',
@@ -251,13 +256,11 @@ describe('RequisitionsScreen', () => {
           actions: [],
         }),
       ]);
-      fireEvent.press(await button('Open Printer paper'));
+      await openRow('Printer paper');
       expect(await screen.findByText(shown)).toBeTruthy();
       expect(
-        screen.getByText(
-          `${status === 'APPROVED' ? 'Approved' : 'Rejected'} · requested by Alice`,
-        ),
-      ).toBeTruthy();
+        screen.getAllByText(status === 'APPROVED' ? 'Approved' : 'Rejected'),
+      ).toHaveLength(2);
     },
   );
 
@@ -283,17 +286,12 @@ describe('RequisitionsScreen', () => {
         })),
       },
     );
-    fireEvent.press(await button('Open Team paper'));
-    expect(await button('Approve Team paper')).toBeTruthy();
+    await openRow('Team paper');
+    expect(await button('Approve')).toBeTruthy();
     noButton('Edit draft');
     noButton('Cancel requisition');
-    fireEvent.changeText(
-      screen.getByLabelText('Reason for rejecting Team paper'),
-      'Not this quarter',
-    );
-    await pressToWrite(
-      screen.getByRole('button', { name: 'Reject Team paper' }),
-    );
+    fireEvent.changeText(screen.getByLabelText('Comment'), 'Not this quarter');
+    await pressToWrite(screen.getByRole('button', { name: 'Reject' }));
     expect(api.rejectRequisition).toHaveBeenCalledWith(
       'token-alice',
       ACME,
@@ -316,10 +314,43 @@ describe('RequisitionsScreen', () => {
   );
 });
 
+describe('RequisitionsScreen linked purchase order', () => {
+  it('shows the order, its status and received progress once one exists', async () => {
+    const approved: Requisition = {
+      ...printerPaper,
+      status: 'APPROVED',
+      approvalRoute: 'NO_RULES',
+      actions: [],
+    };
+    const order = purchaseOrder(approved, supplier(ACME, 'Office Depot'), [
+      { item: paper, quantity: 4, unitPriceMinor: 2499 },
+    ]);
+    order.lines[0].receivedQuantity = 3;
+    order.status = 'PARTIALLY_RECEIVED';
+    renderAs('REQUESTER', [approved], {
+      purchaseOrders: async () => [order],
+    });
+    await openRow('Printer paper');
+    expect(
+      await screen.findByText('Purchase order · Office Depot'),
+    ).toBeTruthy();
+    expect(screen.getByText('Partially received')).toBeTruthy();
+    expect(screen.getByText('3 of 4 received')).toBeTruthy();
+  });
+
+  it('shows no order section before an order exists', async () => {
+    renderAs('REQUESTER');
+    await openRow('Printer paper');
+    expect(await screen.findByText('Timeline')).toBeTruthy();
+    expect(screen.queryByText('Purchase order')).toBeNull();
+  });
+});
+
 describe('RequisitionsScreen company switching', () => {
   const kontor = requisition(NORDIC, 'Kontorspapper');
 
-  function renderTwoCompanies(nordicRole: Role) {
+  /** `chipOutside` stands for the chip of another tab, which stays reachable while a detail is open. */
+  function renderTwoCompanies(nordicRole: Role, chipOutside = false) {
     const nordicRows = deferred<Requisition[]>();
     const api = fakeApi({
       companies: async () => [
@@ -335,6 +366,7 @@ describe('RequisitionsScreen company switching', () => {
     });
     render(
       <TestApp api={api}>
+        {chipOutside && <ActiveCompanyChip />}
         <RequisitionsScreen />
       </TestApp>,
     );
@@ -342,13 +374,13 @@ describe('RequisitionsScreen company switching', () => {
   }
 
   it('never shows the previous company’s requisitions or open detail after a switch', async () => {
-    const { nordicRows } = renderTwoCompanies('REQUESTER');
-    fireEvent.press(await button('Open Printer paper'));
-    expect(await screen.findByText('Total €74.97')).toBeTruthy();
+    const { nordicRows } = renderTwoCompanies('REQUESTER', true);
+    await openRow('Printer paper');
+    expect(await screen.findByText('Total')).toBeTruthy();
 
     switchCompany('Nordic Supplies');
     expect(screen.queryByText('Printer paper')).toBeNull();
-    expect(screen.queryByText('Total €74.97')).toBeNull();
+    expect(screen.queryByText('Total')).toBeNull();
     expect(screen.getByLabelText('Loading requisitions')).toBeTruthy();
 
     await act(async () => nordicRows.resolve([kontor]));

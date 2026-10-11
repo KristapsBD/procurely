@@ -35,9 +35,10 @@ name: Requisition to approval to purchase order to goods receipt
 - inputText: '4'
 - assertVisible: 'Estimated total €756.00'
 - tapOn: 'Save draft'
-- assertVisible: 'Draft · requested by Ivan Requester'
+- assertVisible: 'Requested by Ivan Requester.*'
+- assertVisible: 'Draft'
 - tapOn: 'Submit'
-- assertVisible: 'Submitted · requested by Ivan Requester'
+- assertVisible: 'Waiting for a decision'
 - assertVisible: 'Waiting for an approver or an admin.'
 - runFlow: steps/sign-out.yaml
 
@@ -51,12 +52,12 @@ name: Requisition to approval to purchase order to goods receipt
     text: 'Inbox'
     index: -1
 - assertVisible: ${output.tag}
+- tapOn: ${output.tag}
+- assertVisible: 'Waiting for you'
 - tapOn:
-    below: 'Comment on ${output.tag} (optional)'
+    below: 'Comment'
 - inputText: 'Within budget'
-- tapOn:
-    text: 'Approve'
-    below: ${output.tag}
+- tapOn: 'Approve'
 - assertVisible: 'Approved: ${output.tag}'
 - runFlow: steps/sign-out.yaml
 
