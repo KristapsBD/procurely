@@ -7,6 +7,9 @@ import type {
 } from '@procurely/shared-types';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
+import { Caption } from '../components/caption';
+import { EmptyState } from '../components/empty-state';
+import { ScreenHeader } from '../components/screen-header';
 import {
   Button,
   ErrorNote,
@@ -68,8 +71,11 @@ export function PurchaseOrderForm(props: {
       ? toOrderRequest(requisition.id, supplierId, lines)
       : null;
   return (
-    <View style={styles.card}>
-      <Text style={styles.heading}>New purchase order</Text>
+    <>
+      <ScreenHeader
+        lead={{ kind: 'back', label: 'Orders', onPress: props.onCancel }}
+        title="New purchase order"
+      />
       <RequisitionChoice
         requisitions={props.requisitions}
         currency={currency}
@@ -119,7 +125,14 @@ export function PurchaseOrderForm(props: {
           }
         />
       )}
-      <Money label="Total" minor={estimateTotal(lines)} currency={currency} />
+      <View style={totalLine}>
+        <Caption>Order total</Caption>
+        <Money
+          minor={estimateTotal(lines)}
+          currency={currency}
+          style={{ fontSize: 20 }}
+        />
+      </View>
       <FormActions
         saveLabel="Create purchase order"
         canSave={!save.isPending && request !== null}
@@ -129,9 +142,15 @@ export function PurchaseOrderForm(props: {
         onCancel={props.onCancel}
         error={save.isError ? writeErrorMessage(save.error) : null}
       />
-    </View>
+    </>
   );
 }
+
+const totalLine = {
+  flexDirection: 'row',
+  alignItems: 'baseline',
+  justifyContent: 'space-between',
+} as const;
 
 function RequisitionChoice(props: {
   requisitions: Requisition[];
@@ -140,12 +159,10 @@ function RequisitionChoice(props: {
   onSelect: (requisition: Requisition) => void;
 }) {
   return (
-    <>
-      <Text style={styles.muted}>Approved requisition</Text>
+    <View style={styles.card}>
+      <Caption>Approved requisition</Caption>
       {props.requisitions.length === 0 && (
-        <Text style={styles.body}>
-          No approved requisition is waiting to be ordered.
-        </Text>
+        <EmptyState title="No approved requisition is waiting to be ordered." />
       )}
       <View style={styles.row}>
         {props.requisitions.map((r) => (
@@ -158,7 +175,7 @@ function RequisitionChoice(props: {
           />
         ))}
       </View>
-    </>
+    </View>
   );
 }
 
@@ -170,8 +187,8 @@ function SupplierChoice(props: {
 }) {
   const suppliers = useSuppliers(props.companyId, { selectable: true });
   return (
-    <>
-      <Text style={styles.muted}>Supplier</Text>
+    <View style={styles.card}>
+      <Caption>Supplier</Caption>
       {suppliers.isPending && <Loading label="Loading suppliers" />}
       {suppliers.isError && (
         <ErrorNote message="Could not load the suppliers." />
@@ -187,7 +204,7 @@ function SupplierChoice(props: {
           />
         ))}
       </View>
-    </>
+    </View>
   );
 }
 
@@ -199,7 +216,8 @@ function LineFields(props: {
 }) {
   const { line } = props;
   return (
-    <View style={{ gap: 4 }}>
+    <View style={[styles.card, { gap: 8 }]}>
+      <Text style={styles.rowTitle}>{line.name}</Text>
       <TextField
         label={`Quantity of ${line.name}`}
         keyboardType="decimal-pad"
@@ -236,8 +254,8 @@ function ItemChoice(props: {
 }) {
   if (props.items.length === 0) return null;
   return (
-    <View style={{ gap: 4 }}>
-      <Text style={styles.muted}>Add an item of this supplier</Text>
+    <View style={styles.card}>
+      <Caption>Add an item of this supplier</Caption>
       <View style={styles.row}>
         {props.items.map((item) => (
           <Button
