@@ -62,10 +62,10 @@ export function createPushRegistrar(
 export function screenForNotification(
   data: unknown,
   activeCompanyId: string | null,
-): '/approvals' | '/requisitions' | null {
+): '/inbox' | '/requests' | null {
   const { kind, companyId } = (data ?? {}) as Record<string, unknown>;
   if (!activeCompanyId || companyId !== activeCompanyId) return null;
-  if (kind === 'approval-requested') return '/approvals';
-  if (kind === 'requisition-decided') return '/requisitions';
+  if (kind === 'approval-requested') return '/inbox';
+  if (kind === 'requisition-decided') return '/requests';
   return null;
 }

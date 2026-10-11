@@ -11,7 +11,7 @@ import type {
   Supplier,
 } from '@procurely/shared-types';
 import { QueryClient } from '@tanstack/react-query';
-import { act, fireEvent } from '@testing-library/react-native';
+import { act, fireEvent, screen } from '@testing-library/react-native';
 import type { ReactNode } from 'react';
 import type { Api } from '../api/client';
 import { AppProviders } from '../app-providers';
@@ -150,6 +150,11 @@ export async function pressToWrite(
 }
 
 /** A promise the test settles by hand, to control when a response "arrives". */
+export function switchCompany(companyName: string) {
+  fireEvent.press(screen.getByRole('button', { name: 'Switch company' }));
+  fireEvent.press(screen.getByRole('button', { name: companyName }));
+}
+
 export function deferred<T>() {
   let resolve!: (value: T) => void;
   const promise = new Promise<T>((r) => (resolve = r));

@@ -75,13 +75,13 @@ describe('push registrar', () => {
 describe('screenForNotification', () => {
   const approval = { kind: 'approval-requested', companyId: 'acme' };
   it('opens the screen for the kind, within the active company only', () => {
-    expect(screenForNotification(approval, 'acme')).toBe('/approvals');
+    expect(screenForNotification(approval, 'acme')).toBe('/inbox');
     expect(
       screenForNotification(
         { ...approval, kind: 'requisition-decided' },
         'acme',
       ),
-    ).toBe('/requisitions');
+    ).toBe('/requests');
     expect(screenForNotification(approval, 'nordic')).toBeNull();
     expect(screenForNotification(approval, null)).toBeNull();
   });

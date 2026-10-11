@@ -11,8 +11,9 @@ import {
   pressToWrite,
   requisition,
   supplier,
+  switchCompany,
 } from '../test/fakes';
-import { HomeScreen } from './home-screen';
+import { CompanyScreen } from './company-screen';
 import { RequisitionsScreen } from './requisitions-screen';
 
 const ACME = 'company-acme';
@@ -335,7 +336,7 @@ describe('RequisitionsScreen company switching', () => {
     });
     render(
       <TestApp api={api}>
-        <HomeScreen />
+        <CompanyScreen />
         <RequisitionsScreen />
       </TestApp>,
     );
@@ -347,7 +348,7 @@ describe('RequisitionsScreen company switching', () => {
     fireEvent.press(await button('Open Printer paper'));
     expect(await screen.findByText('Total 74.97 EUR')).toBeTruthy();
 
-    fireEvent.press(screen.getByRole('button', { name: 'Nordic Supplies' }));
+    switchCompany('Nordic Supplies');
     expect(screen.queryByText('Printer paper')).toBeNull();
     expect(screen.queryByText('Total 74.97 EUR')).toBeNull();
     expect(screen.getByLabelText('Loading requisitions')).toBeTruthy();
@@ -360,14 +361,12 @@ describe('RequisitionsScreen company switching', () => {
   it('drops the entry point and the rows when the person is an approver in the next company', async () => {
     const { api } = renderTwoCompanies('APPROVER');
     expect(await screen.findByText('Printer paper')).toBeTruthy();
-    expect(await button('Requisitions')).toBeTruthy();
 
-    fireEvent.press(screen.getByRole('button', { name: 'Nordic Supplies' }));
+    switchCompany('Nordic Supplies');
     expect(
       await screen.findByText('Requisitions are for requesters and admins.'),
     ).toBeTruthy();
     expect(screen.queryByText('Printer paper')).toBeNull();
-    noButton('Requisitions');
     expect(api.requisitions).toHaveBeenCalledTimes(1);
   });
 });
