@@ -2,7 +2,7 @@ appId: procurely
 ---
 - openLink: ${APP_URL}
 - extendedWaitUntil:
-    visible: "Sign out"
+    visible: 'Sign out'
     timeout: 30000
-- tapOn: "Sign out"
-- assertVisible: "Sign in as Alice"
+- tapOn: 'Sign out'
+- assertVisible: 'Sign in as Alice'

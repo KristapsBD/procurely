@@ -8,74 +8,74 @@ name: Requisition to approval to purchase order to goods receipt
 - evalScript: ${output.tag = 'E2E shelving ' + Date.now()}
 - openLink: ${APP_URL}
 - extendedWaitUntil:
-    visible: "Sign in as Alice"
+    visible: 'Sign in as Alice'
     timeout: 120000
 
 - runFlow:
     file: steps/sign-in-as-id.yaml
     env:
-      PERSON_ID: "00000000-0000-4000-8000-0000000000b9"
+      PERSON_ID: '00000000-0000-4000-8000-0000000000b9'
       NAME: Ivan Requester
-- assertVisible: "Megacorp Industries (EUR), you are requester"
-- tapOn: "Requisitions"
-- tapOn: "New requisition"
-- tapOn: "PLANT1"
+- assertVisible: 'Megacorp Industries (EUR), you are requester'
+- tapOn: 'Requisitions'
+- tapOn: 'New requisition'
+- tapOn: 'PLANT1'
 - tapOn:
-    below: "Justification"
+    below: 'Justification'
 - inputText: ${output.tag}
-- tapOn: "Steel shelving unit · 189.00 EUR"
+- tapOn: 'Steel shelving unit · 189.00 EUR'
 - tapOn:
-    below: "Quantity of Steel shelving unit"
+    below: 'Quantity of Steel shelving unit'
 - eraseText
-- inputText: "4"
-- assertVisible: "Estimated total 756.00 EUR"
-- tapOn: "Save draft"
-- assertVisible: "Draft · requested by Ivan Requester"
-- tapOn: "Submit"
-- assertVisible: "Submitted · requested by Ivan Requester"
-- assertVisible: "Waiting for an approver or an admin."
+- inputText: '4'
+- assertVisible: 'Estimated total 756.00 EUR'
+- tapOn: 'Save draft'
+- assertVisible: 'Draft · requested by Ivan Requester'
+- tapOn: 'Submit'
+- assertVisible: 'Submitted · requested by Ivan Requester'
+- assertVisible: 'Waiting for an approver or an admin.'
 - runFlow: steps/sign-out.yaml
 
 - runFlow:
     file: steps/sign-in-as-id.yaml
     env:
-      PERSON_ID: "00000000-0000-4000-8000-0000000000b8"
+      PERSON_ID: '00000000-0000-4000-8000-0000000000b8'
       NAME: Hanna Approver
-- tapOn: "Approvals"
+- tapOn: 'Approvals'
 - assertVisible: ${output.tag}
 - tapOn:
-    below: "Comment on ${output.tag} (optional)"
-- inputText: "Within budget"
+    below: 'Comment on ${output.tag} (optional)'
+- inputText: 'Within budget'
 - tapOn:
-    text: "Approve"
+    text: 'Approve'
     below: ${output.tag}
-- assertVisible: "Approved: ${output.tag}"
+- assertVisible: 'Approved: ${output.tag}'
 - runFlow: steps/sign-out.yaml
 
 - runFlow:
     file: steps/sign-in-as-id.yaml
     env:
-      PERSON_ID: "00000000-0000-4000-8000-0000000000bd"
+      PERSON_ID: '00000000-0000-4000-8000-0000000000bd'
       NAME: Jonas Buyer
-- tapOn: "Purchase orders"
-- tapOn: "New purchase order"
-- tapOn: "${output.tag} · 756.00 EUR"
-- tapOn: "Ferro Industrial Supply"
-- tapOn: "Create purchase order"
-- assertVisible: "Status: Issued"
-- assertVisible: "4 × Steel shelving unit at 189.00 EUR = 756.00 EUR (0 received)"
+- tapOn: 'Purchase orders'
+- tapOn: 'New purchase order'
+- tapOn: '${output.tag} · 756.00 EUR'
+- tapOn: 'Ferro Industrial Supply'
+- tapOn: 'Create purchase order'
+- assertVisible: 'Status: Issued'
+- assertVisible: '4 × Steel shelving unit at 189.00 EUR = 756.00 EUR (0 received)'
 
 - tapOn:
-    below: "Received now of Steel shelving unit"
-- inputText: "3"
-- tapOn: "Record delivery"
-- assertVisible: "Status: Partially received"
-- assertVisible: "Steel shelving unit: 3 of 4 received"
+    below: 'Received now of Steel shelving unit'
+- inputText: '3'
+- tapOn: 'Record delivery'
+- assertVisible: 'Status: Partially received'
+- assertVisible: 'Steel shelving unit: 3 of 4 received'
 - tapOn:
-    below: "Received now of Steel shelving unit"
-- inputText: "1"
-- tapOn: "Record delivery"
-- assertVisible: "Status: Fully received"
-- tapOn: "Close order"
-- assertVisible: "Status: Closed"
-- assertVisible: "Closed by Jonas Buyer on .*"
+    below: 'Received now of Steel shelving unit'
+- inputText: '1'
+- tapOn: 'Record delivery'
+- assertVisible: 'Status: Fully received'
+- tapOn: 'Close order'
+- assertVisible: 'Status: Closed'
+- assertVisible: 'Closed by Jonas Buyer on .*'
