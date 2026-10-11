@@ -1,6 +1,6 @@
 # Procurely verification map
 
-Maintained source for verifying user-facing behavior of the Expo **web** app against this checkout's API. Native clients are out of scope. Read this index, then the matching feature file.
+Maintained source for verifying user-facing behavior of the Expo **web** app against this checkout's API. Native clients are out of scope. The requisition, approval, purchase order and goods receipt path is also saved as a Maestro script (`e2e/maestro/`, `make e2e`, Megacorp's Ivan, Hanna and Jonas). Read this index, then the matching feature file.
 
 ## Baseline preconditions
 
