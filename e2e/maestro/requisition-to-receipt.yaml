@@ -17,7 +17,12 @@ name: Requisition to approval to purchase order to goods receipt
       PERSON_ID: '00000000-0000-4000-8000-0000000000b9'
       NAME: Ivan Requester
 - assertVisible: 'Megacorp Industries (EUR), you are requester'
-- tapOn: 'Requisitions'
+- assertNotVisible: 'Inbox'
+- assertNotVisible: 'Orders'
+# index -1 picks the tab bar button: each tab's screen header repeats its name above it.
+- tapOn:
+    text: 'Requests'
+    index: -1
 - tapOn: 'New requisition'
 - tapOn: 'PLANT1'
 - tapOn:
@@ -41,7 +46,10 @@ name: Requisition to approval to purchase order to goods receipt
     env:
       PERSON_ID: '00000000-0000-4000-8000-0000000000b8'
       NAME: Hanna Approver
-- tapOn: 'Approvals'
+- assertNotVisible: 'Requests'
+- tapOn:
+    text: 'Inbox'
+    index: -1
 - assertVisible: ${output.tag}
 - tapOn:
     below: 'Comment on ${output.tag} (optional)'
@@ -57,7 +65,10 @@ name: Requisition to approval to purchase order to goods receipt
     env:
       PERSON_ID: '00000000-0000-4000-8000-0000000000bd'
       NAME: Jonas Buyer
-- tapOn: 'Purchase orders'
+- assertNotVisible: 'Inbox'
+- tapOn:
+    text: 'Orders'
+    index: -1
 - tapOn: 'New purchase order'
 - tapOn: '${output.tag} · 756.00 EUR'
 - tapOn: 'Ferro Industrial Supply'
