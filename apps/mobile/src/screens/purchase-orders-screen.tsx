@@ -6,6 +6,7 @@ import {
   ErrorNote,
   ListRow,
   Loading,
+  Money,
   StatusBadge,
   statusLabel,
   styles,
@@ -181,7 +182,7 @@ function OrderDetail(props: {
         </Text>
       ))}
       <Text style={styles.body}>
-        {`Total ${formatMoney(o.totalMinor, currency)}`}
+        Total <Money minor={o.totalMinor} currency={currency} />
       </Text>
       <GoodsReceiptPanel company={props.company} order={o} />
       <Button label="Back to purchase orders" onPress={props.onBack} />

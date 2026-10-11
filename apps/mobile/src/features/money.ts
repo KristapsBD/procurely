@@ -8,9 +8,10 @@ export function formatMoney(minor: number, currency: string): string {
 
 /** The amount alone ("24.99"), as a price field shows it for editing. */
 export function formatAmount(minor: number): string {
-  const major = Math.floor(minor / 100);
-  const cents = String(minor % 100).padStart(2, '0');
-  return `${major}.${cents}`;
+  const abs = Math.abs(minor);
+  const major = Math.floor(abs / 100);
+  const cents = String(abs % 100).padStart(2, '0');
+  return `${minor < 0 ? '-' : ''}${major}.${cents}`;
 }
 
 /** Up to 7 digits, so the result always fits the API's integer price column. */

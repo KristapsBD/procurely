@@ -10,6 +10,7 @@ import {
   ErrorNote,
   ListRow,
   Loading,
+  Money,
   StatusBadge,
   statusLabel,
   styles,
@@ -180,7 +181,7 @@ function RequisitionDetail(props: {
         </Text>
       ))}
       <Text style={styles.body}>
-        {`Total ${formatMoney(r.totalMinor, company.currency)}`}
+        Total <Money minor={r.totalMinor} currency={company.currency} />
       </Text>
       <RequisitionActions
         company={company}

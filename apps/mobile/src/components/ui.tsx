@@ -61,11 +61,6 @@ export function Button(props: {
   );
 }
 
-/** A surface with the Ledger border and radius. */
-export function Card(props: { children: ReactNode }) {
-  return <View style={styles.card}>{props.children}</View>;
-}
-
 /** A card row: title and meta on the left, an amount or badge on the right. */
 export function ListRow(props: {
   title: string;
@@ -85,37 +80,6 @@ export function ListRow(props: {
         {props.trailing}
       </View>
       {props.children}
-    </View>
-  );
-}
-
-/** One chip per option; exactly one is selected. */
-export function SegmentedControl<T extends string>(props: {
-  options: { value: T; label: string }[];
-  value: T;
-  onChange: (value: T) => void;
-}) {
-  return (
-    <View style={styles.segmented}>
-      {props.options.map((o) => {
-        const selected = o.value === props.value;
-        return (
-          <Pressable
-            key={o.value}
-            accessibilityRole="button"
-            accessibilityLabel={o.label}
-            accessibilityState={{ selected }}
-            onPress={() => props.onChange(o.value)}
-            style={[styles.segment, selected && styles.segmentSelected]}
-          >
-            <Text
-              style={[styles.segmentText, selected && styles.segmentTextOn]}
-            >
-              {o.label}
-            </Text>
-          </Pressable>
-        );
-      })}
     </View>
   );
 }
@@ -283,22 +247,6 @@ export const styles = StyleSheet.create({
     fontSize: 15,
     color: p.ink,
   },
-  segmented: {
-    flexDirection: 'row',
-    padding: 3,
-    backgroundColor: p.controlTrack,
-    borderRadius: theme.radius.chip,
-  },
-  segment: {
-    flex: 1,
-    minHeight: 38,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 8,
-  },
-  segmentSelected: { backgroundColor: p.surface },
-  segmentText: { fontFamily: fonts.regular, fontSize: 14, color: p.muted },
-  segmentTextOn: { fontFamily: fonts.medium, color: p.ink },
   chip: {
     minHeight: theme.controlHeight,
     flexDirection: 'row',

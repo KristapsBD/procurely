@@ -11,6 +11,7 @@ import {
   ErrorNote,
   FormActions,
   Loading,
+  Money,
   TextField,
   styles,
 } from '../components/ui';
@@ -146,7 +147,8 @@ export function RequisitionForm(props: {
             }
           />
           <Text style={styles.body}>
-            {`Estimated total ${formatMoney(estimate(lines, catalog.data), currency)}`}
+            Estimated total{' '}
+            <Money minor={estimate(lines, catalog.data)} currency={currency} />
           </Text>
         </>
       )}

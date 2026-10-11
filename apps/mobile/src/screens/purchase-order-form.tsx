@@ -12,6 +12,7 @@ import {
   ErrorNote,
   FormActions,
   Loading,
+  Money,
   TextField,
   styles,
 } from '../components/ui';
@@ -119,7 +120,7 @@ export function PurchaseOrderForm(props: {
         />
       )}
       <Text style={styles.body}>
-        {`Total ${formatMoney(estimateTotal(lines), currency)}`}
+        Total <Money minor={estimateTotal(lines)} currency={currency} />
       </Text>
       <FormActions
         saveLabel="Create purchase order"
