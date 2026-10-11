@@ -181,9 +181,7 @@ function OrderDetail(props: {
           {`${l.quantity} × ${l.catalogItemName} at ${formatMoney(l.unitPriceMinor, currency)} = ${formatMoney(l.amountMinor, currency)} (${l.receivedQuantity} received)`}
         </Text>
       ))}
-      <Text style={styles.body}>
-        Total <Money minor={o.totalMinor} currency={currency} />
-      </Text>
+      <Money label="Total" minor={o.totalMinor} currency={currency} />
       <GoodsReceiptPanel company={props.company} order={o} />
       <Button label="Back to purchase orders" onPress={props.onBack} />
     </View>

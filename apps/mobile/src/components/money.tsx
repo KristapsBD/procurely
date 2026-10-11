@@ -6,6 +6,8 @@ import { fonts, theme } from './theme';
 export function Money(props: {
   minor: number;
   currency: string;
+  /** Leading words in the same text node, so the line reads and matches as one string. */
+  label?: string;
   style?: TextStyle;
 }) {
   return (
@@ -20,7 +22,7 @@ export function Money(props: {
         props.style,
       ]}
     >
-      {formatMoney(props.minor, props.currency)}
+      {`${props.label ? `${props.label} ` : ''}${formatMoney(props.minor, props.currency)}`}
     </Text>
   );
 }

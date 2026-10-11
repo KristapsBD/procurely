@@ -180,9 +180,7 @@ function RequisitionDetail(props: {
           {`${l.quantity} × ${l.catalogItemName} at ${formatMoney(l.unitPriceMinor, company.currency)} = ${formatMoney(l.amountMinor, company.currency)}`}
         </Text>
       ))}
-      <Text style={styles.body}>
-        Total <Money minor={r.totalMinor} currency={company.currency} />
-      </Text>
+      <Money label="Total" minor={r.totalMinor} currency={company.currency} />
       <RequisitionActions
         company={company}
         requisition={r}

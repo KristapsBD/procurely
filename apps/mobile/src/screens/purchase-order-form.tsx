@@ -119,9 +119,7 @@ export function PurchaseOrderForm(props: {
           }
         />
       )}
-      <Text style={styles.body}>
-        Total <Money minor={estimateTotal(lines)} currency={currency} />
-      </Text>
+      <Money label="Total" minor={estimateTotal(lines)} currency={currency} />
       <FormActions
         saveLabel="Create purchase order"
         canSave={!save.isPending && request !== null}

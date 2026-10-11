@@ -146,10 +146,11 @@ export function RequisitionForm(props: {
               ])
             }
           />
-          <Text style={styles.body}>
-            Estimated total{' '}
-            <Money minor={estimate(lines, catalog.data)} currency={currency} />
-          </Text>
+          <Money
+            label="Estimated total"
+            minor={estimate(lines, catalog.data)}
+            currency={currency}
+          />
         </>
       )}
       <FormActions
