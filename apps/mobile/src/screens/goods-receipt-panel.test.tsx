@@ -89,15 +89,20 @@ const button = (name: string) => screen.findByRole('button', { name });
 
 async function openOrder() {
   fireEvent.press(await button('Open order of Spring stock'));
-  await screen.findByText('Deliveries');
+  await screen.findByText('Nothing received yet.');
+}
+
+async function openReceiptEntry() {
+  fireEvent.press(await button('Record receipt'));
+  await screen.findByText('Confirm a delivery.', { exact: false });
 }
 
 describe('goods receipts on a purchase order', () => {
   it('lets a buyer confirm a partial then the rest, moving the status, then close the order', async () => {
     const api = renderAs('BUYER');
     await openOrder();
-    expect(await screen.findByText('Status: Issued')).toBeTruthy();
-    expect(await screen.findByText('Nothing received yet.')).toBeTruthy();
+    expect(await screen.findByText('Issued')).toBeTruthy();
+    await openReceiptEntry();
 
     fireEvent.changeText(screen.getByLabelText('Received now of Pens'), '3');
     fireEvent.changeText(
@@ -119,26 +124,28 @@ describe('goods receipts on a purchase order', () => {
         ],
       },
     );
-    expect(await screen.findByText('Status: Partially received')).toBeTruthy();
+    expect(await screen.findByText('Partially received')).toBeTruthy();
+    expect(screen.getByText('3 of 4 received')).toBeTruthy();
+    expect(screen.getByText('Note. one box dented')).toBeTruthy();
     expect(screen.getByText('+3 × Pens (one box dented)')).toBeTruthy();
-    expect(screen.getByText('Pens: 3 of 4 received')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Close order' })).toBeNull();
 
+    await openReceiptEntry();
     fireEvent.changeText(screen.getByLabelText('Received now of Pens'), '1');
     await pressToWrite(await button('Record delivery'));
-    expect(await screen.findByText('Status: Fully received')).toBeTruthy();
+    expect(await screen.findByText('Fully received')).toBeTruthy();
+    expect(screen.getByText('4 of 4 received')).toBeTruthy();
 
     await pressToWrite(await button('Close order'));
-    expect(await screen.findByText('Status: Closed')).toBeTruthy();
-    expect(
-      screen.queryByRole('button', { name: 'Record delivery' }),
-    ).toBeNull();
+    expect(await screen.findByText('Closed')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Record receipt' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Close order' })).toBeNull();
   });
 
   it('refuses over-receiving before it is sent', async () => {
     const api = renderAs('BUYER');
     await openOrder();
+    await openReceiptEntry();
     fireEvent.changeText(screen.getByLabelText('Received now of Pens'), '5');
     expect(await screen.findByText('Only 4 still expected')).toBeTruthy();
     expect(
@@ -150,9 +157,6 @@ describe('goods receipts on a purchase order', () => {
   it('shows deliveries to a requester but offers no way to record one', async () => {
     renderAs('REQUESTER');
     await openOrder();
-    expect(
-      screen.queryByRole('button', { name: 'Record delivery' }),
-    ).toBeNull();
-    expect(screen.queryByLabelText('Received now of Pens')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Record receipt' })).toBeNull();
   });
 });

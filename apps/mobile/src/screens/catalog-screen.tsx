@@ -5,11 +5,15 @@ import type {
 } from '@procurely/shared-types';
 import { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
+import { EmptyState } from '../components/empty-state';
+import { theme } from '../components/theme';
 import {
   Button,
   ErrorNote,
   FormActions,
+  ListRow,
   Loading,
+  Money,
   TextField,
   styles,
 } from '../components/ui';
@@ -20,9 +24,9 @@ import {
   useSuppliers,
   writeErrorMessage,
 } from '../features/data';
-import { formatAmount, formatMoney, parseMoney } from '../features/money';
+import { formatAmount, parseMoney } from '../features/money';
 import { canManagePurchasing } from '../features/permissions';
-import { CompanyLine, WithActiveCompany } from './with-active-company';
+import { WithActiveCompany } from './with-active-company';
 
 /** The catalog of the company the person acts in. Everyone reads; buyers and admins manage. */
 export function CatalogScreen() {
@@ -43,7 +47,6 @@ function Catalog(props: { company: CompanyMembership }) {
   const [adding, setAdding] = useState(false);
   return (
     <>
-      <CompanyLine company={props.company} />
       {canManage && !adding && (
         <Button label="Add item" onPress={() => setAdding(true)} />
       )}
@@ -61,7 +64,10 @@ function Catalog(props: { company: CompanyMembership }) {
         />
       )}
       {items.data && items.data.length === 0 && (
-        <Text style={styles.body}>No catalog items yet.</Text>
+        <EmptyState
+          title="No catalog items yet."
+          body="Items a buyer adds show up here with their price."
+        />
       )}
       {items.data?.map((item) => (
         <CatalogItemCard
@@ -208,13 +214,17 @@ function CatalogItemCard(props: {
     );
   }
   return (
-    <View style={styles.card}>
-      <Text style={styles.body}>{item.name}</Text>
-      <Text style={styles.muted}>
-        {`${item.supplierName} · ${formatMoney(item.unitPriceMinor, company.currency)}`}
-      </Text>
+    <ListRow
+      title={item.name}
+      meta={item.supplierName}
+      trailing={
+        <Money minor={item.unitPriceMinor} currency={company.currency} />
+      }
+    >
       {!item.supplierActive && (
-        <Text style={styles.muted}>Supplier inactive: cannot be ordered</Text>
+        <Text style={[styles.muted, { color: theme.palette.pending }]}>
+          Supplier inactive: cannot be ordered
+        </Text>
       )}
       {props.canManage && (
         <View style={styles.row}>
@@ -235,6 +245,6 @@ function CatalogItemCard(props: {
       {remove.isError && (
         <ErrorNote message={writeErrorMessage(remove.error)} />
       )}
-    </View>
+    </ListRow>
   );
 }

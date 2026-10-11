@@ -49,8 +49,10 @@ describe('CatalogScreen', () => {
   it('shows a requester items with supplier and agreed price, read only', async () => {
     renderAs('REQUESTER');
     expect(await screen.findByText('A4 copy paper')).toBeTruthy();
-    expect(screen.getByText('Office Depot · €24.99')).toBeTruthy();
-    expect(screen.getByText('Old Paper Mill · €19.99')).toBeTruthy();
+    expect(screen.getByText('Office Depot')).toBeTruthy();
+    expect(screen.getByText('€24.99')).toBeTruthy();
+    expect(screen.getByText('Old Paper Mill')).toBeTruthy();
+    expect(screen.getByText('€19.99')).toBeTruthy();
     expect(screen.getByText(/Supplier inactive/)).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Add item' })).toBeNull();
     expect(
@@ -72,7 +74,8 @@ describe('CatalogScreen', () => {
     fireEvent.changeText(screen.getByLabelText('Unit price (EUR)'), '89.90');
     await pressToWrite(screen.getByRole('button', { name: 'Save item' }));
 
-    expect(await screen.findByText('TechWorld · €89.90')).toBeTruthy();
+    expect(await screen.findByText('€89.90')).toBeTruthy();
+    expect(screen.getByText('TechWorld')).toBeTruthy();
     expect(api.createCatalogItem).toHaveBeenCalledWith('token-alice', ACME, {
       supplierId: tech.id,
       name: 'USB-C dock',
@@ -107,7 +110,7 @@ describe('CatalogScreen', () => {
     fireEvent.changeText(screen.getByLabelText('Unit price (EUR)'), '20.99');
     await pressToWrite(screen.getByRole('button', { name: 'Save item' }));
 
-    expect(await screen.findByText('Old Paper Mill · €20.99')).toBeTruthy();
+    expect(await screen.findByText('€20.99')).toBeTruthy();
     expect(api.updateCatalogItem).toHaveBeenCalledWith(
       'token-alice',
       ACME,

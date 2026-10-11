@@ -5,85 +5,54 @@ import type {
 } from '@procurely/shared-types';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
-import {
-  Button,
-  ErrorNote,
-  Loading,
-  TextField,
-  styles,
-} from '../components/ui';
-import {
-  useCompanyMutation,
-  useGoodsReceipts,
-  writeErrorMessage,
-} from '../features/data';
+import { Caption } from '../components/caption';
+import { EmptyState } from '../components/empty-state';
+import { ReceiptProgress } from '../components/receipt-progress';
+import { RowCard, RowItem } from '../components/row-card';
+import { ScreenHeader } from '../components/screen-header';
+import { Button, ErrorNote, TextField, styles } from '../components/ui';
+import { useCompanyMutation, writeErrorMessage } from '../features/data';
 import {
   type ReceiptLineDraft,
   emptyDrafts,
   lineIssue,
   toReceiptRequest,
 } from '../features/goods-receipts';
-import { canRaisePurchaseOrders } from '../features/permissions';
 
-/**
- * Deliveries against one order: what arrived so far, and for a buyer or admin the form to
- * confirm another delivery and the button to close a fully received order. A receipt cannot be
- * edited; a mistake is corrected by a later entry with a negative quantity and a note.
- */
-export function GoodsReceiptPanel(props: {
-  company: CompanyMembership;
-  order: PurchaseOrder;
-}) {
-  const { company, order } = props;
-  const receipts = useGoodsReceipts(company.companyId, order.id);
-  const canWrite = canRaisePurchaseOrders(company.role);
+export function Deliveries(props: { receipts: GoodsReceipt[] }) {
+  if (props.receipts.length === 0) {
+    return <EmptyState title="Nothing received yet." />;
+  }
   return (
     <View style={{ gap: 8 }}>
-      <Text style={styles.heading}>Deliveries</Text>
-      {receipts.isPending && <Loading label="Loading deliveries" />}
-      {receipts.isError && (
-        <ErrorNote
-          message="Could not load deliveries."
-          onRetry={() => void receipts.refetch()}
-        />
-      )}
-      {receipts.data?.length === 0 && (
-        <Text style={styles.body}>Nothing received yet.</Text>
-      )}
-      {receipts.data?.map((r) => (
-        <ReceiptEntry key={r.id} receipt={r} />
-      ))}
-      {canWrite && order.status !== 'CLOSED' && (
-        <>
-          <ReceiptForm company={company} order={order} />
-          {order.status === 'FULLY_RECEIVED' && (
-            <CloseOrder company={company} order={order} />
-          )}
-        </>
-      )}
+      <Caption>Deliveries</Caption>
+      <RowCard>
+        {props.receipts.map((r) => (
+          <RowItem
+            key={r.id}
+            title={`${new Date(r.receivedAt).toLocaleString()} · ${r.receivedByName}`}
+            meta={r.lines
+              .map(
+                (l) =>
+                  `${l.quantity > 0 ? '+' : ''}${l.quantity} × ${l.catalogItemName}${l.note ? ` (${l.note})` : ''}`,
+              )
+              .join('\n')}
+          />
+        ))}
+      </RowCard>
     </View>
   );
 }
 
-function ReceiptEntry(props: { receipt: GoodsReceipt }) {
-  const r = props.receipt;
-  return (
-    <View style={{ gap: 2 }}>
-      <Text style={styles.muted}>
-        {`${new Date(r.receivedAt).toLocaleString()} · ${r.receivedByName}`}
-      </Text>
-      {r.lines.map((l) => (
-        <Text key={l.id} style={styles.body}>
-          {`${l.quantity > 0 ? '+' : ''}${l.quantity} × ${l.catalogItemName}${l.note ? ` (${l.note})` : ''}`}
-        </Text>
-      ))}
-    </View>
-  );
-}
-
-function ReceiptForm(props: {
+/**
+ * Confirms a delivery against one order. A receipt cannot be edited; a mistake is corrected by a
+ * later entry with a negative quantity and a note.
+ */
+export function ReceiptEntryScreen(props: {
   company: CompanyMembership;
   order: PurchaseOrder;
+  onBack: () => void;
+  onRecorded: () => void;
 }) {
   const { company, order } = props;
   const [drafts, setDrafts] = useState<ReceiptLineDraft[]>(emptyDrafts(order));
@@ -100,7 +69,16 @@ function ReceiptForm(props: {
       ),
     );
   return (
-    <View style={{ gap: 8 }}>
+    <>
+      <ScreenHeader
+        lead={{
+          kind: 'back',
+          label: 'Order',
+          onPress: props.onBack,
+        }}
+        title="Record receipt"
+        subtitle={`${order.supplierName} · ${order.requisitionJustification}`}
+      />
       <Text style={styles.muted}>
         Confirm a delivery. Leave a line blank if nothing arrived for it. To
         correct an earlier entry, enter a negative number and a note.
@@ -109,10 +87,12 @@ function ReceiptForm(props: {
         const draft = drafts.find((d) => d.purchaseOrderLineId === l.id)!;
         const issue = lineIssue(order, draft);
         return (
-          <View key={l.id} style={{ gap: 4 }}>
-            <Text style={styles.body}>
-              {`${l.catalogItemName}: ${l.receivedQuantity} of ${l.quantity} received`}
-            </Text>
+          <View key={l.id} style={styles.card}>
+            <Text style={styles.rowTitle}>{l.catalogItemName}</Text>
+            <ReceiptProgress
+              received={l.receivedQuantity}
+              ordered={l.quantity}
+            />
             <TextField
               label={`Received now of ${l.catalogItemName}`}
               keyboardType="decimal-pad"
@@ -134,18 +114,15 @@ function ReceiptForm(props: {
         variant="primary"
         disabled={save.isPending || request === null}
         onPress={() =>
-          request &&
-          save.mutate(request, {
-            onSuccess: () => setDrafts(emptyDrafts(order)),
-          })
+          request && save.mutate(request, { onSuccess: props.onRecorded })
         }
       />
       {save.isError && <ErrorNote message={writeErrorMessage(save.error)} />}
-    </View>
+    </>
   );
 }
 
-function CloseOrder(props: {
+export function CloseOrder(props: {
   company: CompanyMembership;
   order: PurchaseOrder;
 }) {

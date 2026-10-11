@@ -1,10 +1,12 @@
 import type { CompanyMembership, Supplier } from '@procurely/shared-types';
 import { useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
+import { EmptyState } from '../components/empty-state';
 import {
   Button,
   ErrorNote,
   FormActions,
+  ListRow,
   Loading,
   TextField,
   styles,
@@ -16,7 +18,7 @@ import {
   writeErrorMessage,
 } from '../features/data';
 import { canManagePurchasing } from '../features/permissions';
-import { CompanyLine, WithActiveCompany } from './with-active-company';
+import { WithActiveCompany } from './with-active-company';
 
 /** The suppliers of the company the person acts in. Buyers and admins manage them. */
 export function SuppliersScreen() {
@@ -37,7 +39,6 @@ function Suppliers(props: { company: CompanyMembership }) {
   const [adding, setAdding] = useState(false);
   return (
     <>
-      <CompanyLine company={props.company} />
       {canManage && !adding && (
         <Button label="Add supplier" onPress={() => setAdding(true)} />
       )}
@@ -57,7 +58,10 @@ function Suppliers(props: { company: CompanyMembership }) {
         />
       )}
       {suppliers.data && suppliers.data.length === 0 && (
-        <Text style={styles.body}>No suppliers yet.</Text>
+        <EmptyState
+          title="No suppliers yet."
+          body="Suppliers a buyer adds show up here."
+        />
       )}
       {suppliers.data?.map((s) => (
         <SupplierCard key={s.id} supplier={s} canManage={canManage} />
@@ -113,11 +117,10 @@ function SupplierCard(props: { supplier: Supplier; canManage: boolean }) {
     );
   }
   return (
-    <View style={styles.card}>
-      <Text style={styles.body}>{name}</Text>
-      <Text style={styles.muted}>
-        {active ? 'Active' : 'Inactive: cannot be chosen for new orders'}
-      </Text>
+    <ListRow
+      title={name}
+      meta={active ? 'Active' : 'Inactive: cannot be chosen for new orders'}
+    >
       {props.canManage && (
         <View style={styles.row}>
           <Button
@@ -136,6 +139,6 @@ function SupplierCard(props: { supplier: Supplier; canManage: boolean }) {
       {setActive.isError && (
         <ErrorNote message={writeErrorMessage(setActive.error)} />
       )}
-    </View>
+    </ListRow>
   );
 }
