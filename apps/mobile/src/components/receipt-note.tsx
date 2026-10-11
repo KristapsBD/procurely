@@ -4,7 +4,6 @@ import { fonts, theme } from './theme';
 
 const p = theme.palette;
 
-/** The note a buyer left on a receipt line, in the rejected tint so damage is hard to miss. */
 export function ReceiptNote(props: { kind: string; text: string }) {
   return (
     <View style={styles.box}>

@@ -1,7 +1,6 @@
 import { StyleSheet, Text } from 'react-native';
 import { fonts, theme } from './theme';
 
-/** A small uppercase label above a group of fields or rows. */
 export function Caption(props: { children: string }) {
   return <Text style={styles.caption}>{props.children}</Text>;
 }
