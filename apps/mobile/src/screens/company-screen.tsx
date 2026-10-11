@@ -6,9 +6,9 @@ import type {
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
+import { ScreenHeader } from '../components/screen-header';
 import {
   Button,
-  CompanyChip,
   ErrorNote,
   FormActions,
   Loading,
@@ -21,7 +21,6 @@ import {
   useSignOutWhenUnauthorized,
   writeErrorMessage,
 } from '../features/data';
-import { landingTab, tabsFor } from '../features/navigation';
 import {
   canManageApprovalRules,
   canManageCostCenters,
@@ -31,26 +30,16 @@ import { useSession } from '../session/session';
 import { CompanyLine, WithActiveCompany } from './with-active-company';
 
 export function CompanyScreen() {
-  const { state, signOut, selectCompany } = useSession();
+  const { state, signOut } = useSession();
   return (
     <ScrollView contentContainerStyle={styles.screen}>
+      <ScreenHeader title="Company" lead={{ kind: 'company' }} />
       <Text style={styles.heading}>
         {state.status === 'signedIn' ? `Signed in as ${state.person.name}` : ''}
       </Text>
       <WithActiveCompany>
-        {(active, companies) => (
+        {(active) => (
           <>
-            <CompanyChip
-              companies={companies}
-              activeCompanyId={active.companyId}
-              onSelect={(companyId) => {
-                selectCompany(companyId);
-                const next = companies.find((c) => c.companyId === companyId);
-                if (next) {
-                  router.replace(`/${landingTab(tabsFor([next.role]))}`);
-                }
-              }}
-            />
             <CompanyLine company={active} />
             {canManageApprovalRules(active.role) && (
               <Button

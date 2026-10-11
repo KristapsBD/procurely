@@ -1,6 +1,7 @@
 import type { CompanyMembership, PurchaseOrder } from '@procurely/shared-types';
 import { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
+import { ScreenHeader } from '../components/screen-header';
 import {
   Button,
   ErrorNote,
@@ -32,6 +33,7 @@ type Pane = { kind: 'list' } | { kind: 'new' } | { kind: 'open'; id: string };
 export function PurchaseOrdersScreen() {
   return (
     <ScrollView contentContainerStyle={styles.screen}>
+      <ScreenHeader title="Orders" lead={{ kind: 'company' }} />
       <WithActiveCompany>
         {(active) => (
           // Keyed by company, so an open order never survives a company switch.

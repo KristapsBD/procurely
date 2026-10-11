@@ -1,6 +1,7 @@
 import type { CompanyMembership, Requisition } from '@procurely/shared-types';
 import { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
+import { ScreenHeader } from '../components/screen-header';
 import { ErrorNote, Loading, styles } from '../components/ui';
 import { approvalNote } from '../features/approvals';
 import { useRequisitions, useSignOutWhenUnauthorized } from '../features/data';
@@ -15,6 +16,7 @@ import { CompanyLine, WithActiveCompany } from './with-active-company';
 export function ApprovalsScreen() {
   return (
     <ScrollView contentContainerStyle={styles.screen}>
+      <ScreenHeader title="Inbox" lead={{ kind: 'company' }} />
       <WithActiveCompany>
         {(active) =>
           canDecideRequisitions(active.role) ? (

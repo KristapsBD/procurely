@@ -5,6 +5,7 @@ import type {
 } from '@procurely/shared-types';
 import { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
+import { ScreenHeader } from '../components/screen-header';
 import {
   Button,
   ErrorNote,
@@ -39,6 +40,7 @@ export function titleOf(r: Requisition): string {
 export function RequisitionsScreen() {
   return (
     <ScrollView contentContainerStyle={styles.screen}>
+      <ScreenHeader title="Requests" lead={{ kind: 'company' }} />
       <WithActiveCompany>
         {(active) =>
           canRaiseRequisitions(active.role) ? (
