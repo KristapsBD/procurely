@@ -1,6 +1,7 @@
 import type { CompanyMembership } from '@procurely/shared-types';
 import type { ReactNode } from 'react';
-import { Text } from 'react-native';
+import { Text, View } from 'react-native';
+import { EmptyState } from '../components/empty-state';
 import { ErrorNote, Loading, styles } from '../components/ui';
 import {
   pickActiveCompany,
@@ -19,7 +20,7 @@ export function WithActiveCompany(props: {
     companies: CompanyMembership[],
   ) => ReactNode;
 }) {
-  const { selectedCompanyId } = useSession();
+  const { selectedCompanyId, signOut } = useSession();
   const companies = useCompanies();
   const unauthorized = useSignOutWhenUnauthorized(companies.error);
 
@@ -35,9 +36,13 @@ export function WithActiveCompany(props: {
   const active = pickActiveCompany(companies.data, selectedCompanyId);
   if (!active) {
     return (
-      <Text style={styles.body}>
-        You do not have access to any company yet. Ask an admin to invite you.
-      </Text>
+      <View style={styles.screen}>
+        <EmptyState
+          title="You do not have access to any company yet"
+          body="An admin of a company must invite you before you can use Procurely."
+          action={{ label: 'Sign out', onPress: () => void signOut() }}
+        />
+      </View>
     );
   }
   return props.children(active, companies.data);

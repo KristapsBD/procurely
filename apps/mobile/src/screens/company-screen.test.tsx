@@ -103,17 +103,20 @@ describe('CompanyScreen company switching', () => {
     expect(screen.queryByText('ACME-OPS')).toBeNull();
   });
 
-  it('shows a clear empty state for a person without any company', async () => {
+  it('tells a person without any company to ask an admin, and lets them sign out', async () => {
+    const store = memoryStore('token-nomad');
     render(
-      <TestApp api={fakeApi({ companies: async () => [] })}>
+      <TestApp api={fakeApi({ companies: async () => [] })} store={store}>
         <CompanyScreen />
       </TestApp>,
     );
-    await waitFor(() =>
-      expect(
-        screen.getByText(/do not have access to any company/),
-      ).toBeTruthy(),
-    );
+    expect(
+      await screen.findByText(/do not have access to any company/),
+    ).toBeTruthy();
+    expect(screen.getByText(/admin of a company must invite you/)).toBeTruthy();
+    const signOut = screen.getAllByRole('button', { name: 'Sign out' });
+    fireEvent.press(signOut[0]);
+    await waitFor(async () => expect(await store.load()).toBeNull());
   });
 
   it('signs out when the API rejects the token on a company call', async () => {
