@@ -6,15 +6,15 @@ Procurely is a multi-tenant procure-to-pay product: someone requests a purchase,
 
 **Company**:
 A tenant: one business whose data is isolated from every other company's, with exactly one currency.
-_Avoid_: Tenant (in product language), organization, account
+_Avoid_: Tenant (in product language), organization
 
 **Person**:
 Someone who can sign in. A person may belong to several companies and acts in one company at a time.
 _Avoid_: User, account
 
 **Membership**:
-A person's link to one company, carrying one role and an active flag. A deactivated membership removes access to that company.
-_Avoid_: Account, seat
+A person's link to one company, carrying one role and either active or deactivated. A deactivated membership removes access to that company.
+_Avoid_: Seat
 
 **Role**:
 What a membership allows in its company: requester, approver, buyer or admin. A person can hold a different role in each company.
@@ -30,7 +30,7 @@ The role that manages suppliers and catalog items, turns approved requisitions i
 _Avoid_: Purchaser
 
 **Admin**:
-The role that manages members, cost centers and approval rules, reads the audit log, and can act as requester, approver and buyer.
+The role that manages members, cost centers and approval rules, reads the audit log, and can act as requester, approver and buyer. An admin cannot edit or cancel someone else's requisition, and cannot decide their own.
 _Avoid_: Owner, manager
 
 **Cost center**:
@@ -40,7 +40,7 @@ _Avoid_: Budget, department
 ## Sourcing
 
 **Supplier**:
-A company the business buys from; a record only, it never signs in. A supplier is deactivated rather than deleted, and an inactive one cannot receive new orders.
+An outside business the company buys from; a record only, it never signs in. A supplier is deactivated rather than deleted, and an inactive one cannot receive new orders.
 _Avoid_: Vendor
 
 **Catalog item**:
@@ -84,7 +84,7 @@ One catalog item, quantity and unit price on a purchase order. The buyer sets th
 _Avoid_: PO line (in prose)
 
 **Purchase order status**:
-Derived from receipts, not stored: issued (nothing received), partially received, fully received, or closed. Closed happens only when a buyer explicitly closes a fully received order, and is final.
+Determined by what has been received: issued (nothing received), partially received, fully received, or closed. Closed happens only when a buyer explicitly closes a fully received order; it is final and a closed order takes no more receipts.
 
 **Goods receipt**:
 A delivery a buyer confirmed against a purchase order, listing the quantity received per order line with an optional note such as damage. It is never edited or deleted.
@@ -96,5 +96,5 @@ A later goods receipt line with a negative quantity and a required note, which u
 ## Accountability
 
 **Audit log**:
-The append-only record of who did what and when in a company; entries are added and never changed or deleted. Only admins can read it.
+The record of who did what and when in a company; entries are never changed or deleted. Only admins can read it.
 _Avoid_: History, activity feed
