@@ -1,5 +1,6 @@
 import type { Member, Role } from '@procurely/shared-types';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { router } from 'expo-router';
 import { ApiError } from '../api/client';
 import {
   TestApp,
@@ -51,6 +52,14 @@ function renderMembers(
 }
 
 describe('MembersScreen', () => {
+  it('goes back to the Company tab from the back pill', async () => {
+    renderMembers('ADMIN');
+    fireEvent.press(
+      await screen.findByRole('button', { name: 'Back to Company' }),
+    );
+    expect(router.replace).toHaveBeenLastCalledWith('/company');
+  });
+
   it('shows an admin each member’s role and whether they are active', async () => {
     renderMembers('ADMIN');
     expect(await screen.findByText('Dave Admin')).toBeTruthy();

@@ -5,13 +5,18 @@ import type {
   Role,
   UpdateMemberRequest,
 } from '@procurely/shared-types';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { ApiError } from '../api/client';
+import { theme } from '../components/theme';
+import { EmptyState } from '../components/empty-state';
+import { ScreenHeader } from '../components/screen-header';
 import {
   Button,
   ErrorNote,
   FormActions,
+  ListRow,
   Loading,
   TextField,
   styles,
@@ -54,6 +59,14 @@ function roleLabel(role: Role): string {
 export function MembersScreen() {
   return (
     <ScrollView contentContainerStyle={styles.screen}>
+      <ScreenHeader
+        title="Members"
+        lead={{
+          kind: 'back',
+          label: 'Company',
+          onPress: () => router.replace('/company'),
+        }}
+      />
       <WithActiveCompany>
         {(active) =>
           canManageMembers(active.role) ? (
@@ -76,11 +89,15 @@ function Members(props: { company: CompanyMembership }) {
   return (
     <>
       <CompanyLine company={props.company} />
-      <Text style={styles.body}>
+      <Text style={styles.muted}>
         Inviting adds the person right away. No email is sent.
       </Text>
       {!adding && (
-        <Button label="Invite member" onPress={() => setAdding(true)} />
+        <Button
+          label="Invite member"
+          variant="primary"
+          onPress={() => setAdding(true)}
+        />
       )}
       {adding && (
         <InviteForm companyId={companyId} onDone={() => setAdding(false)} />
@@ -93,7 +110,7 @@ function Members(props: { company: CompanyMembership }) {
         />
       )}
       {members.data && members.data.length === 0 && (
-        <Text style={styles.body}>No members yet.</Text>
+        <EmptyState title="No members yet." />
       )}
       {members.data?.map((m) => (
         <MemberCard key={m.id} companyId={companyId} member={m} />
@@ -136,7 +153,7 @@ function RoleChoice(props: {
   memberName?: string;
 }) {
   return (
-    <View style={{ gap: 4 }}>
+    <View style={{ gap: theme.space.xs }}>
       <Text style={styles.muted}>Role</Text>
       <View style={styles.row}>
         {ROLES.map((role) => (
@@ -173,9 +190,7 @@ function MemberCard(props: { companyId: string; member: Member }) {
     update.mutate({ role }, { onSuccess: () => setChanging(false) });
   };
   return (
-    <View style={styles.card}>
-      <Text style={styles.body}>{member.name}</Text>
-      <Text style={styles.muted}>{member.email}</Text>
+    <ListRow title={member.name} meta={member.email}>
       <Text style={styles.muted}>{`Role: ${roleLabel(member.role)}`}</Text>
       <Text style={styles.muted}>{member.active ? 'Active' : 'Inactive'}</Text>
       {changing && (
@@ -195,6 +210,7 @@ function MemberCard(props: { companyId: string; member: Member }) {
         )}
         <Button
           label={member.active ? 'Deactivate' : 'Reactivate'}
+          variant={member.active ? 'destructive' : 'secondary'}
           accessibilityLabel={`${member.active ? 'Deactivate' : 'Reactivate'} ${member.name}`}
           disabled={update.isPending}
           onPress={() => update.mutate({ active: !member.active })}
@@ -203,7 +219,7 @@ function MemberCard(props: { companyId: string; member: Member }) {
       {update.isError && (
         <ErrorNote message={writeErrorMessage(update.error)} />
       )}
-    </View>
+    </ListRow>
   );
 }
 

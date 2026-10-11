@@ -5,6 +5,7 @@ import {
   screen,
   waitFor,
 } from '@testing-library/react-native';
+import { router } from 'expo-router';
 import { TestApp, fakeApi, membership, pressToWrite } from '../test/fakes';
 import { ApprovalRulesScreen } from './approval-rules-screen';
 
@@ -48,12 +49,16 @@ const button = (name: string) => screen.findByRole('button', { name });
 describe('ApprovalRulesScreen', () => {
   it('lists the rules in the company currency', async () => {
     renderAs('ADMIN', [rule(50000, 'APPROVER'), rule(200000, 'ADMIN')]);
-    expect(
-      await screen.findByText('From SEK\u00a0500.00: Approver approves'),
-    ).toBeTruthy();
-    expect(
-      screen.getByText('From SEK\u00a02,000.00: Admin approves'),
-    ).toBeTruthy();
+    expect(await screen.findByText('From SEK\u00a0500.00')).toBeTruthy();
+    expect(screen.getByText('Approver approves')).toBeTruthy();
+    expect(screen.getByText('From SEK\u00a02,000.00')).toBeTruthy();
+    expect(screen.getByText('Admin approves')).toBeTruthy();
+  });
+
+  it('goes back to the Company tab from the back pill', async () => {
+    renderAs('ADMIN');
+    fireEvent.press(await button('Back to Company'));
+    expect(router.replace).toHaveBeenLastCalledWith('/company');
   });
 
   it('says that an admin decides while there are no rules', async () => {
@@ -77,9 +82,8 @@ describe('ApprovalRulesScreen', () => {
       thresholdMinor: 150050,
       requiredRole: 'ADMIN',
     });
-    expect(
-      await screen.findByText('From SEK\u00a01,500.50: Admin approves'),
-    ).toBeTruthy();
+    expect(await screen.findByText('From SEK\u00a01,500.50')).toBeTruthy();
+    expect(screen.getByText('Admin approves')).toBeTruthy();
   });
 
   it('deletes a rule', async () => {
@@ -91,9 +95,7 @@ describe('ApprovalRulesScreen', () => {
       'rule-50000',
     );
     await waitFor(() =>
-      expect(
-        screen.queryByText('From SEK\u00a0500.00: Approver approves'),
-      ).toBeNull(),
+      expect(screen.queryByText('From SEK\u00a0500.00')).toBeNull(),
     );
   });
 
