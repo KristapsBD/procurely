@@ -1,15 +1,15 @@
 import type { CompanyMembership, PurchaseOrder } from '@procurely/shared-types';
 import { useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { ScrollView } from 'react-native';
+import { EmptyState } from '../components/empty-state';
+import { RowCard, RowItem } from '../components/row-card';
 import { ScreenHeader } from '../components/screen-header';
 import {
   Button,
   ErrorNote,
-  ListRow,
   Loading,
   Money,
   StatusBadge,
-  statusLabel,
   styles,
 } from '../components/ui';
 import {
@@ -17,14 +17,19 @@ import {
   useRequisitions,
   useSignOutWhenUnauthorized,
 } from '../features/data';
-import { formatMoney } from '../features/money';
+import { orderReference } from '../features/order-lines';
 import { canRaisePurchaseOrders } from '../features/permissions';
 import { orderable } from '../features/purchase-orders';
-import { GoodsReceiptPanel } from './goods-receipt-panel';
+import { ReceiptEntryScreen } from './goods-receipt-panel';
+import { OrderDetail } from './order-detail';
 import { PurchaseOrderForm } from './purchase-order-form';
-import { CompanyLine, WithActiveCompany } from './with-active-company';
+import { WithActiveCompany } from './with-active-company';
 
-type Pane = { kind: 'list' } | { kind: 'new' } | { kind: 'open'; id: string };
+type Pane =
+  | { kind: 'list' }
+  | { kind: 'new' }
+  | { kind: 'open'; id: string }
+  | { kind: 'receipt'; id: string };
 
 /**
  * The purchase orders the person may read in the company they act in: all of them for buyers
@@ -33,7 +38,6 @@ type Pane = { kind: 'list' } | { kind: 'new' } | { kind: 'open'; id: string };
 export function PurchaseOrdersScreen() {
   return (
     <ScrollView contentContainerStyle={styles.screen}>
-      <ScreenHeader title="Orders" lead={{ kind: 'company' }} />
       <WithActiveCompany>
         {(active) => (
           // Keyed by company, so an open order never survives a company switch.
@@ -75,7 +79,23 @@ function PurchaseOrders(props: { company: CompanyMembership }) {
       case 'open': {
         const open = rows.find((o) => o.id === pane.id);
         return open ? (
-          <OrderDetail company={company} order={open} onBack={toList} />
+          <OrderDetail
+            company={company}
+            order={open}
+            onBack={toList}
+            onRecord={() => setPane({ kind: 'receipt', id: open.id })}
+          />
+        ) : null;
+      }
+      case 'receipt': {
+        const open = rows.find((o) => o.id === pane.id);
+        return open ? (
+          <ReceiptEntryScreen
+            company={company}
+            order={open}
+            onBack={() => setPane({ kind: 'open', id: open.id })}
+            onRecorded={() => setPane({ kind: 'open', id: open.id })}
+          />
         ) : null;
       }
       default: {
@@ -86,7 +106,9 @@ function PurchaseOrders(props: { company: CompanyMembership }) {
   };
   return (
     <>
-      <CompanyLine company={company} />
+      {!orders.data && (
+        <ScreenHeader title="Orders" lead={{ kind: 'company' }} />
+      )}
       {orders.isPending && <Loading label="Loading purchase orders" />}
       {orders.isError && !unauthorized && (
         <ErrorNote
@@ -108,6 +130,7 @@ function OrderList(props: {
 }) {
   return (
     <>
+      <ScreenHeader title="Orders" lead={{ kind: 'company' }} />
       {props.canOrder && (
         <Button
           variant="primary"
@@ -115,23 +138,34 @@ function OrderList(props: {
           onPress={props.onNew}
         />
       )}
-      {props.rows.length === 0 && (
-        <Text style={styles.body}>No purchase orders yet.</Text>
+      {props.rows.length === 0 ? (
+        <EmptyState
+          title="No purchase orders yet."
+          body="Orders appear here once a buyer raises one from an approved requisition."
+        />
+      ) : (
+        <RowCard>
+          {props.rows.map((o) => (
+            <RowItem
+              key={o.id}
+              mono
+              title={orderReference(o.id)}
+              meta={`${o.supplierName} · ${o.requisitionJustification}`}
+              trailing={
+                <>
+                  <Money
+                    minor={o.totalMinor}
+                    currency={props.company.currency}
+                  />
+                  <StatusBadge status={o.status} />
+                </>
+              }
+              accessibilityLabel={`Open order of ${o.requisitionJustification}`}
+              onPress={() => props.onOpen(o.id)}
+            />
+          ))}
+        </RowCard>
       )}
-      {props.rows.map((o) => (
-        <ListRow
-          key={o.id}
-          title={o.requisitionJustification}
-          meta={`${o.supplierName} · ${formatMoney(o.totalMinor, props.company.currency)} · ${statusLabel(o.status)}`}
-          trailing={<StatusBadge status={o.status} />}
-        >
-          <Button
-            label="Open"
-            accessibilityLabel={`Open order of ${o.requisitionJustification}`}
-            onPress={() => props.onOpen(o.id)}
-          />
-        </ListRow>
-      ))}
     </>
   );
 }
@@ -155,37 +189,5 @@ function NewOrder(props: {
       onSaved={props.onSaved}
       onCancel={props.onCancel}
     />
-  );
-}
-
-function OrderDetail(props: {
-  company: CompanyMembership;
-  order: PurchaseOrder;
-  onBack: () => void;
-}) {
-  const { currency } = props.company;
-  const o = props.order;
-  return (
-    <View style={styles.card}>
-      <Text style={styles.heading}>{o.requisitionJustification}</Text>
-      <StatusBadge status={o.status} />
-      <Text style={styles.muted}>
-        {`${o.supplierName} · ordered by ${o.createdByName}`}
-      </Text>
-      <Text style={styles.body}>{`Status: ${statusLabel(o.status)}`}</Text>
-      {o.closedAt && (
-        <Text style={styles.muted}>
-          {`Closed by ${o.closedByName} on ${new Date(o.closedAt).toLocaleDateString()}`}
-        </Text>
-      )}
-      {o.lines.map((l) => (
-        <Text key={l.id} style={styles.body}>
-          {`${l.quantity} × ${l.catalogItemName} at ${formatMoney(l.unitPriceMinor, currency)} = ${formatMoney(l.amountMinor, currency)} (${l.receivedQuantity} received)`}
-        </Text>
-      ))}
-      <Money label="Total" minor={o.totalMinor} currency={currency} />
-      <GoodsReceiptPanel company={props.company} order={o} />
-      <Button label="Back to purchase orders" onPress={props.onBack} />
-    </View>
   );
 }

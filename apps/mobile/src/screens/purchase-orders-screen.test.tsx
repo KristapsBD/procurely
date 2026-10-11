@@ -11,6 +11,7 @@ import {
   requisition,
   supplier,
 } from '../test/fakes';
+import { orderReference } from '../features/order-lines';
 import { PurchaseOrdersScreen } from './purchase-orders-screen';
 
 const ACME = 'company-acme';
@@ -79,21 +80,26 @@ const noButton = (name: string) =>
   expect(screen.queryByRole('button', { name })).toBeNull();
 
 describe('PurchaseOrdersScreen', () => {
-  it('lists the orders with supplier and total, and opens one with its lines', async () => {
+  it('lists the orders with number, supplier, total and one status badge, and opens one with its lines', async () => {
     renderAs('REQUESTER');
-    expect(await screen.findByText('Spring stock')).toBeTruthy();
-    expect(screen.getByText('Office Depot · €5.60 · Issued')).toBeTruthy();
+    expect(await screen.findByText(orderReference(existing.id))).toBeTruthy();
+    expect(screen.getByText('Office Depot · Spring stock')).toBeTruthy();
+    expect(screen.getByText('€5.60')).toBeTruthy();
+    expect(screen.getAllByText('Issued')).toHaveLength(1);
     fireEvent.press(await button('Open order of Spring stock'));
-    expect(
-      await screen.findByText('4 × Pens at €1.40 = €5.60 (0 received)'),
-    ).toBeTruthy();
-    expect(screen.getByText('Total €5.60')).toBeTruthy();
-    expect(screen.getByText('Office Depot · ordered by Carol')).toBeTruthy();
+    expect(await screen.findByText('Pens')).toBeTruthy();
+    expect(screen.getByText('4 ordered × €1.40')).toBeTruthy();
+    expect(screen.getByText('0 of 4 received')).toBeTruthy();
+    expect(screen.getByText('Order total')).toBeTruthy();
+    expect(screen.getAllByText('€5.60')).toHaveLength(2);
+    expect(screen.getByText('Office Depot · Spring stock')).toBeTruthy();
+    fireEvent.press(await button('Back to Orders'));
+    expect(await screen.findByText(orderReference(existing.id))).toBeTruthy();
   });
 
   it('offers no way to order to requesters and approvers', async () => {
     renderAs('APPROVER');
-    await screen.findByText('Spring stock');
+    await screen.findByText('Office Depot · Spring stock');
     noButton('New purchase order');
   });
 
@@ -112,7 +118,7 @@ describe('PurchaseOrdersScreen', () => {
       await screen.findByLabelText('Quantity of A4 copy paper'),
     ).toBeTruthy();
     expect(screen.queryByLabelText('Quantity of Laptop')).toBeNull();
-    expect(screen.getByText('Total €74.97')).toBeTruthy();
+    expect(screen.getByText('€74.97')).toBeTruthy();
     // The supplier's other items can be added; an inactive supplier is not offered.
     expect(
       screen.queryByRole('button', { name: 'Supplier Old Paper Mill' }),
@@ -123,7 +129,7 @@ describe('PurchaseOrdersScreen', () => {
       '24,00',
     );
     fireEvent.changeText(screen.getByLabelText('Quantity of Pens'), '10');
-    expect(screen.getByText('Total €87.00')).toBeTruthy();
+    expect(screen.getByText('€87.00')).toBeTruthy();
 
     await pressToWrite(await button('Create purchase order'));
 
@@ -135,8 +141,9 @@ describe('PurchaseOrdersScreen', () => {
         { catalogItemId: pens.id, quantity: 10, unitPriceMinor: 150 },
       ],
     });
-    expect(await screen.findByText('Back to purchase orders')).toBeTruthy();
-    expect(screen.getByText('Total €87.00')).toBeTruthy();
+    expect(await screen.findByText('€87.00')).toBeTruthy();
+    expect(screen.getByText('Order total')).toBeTruthy();
+    expect(screen.getByText('10 ordered × €1.50')).toBeTruthy();
   });
 
   it('does not offer a requisition that already has an order', async () => {
