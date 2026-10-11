@@ -82,12 +82,12 @@ describe('PurchaseOrdersScreen', () => {
   it('lists the orders with supplier and total, and opens one with its lines', async () => {
     renderAs('REQUESTER');
     expect(await screen.findByText('Spring stock')).toBeTruthy();
-    expect(screen.getByText('Office Depot · 5.60 EUR · Issued')).toBeTruthy();
+    expect(screen.getByText('Office Depot · €5.60 · Issued')).toBeTruthy();
     fireEvent.press(await button('Open order of Spring stock'));
     expect(
-      await screen.findByText('4 × Pens at 1.40 EUR = 5.60 EUR (0 received)'),
+      await screen.findByText('4 × Pens at €1.40 = €5.60 (0 received)'),
     ).toBeTruthy();
-    expect(screen.getByText('Total 5.60 EUR')).toBeTruthy();
+    expect(screen.getByText('Total €5.60')).toBeTruthy();
     expect(screen.getByText('Office Depot · ordered by Carol')).toBeTruthy();
   });
 
@@ -112,7 +112,7 @@ describe('PurchaseOrdersScreen', () => {
       await screen.findByLabelText('Quantity of A4 copy paper'),
     ).toBeTruthy();
     expect(screen.queryByLabelText('Quantity of Laptop')).toBeNull();
-    expect(screen.getByText('Total 74.97 EUR')).toBeTruthy();
+    expect(screen.getByText('Total €74.97')).toBeTruthy();
     // The supplier's other items can be added; an inactive supplier is not offered.
     expect(
       screen.queryByRole('button', { name: 'Supplier Old Paper Mill' }),
@@ -123,7 +123,7 @@ describe('PurchaseOrdersScreen', () => {
       '24,00',
     );
     fireEvent.changeText(screen.getByLabelText('Quantity of Pens'), '10');
-    expect(screen.getByText('Total 87.00 EUR')).toBeTruthy();
+    expect(screen.getByText('Total €87.00')).toBeTruthy();
 
     await pressToWrite(await button('Create purchase order'));
 
@@ -136,7 +136,7 @@ describe('PurchaseOrdersScreen', () => {
       ],
     });
     expect(await screen.findByText('Back to purchase orders')).toBeTruthy();
-    expect(screen.getByText('Total 87.00 EUR')).toBeTruthy();
+    expect(screen.getByText('Total €87.00')).toBeTruthy();
   });
 
   it('does not offer a requisition that already has an order', async () => {

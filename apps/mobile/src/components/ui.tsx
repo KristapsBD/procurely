@@ -8,6 +8,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 import { fonts, theme } from './theme';
 
 export { Money } from './money';
@@ -89,6 +90,21 @@ function roleName(role: string): string {
   return role.slice(0, 1) + role.slice(1).toLowerCase();
 }
 
+function Chevron() {
+  return (
+    <Svg width={14} height={14} viewBox="0 0 14 14">
+      <Path
+        d="M3 5l4 4 4-4"
+        stroke={p.muted}
+        strokeWidth={1.6}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+    </Svg>
+  );
+}
+
 /** The company the person acts in and their role there; with several companies it opens a picker. */
 export function CompanyChip(props: {
   companies: { companyId: string; companyName: string; role: string }[];
@@ -112,7 +128,7 @@ export function CompanyChip(props: {
     </>
   );
   if (props.companies.length < 2) {
-    return <View style={styles.chip}>{content}</View>;
+    return <View style={[styles.chip, styles.chipPill]}>{content}</View>;
   }
   return (
     <>
@@ -120,10 +136,10 @@ export function CompanyChip(props: {
         accessibilityRole="button"
         accessibilityLabel="Switch company"
         onPress={() => setOpen(true)}
-        style={styles.chip}
+        style={[styles.chip, styles.chipPill]}
       >
         {content}
-        <Text style={styles.muted}>⌄</Text>
+        <Chevron />
       </Pressable>
       <Modal
         transparent
@@ -332,6 +348,7 @@ export const styles = StyleSheet.create({
     borderRadius: theme.radius.chip,
     backgroundColor: p.surface,
   },
+  chipPill: { alignSelf: 'flex-start' },
   chipActive: { borderColor: p.accent },
   pickerBackdrop: {
     flex: 1,

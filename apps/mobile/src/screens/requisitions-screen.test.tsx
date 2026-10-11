@@ -13,7 +13,6 @@ import {
   supplier,
   switchCompany,
 } from '../test/fakes';
-import { CompanyScreen } from './company-screen';
 import { RequisitionsScreen } from './requisitions-screen';
 
 const ACME = 'company-acme';
@@ -88,7 +87,7 @@ describe('RequisitionsScreen', () => {
   it('lists a requester’s requisitions with status and total', async () => {
     renderAs('REQUESTER');
     expect(await screen.findByText('Printer paper')).toBeTruthy();
-    expect(screen.getByText('Draft · 74.97 EUR · Alice')).toBeTruthy();
+    expect(screen.getByText('Draft · €74.97 · Alice')).toBeTruthy();
     expect(await button('New requisition')).toBeTruthy();
   });
 
@@ -106,7 +105,7 @@ describe('RequisitionsScreen', () => {
       screen.getByLabelText('Quantity of A4 copy paper'),
       '3',
     );
-    expect(screen.getByText('Estimated total 74.97 EUR')).toBeTruthy();
+    expect(screen.getByText('Estimated total €74.97')).toBeTruthy();
     await pressToWrite(screen.getByRole('button', { name: 'Save draft' }));
 
     expect(api.createRequisition).toHaveBeenCalledWith('token-alice', ACME, {
@@ -114,10 +113,10 @@ describe('RequisitionsScreen', () => {
       justification: 'Printer paper',
       lines: [{ catalogItemId: paper.id, quantity: 3 }],
     });
-    expect(await screen.findByText('Total 74.97 EUR')).toBeTruthy();
+    expect(await screen.findByText('Total €74.97')).toBeTruthy();
     expect(screen.getByText('Cost center: OPS')).toBeTruthy();
     expect(
-      screen.getByText('3 × A4 copy paper at 24.99 EUR = 74.97 EUR'),
+      screen.getByText('3 × A4 copy paper at €24.99 = €74.97'),
     ).toBeTruthy();
 
     await pressToWrite(await button('Submit'));
@@ -197,7 +196,7 @@ describe('RequisitionsScreen', () => {
 
   it('shows the reason when a submit is approved automatically', async () => {
     const reason =
-      "Approved automatically: the total of 74.97 EUR is under the company's lowest approval threshold of 500.00 EUR.";
+      "Approved automatically: the total of €74.97 is under the company's lowest approval threshold of €500.00.";
     const approved: Requisition = {
       ...printerPaper,
       status: 'APPROVED',
@@ -336,7 +335,6 @@ describe('RequisitionsScreen company switching', () => {
     });
     render(
       <TestApp api={api}>
-        <CompanyScreen />
         <RequisitionsScreen />
       </TestApp>,
     );
@@ -346,11 +344,11 @@ describe('RequisitionsScreen company switching', () => {
   it('never shows the previous company’s requisitions or open detail after a switch', async () => {
     const { nordicRows } = renderTwoCompanies('REQUESTER');
     fireEvent.press(await button('Open Printer paper'));
-    expect(await screen.findByText('Total 74.97 EUR')).toBeTruthy();
+    expect(await screen.findByText('Total €74.97')).toBeTruthy();
 
     switchCompany('Nordic Supplies');
     expect(screen.queryByText('Printer paper')).toBeNull();
-    expect(screen.queryByText('Total 74.97 EUR')).toBeNull();
+    expect(screen.queryByText('Total €74.97')).toBeNull();
     expect(screen.getByLabelText('Loading requisitions')).toBeTruthy();
 
     await act(async () => nordicRows.resolve([kontor]));

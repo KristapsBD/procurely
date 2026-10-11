@@ -49,9 +49,11 @@ describe('ApprovalRulesScreen', () => {
   it('lists the rules in the company currency', async () => {
     renderAs('ADMIN', [rule(50000, 'APPROVER'), rule(200000, 'ADMIN')]);
     expect(
-      await screen.findByText('From 500.00 SEK: Approver approves'),
+      await screen.findByText('From SEK\u00a0500.00: Approver approves'),
     ).toBeTruthy();
-    expect(screen.getByText('From 2000.00 SEK: Admin approves')).toBeTruthy();
+    expect(
+      screen.getByText('From SEK\u00a02,000.00: Admin approves'),
+    ).toBeTruthy();
   });
 
   it('says that an admin decides while there are no rules', async () => {
@@ -76,13 +78,13 @@ describe('ApprovalRulesScreen', () => {
       requiredRole: 'ADMIN',
     });
     expect(
-      await screen.findByText('From 1500.50 SEK: Admin approves'),
+      await screen.findByText('From SEK\u00a01,500.50: Admin approves'),
     ).toBeTruthy();
   });
 
   it('deletes a rule', async () => {
     const api = renderAs('ADMIN', [rule(50000, 'APPROVER')]);
-    await pressToWrite(await button('Delete rule from 500.00 SEK'));
+    await pressToWrite(await button('Delete rule from SEK\u00a0500.00'));
     expect(api.deleteApprovalRule).toHaveBeenCalledWith(
       'token-alice',
       NORDIC,
@@ -90,7 +92,7 @@ describe('ApprovalRulesScreen', () => {
     );
     await waitFor(() =>
       expect(
-        screen.queryByText('From 500.00 SEK: Approver approves'),
+        screen.queryByText('From SEK\u00a0500.00: Approver approves'),
       ).toBeNull(),
     );
   });

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { View } from 'react-native';
+import { ScreenHeader } from '../components/screen-header';
 import { SegmentedControl, styles } from '../components/ui';
 import { CatalogScreen } from './catalog-screen';
 import { SuppliersScreen } from './suppliers-screen';
@@ -14,6 +15,9 @@ export function SuppliersTab() {
     useState<(typeof SEGMENTS)[number]['value']>('suppliers');
   return (
     <View style={{ flex: 1 }}>
+      <View style={styles.segmentBar}>
+        <ScreenHeader title="Suppliers" lead={{ kind: 'company' }} />
+      </View>
       <View style={styles.segmentBar}>
         <SegmentedControl
           options={SEGMENTS}

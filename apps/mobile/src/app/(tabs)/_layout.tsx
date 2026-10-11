@@ -31,8 +31,7 @@ export default function TabsLayout() {
               },
               tabBarItemStyle: { minHeight: 52 },
               tabBarLabelStyle: { fontSize: 11 },
-              headerStyle: { backgroundColor: p.ground },
-              headerShadowVisible: false,
+              headerShown: false,
             }}
           >
             <Tabs.Screen name="index" options={{ href: null }} />

@@ -1,17 +1,38 @@
 import { formatMoney, parseMoney } from './money';
 
 describe('formatMoney', () => {
-  it('shows minor units as a decimal amount with the company currency', () => {
-    expect(formatMoney(2499, 'EUR')).toBe('24.99 EUR');
-    expect(formatMoney(27900, 'SEK')).toBe('279.00 SEK');
-    expect(formatMoney(5, 'EUR')).toBe('0.05 EUR');
-    expect(formatMoney(0, 'EUR')).toBe('0.00 EUR');
+  it('shows minor units as a currency amount with the symbol or code in front', () => {
+    expect(formatMoney(57800, 'EUR')).toBe('€578.00');
+    expect(formatMoney(123450, 'SEK')).toBe('SEK\u00a01,234.50');
+    expect(formatMoney(2499, 'EUR')).toBe('€24.99');
+    expect(formatMoney(5, 'EUR')).toBe('€0.05');
+    expect(formatMoney(0, 'EUR')).toBe('€0.00');
   });
 
-  it('puts the sign before the amount for negative minor units', () => {
-    expect(formatMoney(-150, 'EUR')).toBe('-1.50 EUR');
-    expect(formatMoney(-5, 'EUR')).toBe('-0.05 EUR');
-    expect(formatMoney(-27900, 'SEK')).toBe('-279.00 SEK');
+  it('puts the sign before the currency for negative minor units', () => {
+    expect(formatMoney(-500, 'EUR')).toBe('-€5.00');
+    expect(formatMoney(-5, 'EUR')).toBe('-€0.05');
+    expect(formatMoney(-27900, 'SEK')).toBe('-SEK\u00a0279.00');
+  });
+
+  it('keeps every digit of the minor amount, with no float drift', () => {
+    expect(formatMoney(435, 'EUR')).toBe('€4.35');
+    expect(formatMoney(50001, 'EUR')).toBe('€500.01');
+    expect(formatMoney(49999, 'EUR')).toBe('€499.99');
+    expect(formatMoney(999999999, 'EUR')).toBe('€9,999,999.99');
+    expect(formatMoney(-435, 'EUR')).toBe('-€4.35');
+    expect(formatMoney(-999999999, 'SEK')).toBe('-SEK\u00a09,999,999.99');
+  });
+
+  it('matches the exact digits across the whole range up to the API limit', () => {
+    for (let minor = 0; minor <= 999999999; minor += 104729) {
+      const digits = String(minor).padStart(3, '0');
+      const exact = `${digits.slice(0, -2)}.${digits.slice(-2)}`.replace(
+        /\B(?=(\d{3})+(?!\d)(?=\.))/g,
+        ',',
+      );
+      expect(formatMoney(minor, 'EUR')).toBe(`€${exact}`);
+    }
   });
 });
 
