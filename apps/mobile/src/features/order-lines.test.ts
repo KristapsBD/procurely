@@ -44,7 +44,7 @@ describe('lineNotes', () => {
 
   it('collects the notes of one line, oldest first, and marks corrections', () => {
     expect(lineNotes(receipts, 'a')).toEqual([
-      { kind: 'Damage', text: '2 boxes crushed' },
+      { kind: 'Note', text: '2 boxes crushed' },
       { kind: 'Correction', text: 'counted twice' },
     ]);
   });

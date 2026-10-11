@@ -6,8 +6,8 @@ export function orderReference(orderId: string): string {
 }
 
 export interface LineNote {
-  /** "Damage" for a delivery that came with a note, "Correction" for a negative entry. */
-  kind: 'Damage' | 'Correction';
+  /** "Note" for a delivery that came with one, since the API has no damage flag, "Correction" for a negative entry. */
+  kind: 'Note' | 'Correction';
   text: string;
 }
 
@@ -21,7 +21,7 @@ export function lineNotes(
     .flatMap((r) => r.lines)
     .filter((l) => l.purchaseOrderLineId === purchaseOrderLineId && l.note)
     .map((l) => ({
-      kind: l.quantity < 0 ? 'Correction' : 'Damage',
+      kind: l.quantity < 0 ? 'Correction' : 'Note',
       text: l.note as string,
     }));
 }

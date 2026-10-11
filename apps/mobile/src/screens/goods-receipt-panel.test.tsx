@@ -126,7 +126,7 @@ describe('goods receipts on a purchase order', () => {
     );
     expect(await screen.findByText('Partially received')).toBeTruthy();
     expect(screen.getByText('3 of 4 received')).toBeTruthy();
-    expect(screen.getByText('Damage. one box dented')).toBeTruthy();
+    expect(screen.getByText('Note. one box dented')).toBeTruthy();
     expect(screen.getByText('+3 × Pens (one box dented)')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Close order' })).toBeNull();
 
