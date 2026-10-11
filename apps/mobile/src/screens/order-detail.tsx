@@ -14,12 +14,11 @@ import {
   styles,
 } from '../components/ui';
 import { useGoodsReceipts } from '../features/data';
-import { lineNotes, orderReference } from '../features/order-lines';
+import { lineNotes } from '../features/order-lines';
 import { canRaisePurchaseOrders } from '../features/permissions';
 import { formatMoney } from '../features/money';
 import { CloseOrder, Deliveries } from './goods-receipt-panel';
 
-/** One order: its lines with how much of each has arrived, the total, and what a buyer can do next. */
 export function OrderDetail(props: {
   company: CompanyMembership;
   order: PurchaseOrder;
@@ -33,9 +32,9 @@ export function OrderDetail(props: {
     <>
       <ScreenHeader
         lead={{ kind: 'back', label: 'Orders', onPress: props.onBack }}
-        title={orderReference(order.id)}
+        title={order.requisitionJustification}
         aside={<StatusBadge status={order.status} />}
-        subtitle={`${order.supplierName} · ${order.requisitionJustification}`}
+        subtitle={order.supplierName}
       />
       <LinesCard
         order={order}

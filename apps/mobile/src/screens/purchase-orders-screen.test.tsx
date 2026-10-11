@@ -11,7 +11,6 @@ import {
   requisition,
   supplier,
 } from '../test/fakes';
-import { orderReference } from '../features/order-lines';
 import { PurchaseOrdersScreen } from './purchase-orders-screen';
 
 const ACME = 'company-acme';
@@ -80,10 +79,10 @@ const noButton = (name: string) =>
   expect(screen.queryByRole('button', { name })).toBeNull();
 
 describe('PurchaseOrdersScreen', () => {
-  it('lists the orders with number, supplier, total and one status badge, and opens one with its lines', async () => {
+  it('lists the orders with title, supplier, total and one status badge, and opens one with its lines', async () => {
     renderAs('REQUESTER');
-    expect(await screen.findByText(orderReference(existing.id))).toBeTruthy();
-    expect(screen.getByText('Office Depot · Spring stock')).toBeTruthy();
+    expect(await screen.findByText('Spring stock')).toBeTruthy();
+    expect(screen.getByText('Office Depot')).toBeTruthy();
     expect(screen.getByText('€5.60')).toBeTruthy();
     expect(screen.getAllByText('Issued')).toHaveLength(1);
     fireEvent.press(await button('Open order of Spring stock'));
@@ -92,14 +91,15 @@ describe('PurchaseOrdersScreen', () => {
     expect(screen.getByText('0 of 4 received')).toBeTruthy();
     expect(screen.getByText('Order total')).toBeTruthy();
     expect(screen.getAllByText('€5.60')).toHaveLength(2);
-    expect(screen.getByText('Office Depot · Spring stock')).toBeTruthy();
+    expect(screen.getByText('Spring stock')).toBeTruthy();
+    expect(screen.getByText('Office Depot')).toBeTruthy();
     fireEvent.press(await button('Back to Orders'));
-    expect(await screen.findByText(orderReference(existing.id))).toBeTruthy();
+    expect(await screen.findByText('Spring stock')).toBeTruthy();
   });
 
   it('offers no way to order to requesters and approvers', async () => {
     renderAs('APPROVER');
-    await screen.findByText('Office Depot · Spring stock');
+    await screen.findByText('Spring stock');
     noButton('New purchase order');
   });
 

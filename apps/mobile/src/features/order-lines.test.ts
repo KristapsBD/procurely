@@ -1,5 +1,5 @@
 import type { GoodsReceipt } from '@procurely/shared-types';
-import { lineNotes, orderReference } from './order-lines';
+import { lineNotes } from './order-lines';
 
 function receipt(
   receivedAt: string,
@@ -21,14 +21,6 @@ function receipt(
     })),
   };
 }
-
-describe('orderReference', () => {
-  it('is the last six hex digits of the uuid, upper case (the leading ones repeat in seeded ids)', () => {
-    expect(orderReference('0a1b2c3d-1111-4222-8333-4444aabbcc66')).toBe(
-      'PO-BBCC66',
-    );
-  });
-});
 
 describe('lineNotes', () => {
   const receipts = [

@@ -4,7 +4,6 @@ import { fonts, theme } from './theme';
 
 const p = theme.palette;
 
-/** One bordered card holding rows, with a hairline between neighbours. */
 export function RowCard(props: { children: ReactNode }) {
   const rows = Children.toArray(props.children);
   return (
@@ -19,11 +18,8 @@ export function RowCard(props: { children: ReactNode }) {
   );
 }
 
-/** A row of a RowCard: title and meta on the left, trailing content on the right. */
 export function RowItem(props: {
   title: string;
-  /** Set the title in tabular mono, for identifiers such as a PO number. */
-  mono?: boolean;
   meta?: string;
   trailing?: ReactNode;
   onPress?: () => void;
@@ -32,9 +28,7 @@ export function RowItem(props: {
   const content = (
     <>
       <View style={styles.text}>
-        <Text style={[styles.title, props.mono && styles.mono]}>
-          {props.title}
-        </Text>
+        <Text style={styles.title}>{props.title}</Text>
         {props.meta !== undefined && (
           <Text style={styles.meta}>{props.meta}</Text>
         )}
@@ -79,6 +73,5 @@ const styles = StyleSheet.create({
   text: { flex: 1, gap: theme.space.xs },
   trailing: { alignItems: 'flex-end', gap: theme.space.xs },
   title: { fontFamily: fonts.medium, fontSize: 15, color: p.ink },
-  mono: { fontFamily: fonts.mono, fontVariant: ['tabular-nums'] },
   meta: { fontFamily: fonts.regular, fontSize: 13, color: p.muted },
 });

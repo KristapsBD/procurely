@@ -18,9 +18,7 @@ import {
   lineIssue,
   toReceiptRequest,
 } from '../features/goods-receipts';
-import { orderReference } from '../features/order-lines';
 
-/** What arrived against an order so far, one row per delivery. Empty when nothing has. */
 export function Deliveries(props: { receipts: GoodsReceipt[] }) {
   if (props.receipts.length === 0) {
     return <EmptyState title="Nothing received yet." />;
@@ -75,7 +73,7 @@ export function ReceiptEntryScreen(props: {
       <ScreenHeader
         lead={{
           kind: 'back',
-          label: orderReference(order.id),
+          label: 'Order',
           onPress: props.onBack,
         }}
         title="Record receipt"

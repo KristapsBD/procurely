@@ -1,10 +1,5 @@
 import type { GoodsReceipt } from '@procurely/shared-types';
 
-/** A short, stable reference for a purchase order, which the API identifies only by uuid. */
-export function orderReference(orderId: string): string {
-  return `PO-${orderId.replace(/-/g, '').slice(-6).toUpperCase()}`;
-}
-
 export interface LineNote {
   /** "Note" for a delivery that came with one, since the API has no damage flag, "Correction" for a negative entry. */
   kind: 'Note' | 'Correction';

@@ -17,7 +17,6 @@ import {
   useRequisitions,
   useSignOutWhenUnauthorized,
 } from '../features/data';
-import { orderReference } from '../features/order-lines';
 import { canRaisePurchaseOrders } from '../features/permissions';
 import { orderable } from '../features/purchase-orders';
 import { ReceiptEntryScreen } from './goods-receipt-panel';
@@ -148,9 +147,8 @@ function OrderList(props: {
           {props.rows.map((o) => (
             <RowItem
               key={o.id}
-              mono
-              title={orderReference(o.id)}
-              meta={`${o.supplierName} · ${o.requisitionJustification}`}
+              title={o.requisitionJustification}
+              meta={o.supplierName}
               trailing={
                 <>
                   <Money
