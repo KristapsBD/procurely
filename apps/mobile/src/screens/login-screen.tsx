@@ -1,12 +1,20 @@
 import type { GoogleSignInErrorReason } from '@procurely/shared-types';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-import { ScrollView, Text, TextInput, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { queryKeys } from '../api/query-keys';
 import { API_URL } from '../config';
 import { DEV_PEOPLE } from '../features/dev-people';
-import { Button, ErrorNote, Loading, styles } from '../components/ui';
-import { theme } from '../components/theme';
+import { SectionLabel } from '../components/section-label';
+import { fonts, theme } from '../components/theme';
+import {
+  Button,
+  ErrorNote,
+  ListRow,
+  Loading,
+  TextField,
+  styles,
+} from '../components/ui';
 import {
   createPkcePair,
   GoogleSignInError,
@@ -18,12 +26,23 @@ import { useApi, useSession } from '../session/session';
 export function LoginScreen() {
   return (
     <ScrollView contentContainerStyle={styles.screen}>
+      <View style={own.header}>
+        <Text accessibilityRole="header" style={own.title}>
+          Procurely
+        </Text>
+        <Text style={styles.muted}>Sign in to approve and order.</Text>
+      </View>
       <GoogleSignIn />
       {/* The API refuses the dev login outside development; do not offer it in a release bundle. */}
       {__DEV__ && <DevLogin />}
     </ScrollView>
   );
 }
+
+const own = StyleSheet.create({
+  header: { gap: theme.space.xs, paddingTop: theme.space.xl },
+  title: { fontFamily: fonts.semibold, fontSize: 28, color: theme.palette.ink },
+});
 
 const GOOGLE_FAILED = `Could not complete Google sign-in. Is the API reachable at ${API_URL}?`;
 const GOOGLE_ERRORS: Record<GoogleSignInErrorReason, string> = {
@@ -104,9 +123,10 @@ function GoogleButton() {
   }
 
   return (
-    <View style={{ gap: 8 }}>
+    <View style={{ gap: theme.space.sm }}>
       <Button
         label="Sign in with Google"
+        variant="primary"
         disabled={busy || !pkce}
         onPress={() => pkce && void signIn(pkce)}
       />
@@ -135,28 +155,23 @@ function DevLogin() {
   }
 
   return (
-    <View style={{ gap: 12 }}>
-      <Text style={styles.heading}>Dev login</Text>
+    <View style={{ gap: theme.space.md }}>
+      <SectionLabel label="Dev login" />
       <Text style={styles.muted}>Sign in as a seeded person.</Text>
       {DEV_PEOPLE.map((person) => (
-        <View key={person.id} style={styles.card}>
+        <ListRow key={person.id} title={person.name} meta={person.note}>
           <Button
             label={`Sign in as ${person.name}`}
             disabled={busy}
             onPress={() => void login(person.id)}
           />
-          <Text style={styles.muted}>{person.note}</Text>
-        </View>
+        </ListRow>
       ))}
-      <TextInput
-        accessibilityLabel="Person id"
+      <TextField
+        label="Person id"
         placeholder="Any seeded person id"
-        placeholderTextColor={theme.palette.muted}
-        autoCapitalize="none"
-        autoCorrect={false}
         value={personId}
         onChangeText={setPersonId}
-        style={styles.input}
       />
       <Button
         label="Sign in with id"

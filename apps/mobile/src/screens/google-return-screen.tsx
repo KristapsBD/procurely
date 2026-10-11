@@ -1,4 +1,4 @@
-import { View } from 'react-native';
+import { Text, View } from 'react-native';
 import { Loading, styles } from '../components/ui';
 
 /**
@@ -10,6 +10,7 @@ export function GoogleReturnScreen() {
   return (
     <View style={styles.screen}>
       <Loading label="Completing Google sign-in" />
+      <Text style={styles.muted}>Completing Google sign-in</Text>
     </View>
   );
 }
