@@ -65,7 +65,7 @@ describe('ApprovalsScreen', () => {
       }),
     ]);
     expect(await screen.findByText('Printer paper')).toBeTruthy();
-    expect(screen.getByText('74.97 EUR · requested by Rita')).toBeTruthy();
+    expect(screen.getByText('€74.97 · requested by Rita')).toBeTruthy();
     expect(
       screen.getByText('Waiting for an approver or an admin.'),
     ).toBeTruthy();

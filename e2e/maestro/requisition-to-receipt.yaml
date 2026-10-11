@@ -1,7 +1,7 @@
 url: about:blank
 name: Requisition to approval to purchase order to goods receipt
 ---
-# Seed story: Megacorp Industries, where requisitions from 500.00 EUR up go to an approver.
+# Seed story: Megacorp Industries, where requisitions from €500.00 up go to an approver.
 # Ivan (requester), Hanna (approver) and Jonas (buyer) take one requisition all the way to
 # a closed purchase order. Text fields have no visible placeholder, so they are found by the
 # label printed above them.
@@ -28,12 +28,12 @@ name: Requisition to approval to purchase order to goods receipt
 - tapOn:
     below: 'Justification'
 - inputText: ${output.tag}
-- tapOn: 'Steel shelving unit · 189.00 EUR'
+- tapOn: 'Steel shelving unit · €189.00'
 - tapOn:
     below: 'Quantity of Steel shelving unit'
 - eraseText
 - inputText: '4'
-- assertVisible: 'Estimated total 756.00 EUR'
+- assertVisible: 'Estimated total €756.00'
 - tapOn: 'Save draft'
 - assertVisible: 'Draft · requested by Ivan Requester'
 - tapOn: 'Submit'
@@ -70,11 +70,11 @@ name: Requisition to approval to purchase order to goods receipt
     text: 'Orders'
     index: -1
 - tapOn: 'New purchase order'
-- tapOn: '${output.tag} · 756.00 EUR'
+- tapOn: '${output.tag} · €756.00'
 - tapOn: 'Ferro Industrial Supply'
 - tapOn: 'Create purchase order'
 - assertVisible: 'Status: Issued'
-- assertVisible: '4 × Steel shelving unit at 189.00 EUR = 756.00 EUR (0 received)'
+- assertVisible: '4 × Steel shelving unit at €189.00 = €756.00 (0 received)'
 
 - tapOn:
     below: 'Received now of Steel shelving unit'

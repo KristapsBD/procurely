@@ -1,9 +1,14 @@
 /**
- * Amounts are integer minor units of the company currency (cents, öre). Converting through
- * strings, never floats, keeps 4.35 at 435 instead of 434.99999.
+ * Amounts are integer minor units of the company currency (cents, öre), shown as "€578.00" or
+ * "SEK 1,234.50". Rounding to two decimals keeps every cent for amounts up to the API's limit.
  */
 export function formatMoney(minor: number, currency: string): string {
-  return `${formatAmount(minor)} ${currency}`;
+  return new Intl.NumberFormat('en', {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(minor / 100);
 }
 
 /** The amount alone ("24.99"), as a price field shows it for editing. */
