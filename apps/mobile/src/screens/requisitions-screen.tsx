@@ -2,11 +2,19 @@ import type {
   CompanyMembership,
   Requisition,
   RequisitionAction,
-  RequisitionStatus,
 } from '@procurely/shared-types';
 import { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
-import { Button, ErrorNote, Loading, styles } from '../components/ui';
+import {
+  Button,
+  ErrorNote,
+  ListRow,
+  Loading,
+  Money,
+  StatusBadge,
+  statusLabel,
+  styles,
+} from '../components/ui';
 import {
   useCompanyMutation,
   useCostCenters,
@@ -22,25 +30,6 @@ import { RequisitionForm } from './requisition-form';
 import { CompanyLine, WithActiveCompany } from './with-active-company';
 
 type Pane = { kind: 'list' } | { kind: 'new' } | { kind: 'open'; id: string };
-
-export function statusLabel(status: RequisitionStatus): string {
-  switch (status) {
-    case 'DRAFT':
-      return 'Draft';
-    case 'SUBMITTED':
-      return 'Submitted';
-    case 'APPROVED':
-      return 'Approved';
-    case 'REJECTED':
-      return 'Rejected';
-    case 'CANCELLED':
-      return 'Cancelled';
-    default: {
-      const unhandled: never = status;
-      return unhandled;
-    }
-  }
-}
 
 export function titleOf(r: Requisition): string {
   return r.justification === '' ? 'Untitled draft' : r.justification;
@@ -133,22 +122,23 @@ function RequisitionList(props: {
 }) {
   return (
     <>
-      <Button label="New requisition" onPress={props.onNew} />
+      <Button variant="primary" label="New requisition" onPress={props.onNew} />
       {props.rows.length === 0 && (
         <Text style={styles.body}>No requisitions yet.</Text>
       )}
       {props.rows.map((r) => (
-        <View key={r.id} style={styles.card}>
-          <Text style={styles.body}>{titleOf(r)}</Text>
-          <Text style={styles.muted}>
-            {`${statusLabel(r.status)} · ${formatMoney(r.totalMinor, props.company.currency)} · ${r.requesterName}`}
-          </Text>
+        <ListRow
+          key={r.id}
+          title={titleOf(r)}
+          meta={`${statusLabel(r.status)} · ${formatMoney(r.totalMinor, props.company.currency)} · ${r.requesterName}`}
+          trailing={<StatusBadge status={r.status} />}
+        >
           <Button
             label="Open"
             accessibilityLabel={`Open ${titleOf(r)}`}
             onPress={() => props.onOpen(r.id)}
           />
-        </View>
+        </ListRow>
       ))}
     </>
   );
@@ -177,6 +167,7 @@ function RequisitionDetail(props: {
   return (
     <View style={styles.card}>
       <Text style={styles.heading}>{titleOf(r)}</Text>
+      <StatusBadge status={r.status} />
       <Text style={styles.muted}>
         {`${statusLabel(r.status)} · requested by ${r.requesterName}`}
       </Text>
@@ -189,9 +180,7 @@ function RequisitionDetail(props: {
           {`${l.quantity} × ${l.catalogItemName} at ${formatMoney(l.unitPriceMinor, company.currency)} = ${formatMoney(l.amountMinor, company.currency)}`}
         </Text>
       ))}
-      <Text style={styles.body}>
-        {`Total ${formatMoney(r.totalMinor, company.currency)}`}
-      </Text>
+      <Money label="Total" minor={r.totalMinor} currency={company.currency} />
       <RequisitionActions
         company={company}
         requisition={r}
@@ -236,6 +225,7 @@ function RequisitionActions(props: {
           <Button
             key={action}
             label="Submit"
+            variant="primary"
             disabled={move.isPending}
             onPress={() => move.mutate('submit')}
           />
@@ -245,6 +235,7 @@ function RequisitionActions(props: {
           <Button
             key={action}
             label="Cancel requisition"
+            variant="destructive"
             disabled={move.isPending}
             onPress={() => move.mutate('cancel')}
           />

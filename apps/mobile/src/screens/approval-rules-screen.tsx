@@ -153,6 +153,7 @@ function RuleCard(props: { company: CompanyMembership; rule: ApprovalRule }) {
       </Text>
       <Button
         label="Delete"
+        variant="destructive"
         accessibilityLabel={`Delete rule from ${amount}`}
         disabled={remove.isPending}
         onPress={() => remove.mutate(undefined)}

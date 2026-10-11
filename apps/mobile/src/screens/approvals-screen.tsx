@@ -7,7 +7,8 @@ import { useRequisitions, useSignOutWhenUnauthorized } from '../features/data';
 import { formatMoney } from '../features/money';
 import { canDecideRequisitions } from '../features/permissions';
 import { DecisionPanel } from './decision-panel';
-import { statusLabel, titleOf } from './requisitions-screen';
+import { statusLabel } from '../components/ui';
+import { titleOf } from './requisitions-screen';
 import { CompanyLine, WithActiveCompany } from './with-active-company';
 
 /** The submitted requisitions the person may approve or reject. For approvers and admins. */

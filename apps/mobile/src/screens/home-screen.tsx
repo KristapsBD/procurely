@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import {
   Button,
+  CompanySwitcher,
   ErrorNote,
   FormActions,
   Loading,
@@ -41,11 +42,14 @@ export function HomeScreen() {
       <WithActiveCompany>
         {(active, companies) => (
           <>
-            <CompanySwitcher
-              companies={companies}
-              activeCompanyId={active.companyId}
-              onSelect={selectCompany}
-            />
+            <View style={{ gap: 8 }}>
+              <Text style={styles.heading}>Company</Text>
+              <CompanySwitcher
+                companies={companies}
+                activeCompanyId={active.companyId}
+                onSelect={selectCompany}
+              />
+            </View>
             <CompanyLine company={active} />
             <View style={styles.row}>
               <Button
@@ -87,28 +91,6 @@ export function HomeScreen() {
         )}
       </WithActiveCompany>
     </ScrollView>
-  );
-}
-
-function CompanySwitcher(props: {
-  companies: CompanyMembership[];
-  activeCompanyId: string;
-  onSelect: (companyId: string) => void;
-}) {
-  return (
-    <View>
-      <Text style={styles.heading}>Company</Text>
-      <View style={styles.row}>
-        {props.companies.map((c) => (
-          <Button
-            key={c.companyId}
-            label={c.companyName}
-            selected={c.companyId === props.activeCompanyId}
-            onPress={() => props.onSelect(c.companyId)}
-          />
-        ))}
-      </View>
-    </View>
   );
 }
 
@@ -224,6 +206,7 @@ function CostCenterCard(props: { costCenter: CostCenter; canManage: boolean }) {
           />
           <Button
             label="Delete"
+            variant="destructive"
             accessibilityLabel={`Delete ${code}`}
             disabled={remove.isPending}
             onPress={() => remove.mutate(undefined)}

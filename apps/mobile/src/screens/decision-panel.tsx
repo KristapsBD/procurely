@@ -41,6 +41,7 @@ export function DecisionPanel(props: {
           />
           <Button
             label="Approve"
+            variant="primary"
             accessibilityLabel={`Approve ${title}`}
             disabled={decide.isPending}
             onPress={() =>
@@ -58,6 +59,7 @@ export function DecisionPanel(props: {
           />
           <Button
             label="Reject"
+            variant="destructive"
             accessibilityLabel={`Reject ${title}`}
             disabled={decide.isPending || reason.trim() === ''}
             onPress={() =>

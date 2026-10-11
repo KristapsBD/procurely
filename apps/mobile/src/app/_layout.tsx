@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { Text, View } from 'react-native';
 import { createApi } from '../api/client';
 import { AppProviders } from '../app-providers';
+import { useLedgerFonts } from '../components/fonts';
 import { Loading, styles } from '../components/ui';
 import { API_URL } from '../config';
 import { expoPushPlatform } from '../push/expo-push-platform';
@@ -22,11 +23,13 @@ const noPushRegistrar = {
 };
 
 export default function RootLayout() {
+  const fontsReady = useLedgerFonts();
   const api = useMemo(() => (API_URL ? createApi(API_URL) : null), []);
   const registrar = useMemo(
     () => (api ? createPushRegistrar(api, expoPushPlatform) : noPushRegistrar),
     [api],
   );
+  if (!fontsReady) return null;
   if (!api) {
     return (
       <View style={styles.screen}>

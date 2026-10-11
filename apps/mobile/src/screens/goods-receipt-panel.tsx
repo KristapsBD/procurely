@@ -131,6 +131,7 @@ function ReceiptForm(props: {
       })}
       <Button
         label="Record delivery"
+        variant="primary"
         disabled={save.isPending || request === null}
         onPress={() =>
           request &&

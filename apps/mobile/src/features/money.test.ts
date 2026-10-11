@@ -7,6 +7,12 @@ describe('formatMoney', () => {
     expect(formatMoney(5, 'EUR')).toBe('0.05 EUR');
     expect(formatMoney(0, 'EUR')).toBe('0.00 EUR');
   });
+
+  it('puts the sign before the amount for negative minor units', () => {
+    expect(formatMoney(-150, 'EUR')).toBe('-1.50 EUR');
+    expect(formatMoney(-5, 'EUR')).toBe('-0.05 EUR');
+    expect(formatMoney(-27900, 'SEK')).toBe('-279.00 SEK');
+  });
 });
 
 describe('parseMoney', () => {

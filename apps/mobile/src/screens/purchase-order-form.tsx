@@ -12,6 +12,7 @@ import {
   ErrorNote,
   FormActions,
   Loading,
+  Money,
   TextField,
   styles,
 } from '../components/ui';
@@ -118,9 +119,7 @@ export function PurchaseOrderForm(props: {
           }
         />
       )}
-      <Text style={styles.body}>
-        {`Total ${formatMoney(estimateTotal(lines), currency)}`}
-      </Text>
+      <Money label="Total" minor={estimateTotal(lines)} currency={currency} />
       <FormActions
         saveLabel="Create purchase order"
         canSave={!save.isPending && request !== null}
@@ -221,6 +220,7 @@ function LineFields(props: {
       )}
       <Button
         label="Remove"
+        variant="destructive"
         accessibilityLabel={`Remove ${line.name}`}
         onPress={props.onRemove}
       />

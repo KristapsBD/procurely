@@ -11,6 +11,7 @@ import {
   ErrorNote,
   FormActions,
   Loading,
+  Money,
   TextField,
   styles,
 } from '../components/ui';
@@ -145,9 +146,11 @@ export function RequisitionForm(props: {
               ])
             }
           />
-          <Text style={styles.body}>
-            {`Estimated total ${formatMoney(estimate(lines, catalog.data), currency)}`}
-          </Text>
+          <Money
+            label="Estimated total"
+            minor={estimate(lines, catalog.data)}
+            currency={currency}
+          />
         </>
       )}
       <FormActions
@@ -182,6 +185,7 @@ function LineField(props: {
       )}
       <Button
         label="Remove"
+        variant="destructive"
         accessibilityLabel={`Remove ${line.name}`}
         onPress={props.onRemove}
       />
