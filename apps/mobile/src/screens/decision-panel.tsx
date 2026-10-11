@@ -19,16 +19,24 @@ export function DecisionPanel(props: {
 }) {
   const { companyId, requisition: r } = props;
   const [comment, setComment] = useState('');
-  const decide = useCompanyMutation(companyId, (api, token, d: Decision) =>
-    d.action === 'approve'
-      ? api.approveRequisition(token, companyId, r.id, {
-          comment: d.comment.trim() || undefined,
-        })
-      : api.rejectRequisition(token, companyId, r.id, {
-          reason: d.reason.trim(),
-        }),
+  const { onDecided } = props;
+  // Reported from the write itself: the refetch that follows hides this panel, and a callback
+  // passed to mutate() is dropped once its component is gone.
+  const decide = useCompanyMutation(
+    companyId,
+    async (api, token, d: Decision) => {
+      const decided =
+        d.action === 'approve'
+          ? await api.approveRequisition(token, companyId, r.id, {
+              comment: d.comment.trim() || undefined,
+            })
+          : await api.rejectRequisition(token, companyId, r.id, {
+              reason: d.reason.trim(),
+            });
+      onDecided?.(decided);
+      return decided;
+    },
   );
-  const onSuccess = props.onDecided;
   const canReject = r.actions.includes('reject');
   return (
     <View style={styles.panel}>
@@ -44,12 +52,7 @@ export function DecisionPanel(props: {
             label="Reject"
             variant="destructive"
             disabled={decide.isPending || comment.trim() === ''}
-            onPress={() =>
-              decide.mutate(
-                { action: 'reject', reason: comment },
-                { onSuccess },
-              )
-            }
+            onPress={() => decide.mutate({ action: 'reject', reason: comment })}
           />
         )}
         {r.actions.includes('approve') && (
@@ -57,9 +60,7 @@ export function DecisionPanel(props: {
             label="Approve"
             variant="primary"
             disabled={decide.isPending}
-            onPress={() =>
-              decide.mutate({ action: 'approve', comment }, { onSuccess })
-            }
+            onPress={() => decide.mutate({ action: 'approve', comment })}
           />
         )}
       </View>

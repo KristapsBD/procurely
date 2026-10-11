@@ -9,11 +9,7 @@ const p = theme.palette;
 
 /** A small uppercase label above a block of the detail screens. */
 export function SectionLabel(props: { children: string }) {
-  return (
-    <Text accessibilityRole="header" style={styles.sectionLabel}>
-      {props.children}
-    </Text>
-  );
+  return <Text style={styles.sectionLabel}>{props.children}</Text>;
 }
 
 /** A grouped card whose rows are separated by hairlines. */

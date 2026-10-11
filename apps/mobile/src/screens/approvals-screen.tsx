@@ -1,6 +1,6 @@
 import type { CompanyMembership, Requisition } from '@procurely/shared-types';
 import type { UseQueryResult } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { ScrollView, Text } from 'react-native';
 import { EmptyState } from '../components/empty-state';
 import {
@@ -34,12 +34,14 @@ type Segment = 'waiting' | 'decided';
 
 /** The submitted requisitions the person may approve or reject. For approvers and admins. */
 export function ApprovalsScreen() {
+  const scroll = useRef<ScrollView>(null);
+  const toTop = () => scroll.current?.scrollTo({ y: 0, animated: false });
   return (
-    <ScrollView contentContainerStyle={styles.screen}>
+    <ScrollView ref={scroll} contentContainerStyle={styles.screen}>
       <WithActiveCompany>
         {(active) =>
           canDecideRequisitions(active.role) ? (
-            <Inbox key={active.companyId} company={active} />
+            <Inbox key={active.companyId} company={active} onNavigate={toTop} />
           ) : (
             <>
               <ScreenHeader title="Inbox" lead={{ kind: 'company' }} />
@@ -60,8 +62,12 @@ function decided(r: Requisition): boolean {
   return r.status === 'APPROVED' || r.status === 'REJECTED';
 }
 
-function Inbox(props: { company: CompanyMembership }) {
-  const { company } = props;
+function Inbox(props: { company: CompanyMembership; onNavigate: () => void }) {
+  const { company, onNavigate } = props;
+  const show = (id: string | null) => {
+    setOpenId(id);
+    onNavigate();
+  };
   const requisitions = useRequisitions(company.companyId);
   const [openId, setOpenId] = useState<string | null>(null);
   const [lastDecided, setLastDecided] = useState<Requisition | null>(null);
@@ -72,10 +78,10 @@ function Inbox(props: { company: CompanyMembership }) {
         company={company}
         requisition={open}
         backLabel="Inbox"
-        onBack={() => setOpenId(null)}
+        onBack={() => show(null)}
         onDecided={(done) => {
           setLastDecided(done);
-          setOpenId(null);
+          show(null);
         }}
       />
     );
@@ -85,7 +91,7 @@ function Inbox(props: { company: CompanyMembership }) {
       company={company}
       requisitions={requisitions}
       lastDecided={lastDecided}
-      onOpen={setOpenId}
+      onOpen={show}
     />
   );
 }

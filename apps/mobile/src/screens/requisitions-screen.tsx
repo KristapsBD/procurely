@@ -1,5 +1,5 @@
 import type { CompanyMembership, Requisition } from '@procurely/shared-types';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { ScrollView } from 'react-native';
 import { EmptyState } from '../components/empty-state';
 import {
@@ -32,13 +32,19 @@ type Pane = { kind: 'list' } | { kind: 'new' } | { kind: 'open'; id: string };
 
 /** Requisitions of the company the person acts in. For requesters and admins only. */
 export function RequisitionsScreen() {
+  const scroll = useRef<ScrollView>(null);
+  const toTop = () => scroll.current?.scrollTo({ y: 0, animated: false });
   return (
-    <ScrollView contentContainerStyle={styles.screen}>
+    <ScrollView ref={scroll} contentContainerStyle={styles.screen}>
       <WithActiveCompany>
         {(active) =>
           canRaiseRequisitions(active.role) ? (
             // Keyed by company, so an open requisition never survives a company switch.
-            <Requisitions key={active.companyId} company={active} />
+            <Requisitions
+              key={active.companyId}
+              company={active}
+              onNavigate={toTop}
+            />
           ) : (
             <>
               <ScreenHeader title="Requests" lead={{ kind: 'company' }} />
@@ -51,11 +57,18 @@ export function RequisitionsScreen() {
   );
 }
 
-function Requisitions(props: { company: CompanyMembership }) {
+function Requisitions(props: {
+  company: CompanyMembership;
+  onNavigate: () => void;
+}) {
   const { company } = props;
   const requisitions = useRequisitions(company.companyId);
   const unauthorized = useSignOutWhenUnauthorized(requisitions.error);
-  const [pane, setPane] = useState<Pane>({ kind: 'list' });
+  const [pane, setPaneState] = useState<Pane>({ kind: 'list' });
+  const setPane = (next: Pane) => {
+    setPaneState(next);
+    props.onNavigate();
+  };
   const toList = () => setPane({ kind: 'list' });
   const body = () => {
     switch (pane.kind) {
