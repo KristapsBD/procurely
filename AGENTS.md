@@ -14,22 +14,6 @@ Default five-label vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`, 
 
 Single-context: one `GLOSSARY.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.
 
-## Working agreements
+## Review
 
-### Questions
-
-Collect open questions and ask them together at a decision point, not one at a time. Give every question a recommended default and say what choosing differently would change. Keep working on everything the questions do not block.
-
-Ask only what the code, the issue, or a quick experiment cannot settle. Never invent missing data, such as a field the API lacks. Treat it as a question.
-
-### Change flow
-
-Every change goes through three stages, each in a separate agent. The coordinator is the session that takes the owner's request and spawns the stage agents. The owner is the repository owner, who merges.
-
-1. **Investigate** (read-only). Read the issue and its comments, the code the change touches, and the data it needs. Map every field the ticket or design shows to its API field. A missing field is a question before building.
-2. **Implement.** Build on the agent's own branch and worktree. Verify on the real surface with the `verify-procurely` skill. Open the PR against `main`. This repo does not stack PRs. Every PR targets `main`, which overrides the playbook's stack guidance. Commit messages, the PR title and the PR body follow the pstack Opening-a-PR playbook, `playbooks/opening-a-pr.md` in the pstack plugin's `poteto-mode` skill.
-3. **Review.** A fresh agent that did not write the change reads the diff against the issue. It runs the `pstack:deslop` and `pstack:no-comments` skills, plus `pstack:interrogate` when the design is contested. It does not fix. It returns findings. A fresh implement agent applies the accepted ones, and a fresh reviewer re-checks. The reviewer posts its verdict as a PR comment whose first line is `Review verdict: PASS` or `Review verdict: CHANGES NEEDED`. The reviewer fills the template's Review section when it posts the verdict, with a link to that comment.
-
-Only a PASS verdict sends a PR to the owner for merge.
-
-Agents use other pstack skills as the task calls for them. Invoke skills through the Skill tool by name (`pstack:deslop`), not as slash commands, which only a person can type. The `pstack:*` skills come from the pstack Claude Code plugin. If it isn't installed, follow the same stages and say in the PR which skills couldn't run.
+Anything beyond a trivial change is reviewed by an agent that didn't write it before it reaches the owner.
