@@ -1,13 +1,20 @@
 import type { CompanyMembership, PurchaseOrder } from '@procurely/shared-types';
 import { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
-import { Button, ErrorNote, Loading, styles } from '../components/ui';
+import {
+  Button,
+  ErrorNote,
+  ListRow,
+  Loading,
+  StatusBadge,
+  statusLabel,
+  styles,
+} from '../components/ui';
 import {
   usePurchaseOrders,
   useRequisitions,
   useSignOutWhenUnauthorized,
 } from '../features/data';
-import { statusLabel } from '../features/goods-receipts';
 import { formatMoney } from '../features/money';
 import { canRaisePurchaseOrders } from '../features/permissions';
 import { orderable } from '../features/purchase-orders';
@@ -99,23 +106,28 @@ function OrderList(props: {
   return (
     <>
       {props.canOrder && (
-        <Button label="New purchase order" onPress={props.onNew} />
+        <Button
+          variant="primary"
+          label="New purchase order"
+          onPress={props.onNew}
+        />
       )}
       {props.rows.length === 0 && (
         <Text style={styles.body}>No purchase orders yet.</Text>
       )}
       {props.rows.map((o) => (
-        <View key={o.id} style={styles.card}>
-          <Text style={styles.body}>{o.requisitionJustification}</Text>
-          <Text style={styles.muted}>
-            {`${o.supplierName} · ${formatMoney(o.totalMinor, props.company.currency)} · ${statusLabel(o.status)}`}
-          </Text>
+        <ListRow
+          key={o.id}
+          title={o.requisitionJustification}
+          meta={`${o.supplierName} · ${formatMoney(o.totalMinor, props.company.currency)} · ${statusLabel(o.status)}`}
+          trailing={<StatusBadge status={o.status} />}
+        >
           <Button
             label="Open"
             accessibilityLabel={`Open order of ${o.requisitionJustification}`}
             onPress={() => props.onOpen(o.id)}
           />
-        </View>
+        </ListRow>
       ))}
     </>
   );
@@ -153,6 +165,7 @@ function OrderDetail(props: {
   return (
     <View style={styles.card}>
       <Text style={styles.heading}>{o.requisitionJustification}</Text>
+      <StatusBadge status={o.status} />
       <Text style={styles.muted}>
         {`${o.supplierName} · ordered by ${o.createdByName}`}
       </Text>

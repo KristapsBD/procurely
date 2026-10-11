@@ -225,6 +225,7 @@ function CatalogItemCard(props: {
           />
           <Button
             label="Delete"
+            variant="destructive"
             accessibilityLabel={`Delete ${item.name}`}
             disabled={remove.isPending}
             onPress={() => remove.mutate(undefined)}

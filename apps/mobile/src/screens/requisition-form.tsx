@@ -182,6 +182,7 @@ function LineField(props: {
       )}
       <Button
         label="Remove"
+        variant="destructive"
         accessibilityLabel={`Remove ${line.name}`}
         onPress={props.onRemove}
       />

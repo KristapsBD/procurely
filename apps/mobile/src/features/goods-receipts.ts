@@ -3,8 +3,6 @@ import type {
   PurchaseOrder,
 } from '@procurely/shared-types';
 
-type PurchaseOrderStatus = PurchaseOrder['status'];
-
 /** What a buyer typed for one order line. Blank quantity means nothing arrived for the line. */
 export interface ReceiptLineDraft {
   purchaseOrderLineId: string;
@@ -66,15 +64,4 @@ export function toReceiptRequest(
       ...(d.note.trim() === '' ? {} : { note: d.note.trim() }),
     })),
   };
-}
-
-const STATUS_LABELS: Record<PurchaseOrderStatus, string> = {
-  ISSUED: 'Issued',
-  PARTIALLY_RECEIVED: 'Partially received',
-  FULLY_RECEIVED: 'Fully received',
-  CLOSED: 'Closed',
-};
-
-export function statusLabel(status: PurchaseOrderStatus): string {
-  return STATUS_LABELS[status];
 }
