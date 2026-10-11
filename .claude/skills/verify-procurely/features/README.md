@@ -18,6 +18,10 @@ Maintained source for verifying user-facing behavior of the Expo **web** app aga
 - Take a new accessibility snapshot before every click.
 - After a mutation, `make seed` before the next unrelated feature unless the recipe restores state itself.
 
+## Navigation
+
+The app has no home screen. After sign-in the person lands on the first tab of their role and sees only that role's tabs (see [Role tab navigation](./role-tab-navigation.md)). Feature files that say "from home" mean the matching tab: `Approvals` is the Inbox tab, `Requisitions` the Requests tab, `Purchase orders` the Orders tab, `Suppliers` and `Catalog` the Suppliers tab (Catalog is its second segment), and `Members`, `Approval rules`, cost centers, the company switcher and `Sign out` are on the Company tab. The switcher is one chip (`Switch company`) that opens a picker; pick `Acme Trading` or `Nordic Supplies` there. Switching lands on the new company's first tab. Click a tab by its name, for example `Company`.
+
 ## Proof and skip reporting
 
 - Capture action plus resulting state: snapshot and screenshot in `.claude/skills/verify-procurely/evidence/<run-id>/`.
@@ -26,6 +30,7 @@ Maintained source for verifying user-facing behavior of the Expo **web** app aga
 
 ## Features
 
+- [Role tab navigation](./role-tab-navigation.md) — tabs and landing tab per role; Alice's tabs change when she switches company.
 - [Sign in and company switch](./sign-in-company-switch.md) — dev login, company switcher, empty-company person.
 - [Cost centers](./cost-centers.md) — list by company; admin add/rename/delete.
 - [Suppliers](./suppliers.md) — list, buyer add/rename/deactivate, requester read-only.

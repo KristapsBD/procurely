@@ -13,13 +13,16 @@ import {
   fakeApi,
   membership,
   pressToWrite,
+  switchCompany,
 } from '../test/fakes';
+import { router } from 'expo-router';
 import { ApiError } from '../api/client';
 import { memoryStore } from '../test/fakes';
-import { HomeScreen } from './home-screen';
+import { CompanyScreen } from './company-screen';
 
-const acme = membership('company-acme', 'Acme Trading');
-const nordic = membership('company-nordic', 'Nordic Supplies');
+const acme = membership('company-acme', 'Acme Trading', 'ADMIN');
+const nordic = membership('company-nordic', 'Nordic Supplies', 'ADMIN');
+const requester = membership('company-acme', 'Acme Trading');
 
 function costCentersByCompany(
   byCompany: Record<string, Promise<CostCenter[]>>,
@@ -30,7 +33,7 @@ function costCentersByCompany(
   });
 }
 
-describe('HomeScreen company switching', () => {
+describe('CompanyScreen company switching', () => {
   it('lists the cost centers of the selected company', async () => {
     const api = costCentersByCompany({
       [acme.companyId]: Promise.resolve([
@@ -40,7 +43,7 @@ describe('HomeScreen company switching', () => {
     });
     render(
       <TestApp api={api}>
-        <HomeScreen />
+        <CompanyScreen />
       </TestApp>,
     );
     expect(await screen.findByText('ACME-OPS')).toBeTruthy();
@@ -56,14 +59,13 @@ describe('HomeScreen company switching', () => {
     });
     render(
       <TestApp api={api}>
-        <HomeScreen />
+        <CompanyScreen />
       </TestApp>,
     );
     await screen.findByText('ACME-OPS');
 
-    fireEvent.press(screen.getByRole('button', { name: 'Nordic Supplies' }));
+    switchCompany('Nordic Supplies');
 
-    // The very first render after the switch: nothing of Acme, a loading state instead.
     expect(screen.queryByText('ACME-OPS')).toBeNull();
     expect(screen.getByLabelText('Loading cost centers')).toBeTruthy();
 
@@ -83,12 +85,11 @@ describe('HomeScreen company switching', () => {
     });
     render(
       <TestApp api={api}>
-        <HomeScreen />
+        <CompanyScreen />
       </TestApp>,
     );
-    fireEvent.press(
-      await screen.findByRole('button', { name: 'Nordic Supplies' }),
-    );
+    await screen.findByRole('button', { name: 'Switch company' });
+    switchCompany('Nordic Supplies');
 
     await act(async () =>
       acmeData.resolve([costCenter(acme.companyId, 'ACME-OPS')]),
@@ -105,7 +106,7 @@ describe('HomeScreen company switching', () => {
   it('shows a clear empty state for a person without any company', async () => {
     render(
       <TestApp api={fakeApi({ companies: async () => [] })}>
-        <HomeScreen />
+        <CompanyScreen />
       </TestApp>,
     );
     await waitFor(() =>
@@ -125,101 +126,84 @@ describe('HomeScreen company switching', () => {
     });
     render(
       <TestApp api={api} store={store}>
-        <HomeScreen />
+        <CompanyScreen />
       </TestApp>,
     );
     await waitFor(async () => expect(await store.load()).toBeNull());
   });
 });
 
-describe('HomeScreen members entry point', () => {
+describe('CompanyScreen admin tools', () => {
   it.each([
     ['ADMIN', true],
     ['REQUESTER', false],
     ['APPROVER', false],
     ['BUYER', false],
-  ] as const)('as %s, offers members: %s', async (role, offered) => {
-    render(
-      <TestApp
-        api={fakeApi({
-          companies: async () => [membership('company-acme', 'Acme', role)],
-        })}
-      >
-        <HomeScreen />
-      </TestApp>,
-    );
-    await screen.findByRole('button', { name: 'Catalog' });
-    expect(screen.queryByRole('button', { name: 'Members' }) !== null).toBe(
-      offered,
-    );
-  });
-});
-
-describe('HomeScreen requisitions entry point', () => {
-  it.each([
-    ['REQUESTER', true],
-    ['ADMIN', true],
-    ['BUYER', false],
-    ['APPROVER', false],
-  ] as const)('as %s, offers requisitions: %s', async (role, offered) => {
-    render(
-      <TestApp
-        api={fakeApi({
-          companies: async () => [membership('company-acme', 'Acme', role)],
-        })}
-      >
-        <HomeScreen />
-      </TestApp>,
-    );
-    await screen.findByRole('button', { name: 'Catalog' });
-    expect(
-      screen.queryByRole('button', { name: 'Requisitions' }) !== null,
-    ).toBe(offered);
-  });
-});
-
-describe('HomeScreen approval entry points', () => {
-  it.each([
-    ['REQUESTER', false, false],
-    ['BUYER', false, false],
-    ['APPROVER', true, false],
-    ['ADMIN', true, true],
   ] as const)(
-    'as %s, offers approvals: %s, approval rules: %s',
-    async (role, approvals, rules) => {
+    'as %s, offers members, approval rules and cost centers: %s',
+    async (role, offered) => {
       render(
         <TestApp
           api={fakeApi({
             companies: async () => [membership('company-acme', 'Acme', role)],
           })}
         >
-          <HomeScreen />
+          <CompanyScreen />
         </TestApp>,
       );
-      await screen.findByRole('button', { name: 'Catalog' });
-      expect(screen.queryByRole('button', { name: 'Approvals' }) !== null).toBe(
-        approvals,
-      );
-      expect(
-        screen.queryByRole('button', { name: 'Approval rules' }) !== null,
-      ).toBe(rules);
+      await screen.findByRole('button', { name: 'Sign out' });
+      await screen.findByText(/you are/);
+      for (const name of ['Members', 'Approval rules']) {
+        expect(screen.queryByRole('button', { name }) !== null).toBe(offered);
+      }
+      expect(screen.queryByText('Cost centers') !== null).toBe(offered);
     },
   );
-});
 
-describe('HomeScreen cost centers', () => {
-  it('offers cost-center management to an admin only', async () => {
+  it('offers no browse links to purchase orders or suppliers', async () => {
     render(
-      <TestApp api={fakeApi({ companies: async () => [acme] })}>
-        <HomeScreen />
+      <TestApp api={fakeApi({ companies: async () => [requester] })}>
+        <CompanyScreen />
       </TestApp>,
     );
-    expect(await screen.findByText('Cost centers')).toBeTruthy();
-    expect(
-      screen.queryByRole('button', { name: 'Add cost center' }),
-    ).toBeNull();
+    await screen.findByText(/you are/);
+    for (const name of ['Purchase orders', 'Suppliers', 'Catalog']) {
+      expect(screen.queryByRole('button', { name })).toBeNull();
+    }
+  });
+});
+
+describe('CompanyScreen company chip', () => {
+  it('shows the company and role, and switches through the picker', async () => {
+    const api = fakeApi({
+      companies: async () => [
+        membership('company-acme', 'Acme Trading', 'REQUESTER'),
+        membership('company-nordic', 'Nordic Supplies', 'APPROVER'),
+      ],
+    });
+    render(
+      <TestApp api={api}>
+        <CompanyScreen />
+      </TestApp>,
+    );
+    expect(await screen.findByText('· Requester')).toBeTruthy();
+    switchCompany('Nordic Supplies');
+    expect(await screen.findByText('· Approver')).toBeTruthy();
+    expect(router.replace).toHaveBeenLastCalledWith('/inbox');
   });
 
+  it('is a plain label with a single company', async () => {
+    render(
+      <TestApp api={fakeApi({ companies: async () => [requester] })}>
+        <CompanyScreen />
+      </TestApp>,
+    );
+    expect(await screen.findByText('· Requester')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Switch company' })).toBeNull();
+  });
+});
+
+describe('CompanyScreen cost centers', () => {
   function renderAsAdmin() {
     const admin = membership('company-acme', 'Acme Trading', 'ADMIN');
     let rows: CostCenter[] = [costCenter(admin.companyId, 'OPS')];
@@ -241,7 +225,7 @@ describe('HomeScreen cost centers', () => {
     });
     render(
       <TestApp api={api}>
-        <HomeScreen />
+        <CompanyScreen />
       </TestApp>,
     );
     return { api, companyId: admin.companyId };

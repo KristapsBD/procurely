@@ -53,7 +53,7 @@ If `chrome-devtools-axi open` fails with `BRIDGE_NOT_READY` (seen in WSL2), star
 
 1. Open `http://127.0.0.1:$METRO_PORT`. First bundle can take ~30s; wait until Sign in is visible.
 2. Follow the feature file. Start from a freshly seeded database unless the file says otherwise (`pnpm db:reset` / `make seed`).
-3. Prefer buttons by accessible name: `Sign in as Alice`, `Acme Trading`, `Nordic Supplies`, `Suppliers`, `Catalog`, `Sign out`.
+3. Prefer buttons by accessible name: `Sign in as Alice`, tabs (`Company`, `Requests`, `Inbox`, `Orders`, `Suppliers`), `Switch company` then `Nordic Supplies`, `Catalog`, `Sign out`.
 4. Confirm company-scoped API calls when the proof needs isolation: `GET /cost-centers`, `/suppliers`, `/catalog-items` with `X-Company-Id`. Browser network tools or `curl` after a dev-login token.
 
 HTTP side path (not a substitute for UI proof on mapped UI features):

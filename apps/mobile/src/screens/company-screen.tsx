@@ -8,7 +8,7 @@ import { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import {
   Button,
-  CompanySwitcher,
+  CompanyChip,
   ErrorNote,
   FormActions,
   Loading,
@@ -21,75 +21,53 @@ import {
   useSignOutWhenUnauthorized,
   writeErrorMessage,
 } from '../features/data';
+import { landingTab, tabsFor } from '../features/navigation';
 import {
-  canDecideRequisitions,
   canManageApprovalRules,
   canManageCostCenters,
   canManageMembers,
-  canRaiseRequisitions,
 } from '../features/permissions';
 import { useSession } from '../session/session';
 import { CompanyLine, WithActiveCompany } from './with-active-company';
 
-export function HomeScreen() {
+export function CompanyScreen() {
   const { state, signOut, selectCompany } = useSession();
   return (
     <ScrollView contentContainerStyle={styles.screen}>
       <Text style={styles.heading}>
         {state.status === 'signedIn' ? `Signed in as ${state.person.name}` : ''}
       </Text>
-      <Button label="Sign out" onPress={() => void signOut()} />
       <WithActiveCompany>
         {(active, companies) => (
           <>
-            <View style={{ gap: 8 }}>
-              <Text style={styles.heading}>Company</Text>
-              <CompanySwitcher
-                companies={companies}
-                activeCompanyId={active.companyId}
-                onSelect={selectCompany}
-              />
-            </View>
+            <CompanyChip
+              companies={companies}
+              activeCompanyId={active.companyId}
+              onSelect={(companyId) => {
+                selectCompany(companyId);
+                const next = companies.find((c) => c.companyId === companyId);
+                if (next) {
+                  router.replace(`/${landingTab(tabsFor([next.role]))}`);
+                }
+              }}
+            />
             <CompanyLine company={active} />
-            <View style={styles.row}>
+            {canManageApprovalRules(active.role) && (
               <Button
-                label="Suppliers"
-                onPress={() => router.push('/suppliers')}
+                label="Approval rules"
+                onPress={() => router.push('/approval-rules')}
               />
-              <Button label="Catalog" onPress={() => router.push('/catalog')} />
-              {canRaiseRequisitions(active.role) && (
-                <Button
-                  label="Requisitions"
-                  onPress={() => router.push('/requisitions')}
-                />
-              )}
-              <Button
-                label="Purchase orders"
-                onPress={() => router.push('/purchase-orders')}
-              />
-              {canDecideRequisitions(active.role) && (
-                <Button
-                  label="Approvals"
-                  onPress={() => router.push('/approvals')}
-                />
-              )}
-              {canManageApprovalRules(active.role) && (
-                <Button
-                  label="Approval rules"
-                  onPress={() => router.push('/approval-rules')}
-                />
-              )}
-              {canManageMembers(active.role) && (
-                <Button
-                  label="Members"
-                  onPress={() => router.push('/members')}
-                />
-              )}
-            </View>
-            <CostCenters company={active} />
+            )}
+            {canManageMembers(active.role) && (
+              <Button label="Members" onPress={() => router.push('/members')} />
+            )}
+            {canManageCostCenters(active.role) && (
+              <CostCenters company={active} />
+            )}
           </>
         )}
       </WithActiveCompany>
+      <Button label="Sign out" onPress={() => void signOut()} />
     </ScrollView>
   );
 }

@@ -8,8 +8,9 @@ import {
   member,
   membership,
   pressToWrite,
+  switchCompany,
 } from '../test/fakes';
-import { HomeScreen } from './home-screen';
+import { CompanyScreen } from './company-screen';
 import { MembersScreen } from './members-screen';
 
 const ACME = 'company-acme';
@@ -201,14 +202,14 @@ describe('MembersScreen company switching', () => {
     });
     render(
       <TestApp api={api}>
-        <HomeScreen />
+        <CompanyScreen />
         <MembersScreen />
       </TestApp>,
     );
     expect(await screen.findByText('Alice Requester')).toBeTruthy();
     expect(api.members).toHaveBeenCalledWith('token-alice', ACME);
 
-    fireEvent.press(screen.getByRole('button', { name: 'Nordic Supplies' }));
+    switchCompany('Nordic Supplies');
 
     expect(screen.queryByText('Alice Requester')).toBeNull();
     expect(screen.getByLabelText('Loading members')).toBeTruthy();
@@ -233,13 +234,12 @@ describe('MembersScreen company switching', () => {
     });
     render(
       <TestApp api={api}>
-        <HomeScreen />
+        <CompanyScreen />
         <MembersScreen />
       </TestApp>,
     );
-    fireEvent.press(
-      await screen.findByRole('button', { name: 'Nordic Supplies' }),
-    );
+    await screen.findByRole('button', { name: 'Switch company' });
+    switchCompany('Nordic Supplies');
 
     await act(async () => acmeRows.resolve([alice]));
     expect(screen.queryByText('Alice Requester')).toBeNull();

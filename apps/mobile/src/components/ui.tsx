@@ -1,6 +1,7 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
+  Modal,
   Pressable,
   StyleSheet,
   Text,
@@ -84,34 +85,107 @@ export function ListRow(props: {
   );
 }
 
-/** The companies the person belongs to as chips; the active one also shows their role there. */
-export function CompanySwitcher(props: {
+function roleName(role: string): string {
+  return role.slice(0, 1) + role.slice(1).toLowerCase();
+}
+
+/** The company the person acts in and their role there; with several companies it opens a picker. */
+export function CompanyChip(props: {
   companies: { companyId: string; companyName: string; role: string }[];
   activeCompanyId: string;
   onSelect: (companyId: string) => void;
 }) {
+  const [open, setOpen] = useState(false);
+  const active = props.companies.find(
+    (c) => c.companyId === props.activeCompanyId,
+  );
+  if (!active) return null;
+  const content = (
+    <>
+      <View style={styles.chipMark}>
+        <Text style={styles.chipMarkText}>
+          {active.companyName.slice(0, 1).toUpperCase()}
+        </Text>
+      </View>
+      <Text style={styles.chipName}>{active.companyName}</Text>
+      <Text style={styles.muted}>{`· ${roleName(active.role)}`}</Text>
+    </>
+  );
+  if (props.companies.length < 2) {
+    return <View style={styles.chip}>{content}</View>;
+  }
   return (
-    <View style={styles.row}>
-      {props.companies.map((c) => {
-        const active = c.companyId === props.activeCompanyId;
+    <>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Switch company"
+        onPress={() => setOpen(true)}
+        style={styles.chip}
+      >
+        {content}
+        <Text style={styles.muted}>⌄</Text>
+      </Pressable>
+      <Modal
+        transparent
+        visible={open}
+        animationType="fade"
+        onRequestClose={() => setOpen(false)}
+      >
+        <View style={styles.pickerBackdrop}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Close company picker"
+            style={StyleSheet.absoluteFill}
+            onPress={() => setOpen(false)}
+          />
+          <View style={styles.pickerSheet}>
+            {props.companies.map((c) => {
+              const selected = c.companyId === props.activeCompanyId;
+              return (
+                <Pressable
+                  key={c.companyId}
+                  accessibilityRole="button"
+                  accessibilityLabel={c.companyName}
+                  accessibilityState={{ selected }}
+                  onPress={() => {
+                    setOpen(false);
+                    if (!selected) props.onSelect(c.companyId);
+                  }}
+                  style={[styles.chip, selected && styles.chipActive]}
+                >
+                  <Text style={styles.chipName}>{c.companyName}</Text>
+                  <Text style={styles.muted}>{`· ${roleName(c.role)}`}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+      </Modal>
+    </>
+  );
+}
+
+export function SegmentedControl<T extends string>(props: {
+  options: readonly { value: T; label: string }[];
+  value: T;
+  onChange: (value: T) => void;
+}) {
+  return (
+    <View style={styles.segmented}>
+      {props.options.map((o) => {
+        const selected = o.value === props.value;
         return (
           <Pressable
-            key={c.companyId}
+            key={o.value}
             accessibilityRole="button"
-            accessibilityLabel={c.companyName}
-            accessibilityState={{ selected: active }}
-            onPress={() => props.onSelect(c.companyId)}
-            style={[styles.chip, active && styles.chipActive]}
+            accessibilityLabel={o.label}
+            accessibilityState={{ selected }}
+            onPress={() => props.onChange(o.value)}
+            style={[styles.segment, selected && styles.segmentSelected]}
           >
-            <View style={styles.chipMark}>
-              <Text style={styles.chipMarkText}>
-                {c.companyName.slice(0, 1).toUpperCase()}
-              </Text>
-            </View>
-            <Text style={styles.chipName}>{c.companyName}</Text>
-            {active && (
-              <Text style={styles.muted}>{`· ${c.role.toLowerCase()}`}</Text>
-            )}
+            <Text style={selected ? styles.rowTitle : styles.muted}>
+              {o.label}
+            </Text>
           </Pressable>
         );
       })}
@@ -259,6 +333,37 @@ export const styles = StyleSheet.create({
     backgroundColor: p.surface,
   },
   chipActive: { borderColor: p.accent },
+  pickerBackdrop: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(22,32,27,0.4)',
+  },
+  pickerSheet: {
+    gap: theme.space.sm,
+    padding: theme.space.xl,
+    backgroundColor: p.ground,
+    borderTopLeftRadius: theme.radius.card,
+    borderTopRightRadius: theme.radius.card,
+  },
+  segmentBar: {
+    paddingHorizontal: theme.space.xl,
+    paddingTop: theme.space.md,
+    backgroundColor: p.ground,
+  },
+  segmented: {
+    flexDirection: 'row',
+    padding: 3,
+    borderRadius: theme.radius.chip,
+    backgroundColor: p.controlTrack,
+  },
+  segment: {
+    flex: 1,
+    minHeight: 38,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 8,
+  },
+  segmentSelected: { backgroundColor: p.surface },
   chipMark: {
     width: 22,
     height: 22,
