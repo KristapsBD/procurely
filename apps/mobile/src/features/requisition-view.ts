@@ -36,7 +36,7 @@ export function timelineSteps(
         },
       ];
     case 'APPROVED':
-      return [drafted, submitted, { label: 'Approved', state: 'current' }];
+      return [drafted, submitted, { label: 'Approved', state: 'done' }];
     case 'REJECTED':
       return [drafted, submitted, { label: 'Rejected', state: 'rejected' }];
     case 'CANCELLED':

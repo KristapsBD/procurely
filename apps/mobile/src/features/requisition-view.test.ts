@@ -41,7 +41,7 @@ describe('timelineSteps', () => {
       timelineSteps({ status: 'APPROVED', approvalRoute: 'ADMIN' }, false).at(
         -1,
       ),
-    ).toEqual({ label: 'Approved', state: 'current' });
+    ).toEqual({ label: 'Approved', state: 'done' });
   });
 
   it('skips Submitted for a draft that was cancelled', () => {

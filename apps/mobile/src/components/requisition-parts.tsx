@@ -144,13 +144,16 @@ const DOT_COLORS = {
 export function StatusTimeline(props: { steps: readonly TimelineStep[] }) {
   return (
     <View style={styles.timeline}>
-      {props.steps.map((s) => (
+      {props.steps.map((s, i) => (
         <View key={s.label} style={styles.step}>
           <View
             style={[styles.dot, { backgroundColor: DOT_COLORS[s.state] }]}
           />
           <Text
-            style={[styles.stepLabel, s.state !== 'done' && styles.stepNow]}
+            style={[
+              styles.stepLabel,
+              i === props.steps.length - 1 && styles.stepNow,
+            ]}
           >
             {s.label}
           </Text>
