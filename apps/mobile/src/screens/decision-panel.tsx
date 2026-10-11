@@ -1,6 +1,7 @@
 import type { Requisition } from '@procurely/shared-types';
 import { useState } from 'react';
-import { View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { fonts, theme } from '../components/theme';
 import { Button, ErrorNote, TextField } from '../components/ui';
 import { useCompanyMutation, writeErrorMessage } from '../features/data';
 
@@ -8,69 +9,74 @@ type Decision =
   { action: 'approve'; comment: string } | { action: 'reject'; reason: string };
 
 /**
- * Approve with an optional comment, or reject with a required reason, as far as the API offers
- * either. Both texts are shown to the requester.
+ * Approve or reject as far as the API offers either, with one comment field. The comment is
+ * optional for Approve and the required reason for Reject. The requester reads it.
  */
 export function DecisionPanel(props: {
   companyId: string;
   requisition: Requisition;
-  title: string;
   onDecided?: (decided: Requisition) => void;
 }) {
-  const { companyId, requisition: r, title } = props;
+  const { companyId, requisition: r } = props;
   const [comment, setComment] = useState('');
-  const [reason, setReason] = useState('');
-  const decide = useCompanyMutation(companyId, (api, token, d: Decision) =>
-    d.action === 'approve'
-      ? api.approveRequisition(token, companyId, r.id, {
-          comment: d.comment.trim() || undefined,
-        })
-      : api.rejectRequisition(token, companyId, r.id, {
-          reason: d.reason.trim(),
-        }),
+  const { onDecided } = props;
+  // Reported from the write itself: the refetch that follows hides this panel, and a callback
+  // passed to mutate() is dropped once its component is gone.
+  const decide = useCompanyMutation(
+    companyId,
+    async (api, token, d: Decision) => {
+      const decided =
+        d.action === 'approve'
+          ? await api.approveRequisition(token, companyId, r.id, {
+              comment: d.comment.trim() || undefined,
+            })
+          : await api.rejectRequisition(token, companyId, r.id, {
+              reason: d.reason.trim(),
+            });
+      onDecided?.(decided);
+      return decided;
+    },
   );
-  const onSuccess = props.onDecided;
+  const canReject = r.actions.includes('reject');
   return (
-    <View style={{ gap: 8 }}>
-      {r.actions.includes('approve') && (
-        <>
-          <TextField
-            label={`Comment on ${title} (optional)`}
-            value={comment}
-            onChangeText={setComment}
-          />
-          <Button
-            label="Approve"
-            variant="primary"
-            accessibilityLabel={`Approve ${title}`}
-            disabled={decide.isPending}
-            onPress={() =>
-              decide.mutate({ action: 'approve', comment }, { onSuccess })
-            }
-          />
-        </>
+    <View style={styles.panel}>
+      <TextField label="Comment" value={comment} onChangeText={setComment} />
+      {canReject && (
+        <Text style={styles.hint}>
+          A comment is required to reject. It is optional to approve.
+        </Text>
       )}
-      {r.actions.includes('reject') && (
-        <>
-          <TextField
-            label={`Reason for rejecting ${title}`}
-            value={reason}
-            onChangeText={setReason}
-          />
+      <View style={styles.actions}>
+        {canReject && (
           <Button
             label="Reject"
             variant="destructive"
-            accessibilityLabel={`Reject ${title}`}
-            disabled={decide.isPending || reason.trim() === ''}
-            onPress={() =>
-              decide.mutate({ action: 'reject', reason }, { onSuccess })
-            }
+            disabled={decide.isPending || comment.trim() === ''}
+            onPress={() => decide.mutate({ action: 'reject', reason: comment })}
           />
-        </>
-      )}
+        )}
+        {r.actions.includes('approve') && (
+          <Button
+            label="Approve"
+            variant="primary"
+            disabled={decide.isPending}
+            onPress={() => decide.mutate({ action: 'approve', comment })}
+          />
+        )}
+      </View>
       {decide.isError && (
         <ErrorNote message={writeErrorMessage(decide.error)} />
       )}
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  panel: { gap: theme.space.sm },
+  hint: {
+    fontFamily: fonts.regular,
+    fontSize: 13,
+    color: theme.palette.muted,
+  },
+  actions: { flexDirection: 'row', gap: theme.space.md },
+});

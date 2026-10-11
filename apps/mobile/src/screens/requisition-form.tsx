@@ -6,6 +6,8 @@ import type {
 } from '@procurely/shared-types';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
+import { SectionLabel } from '../components/requisition-parts';
+import { theme } from '../components/theme';
 import {
   Button,
   ErrorNote,
@@ -104,7 +106,7 @@ export function RequisitionForm(props: {
   const save = useSaveRequisition(companyId, props.requisition);
   const request = toRequest(costCenterId, justification, lines);
   return (
-    <View style={styles.card}>
+    <View style={{ gap: theme.space.lg }}>
       <CostCenterChoice
         companyId={companyId}
         selectedId={costCenterId}
@@ -115,6 +117,7 @@ export function RequisitionForm(props: {
         value={justification}
         onChangeText={setJustification}
       />
+      {lines.length > 0 && <SectionLabel>Lines</SectionLabel>}
       {lines.map((l) => (
         <LineField
           key={l.catalogItemId}
@@ -173,7 +176,7 @@ function LineField(props: {
 }) {
   const { line } = props;
   return (
-    <View style={{ gap: 4 }}>
+    <View style={[styles.card, { gap: theme.space.sm }]}>
       <TextField
         label={`Quantity of ${line.name}`}
         keyboardType="decimal-pad"
@@ -204,8 +207,8 @@ function CostCenterChoice(props: {
     return <ErrorNote message="Could not load cost centers." />;
   }
   return (
-    <View style={{ gap: 4 }}>
-      <Text style={styles.muted}>Cost center</Text>
+    <View style={{ gap: theme.space.sm }}>
+      <SectionLabel>Cost center</SectionLabel>
       <View style={styles.row}>
         {costCenters.data.map((cc) => (
           <Button
@@ -234,8 +237,8 @@ function ItemChoice(props: {
   );
   if (offered.length === 0) return null;
   return (
-    <View style={{ gap: 4 }}>
-      <Text style={styles.muted}>Add from the catalog</Text>
+    <View style={{ gap: theme.space.sm }}>
+      <SectionLabel>Add from the catalog</SectionLabel>
       <View style={styles.row}>
         {offered.map((item) => (
           <Button

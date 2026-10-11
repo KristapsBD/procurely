@@ -53,10 +53,12 @@ function renderAs(role: Role, rows: Requisition[]) {
   return api;
 }
 
-const button = (name: string) => screen.findByRole('button', { name });
+const button = (name: string | RegExp) => screen.findByRole('button', { name });
+const openRow = async (title: string) =>
+  fireEvent.press(await button(new RegExp(title)));
 
 describe('ApprovalsScreen', () => {
-  it('lists only what the API lets the person decide, with who it waits for', async () => {
+  it('lists only what the API lets the person decide, with requester, cost center and amount', async () => {
     renderAs('APPROVER', [
       submitted('Printer paper'),
       submitted('My own paper', {
@@ -65,27 +67,103 @@ describe('ApprovalsScreen', () => {
       }),
     ]);
     expect(await screen.findByText('Printer paper')).toBeTruthy();
-    expect(screen.getByText('€74.97 · requested by Rita')).toBeTruthy();
-    expect(
-      screen.getByText('Waiting for an approver or an admin.'),
-    ).toBeTruthy();
+    expect(screen.getByText('Rita')).toBeTruthy();
+    expect(screen.getByText('€74.97')).toBeTruthy();
+    expect(screen.getByText('1 waiting for you')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Waiting · 1' })).toBeTruthy();
     expect(screen.queryByText('My own paper')).toBeNull();
+  });
+
+  it('puts approved and rejected requisitions under Decided, with the badge only', async () => {
+    renderAs('APPROVER', [
+      submitted('Printer paper'),
+      submitted('Webcams', {
+        status: 'APPROVED',
+        actions: [],
+        decisionNote: 'Fine',
+      }),
+      submitted('Headsets', { status: 'REJECTED', actions: [] }),
+    ]);
+    expect(await screen.findByText('Printer paper')).toBeTruthy();
+    expect(screen.queryByText('Webcams')).toBeNull();
+    fireEvent.press(screen.getByRole('button', { name: 'Decided' }));
+    expect(screen.getByText('Webcams')).toBeTruthy();
+    expect(screen.getByText('Approved')).toBeTruthy();
+    expect(screen.getByText('Headsets')).toBeTruthy();
+    expect(screen.getByText('Rejected')).toBeTruthy();
+    expect(screen.queryByText('Printer paper')).toBeNull();
+  });
+
+  it('hints how the total sits against the rule', async () => {
+    const api = fakeApi({
+      companies: async () => [membership(ACME, 'Acme Trading', 'APPROVER')],
+      approvalRules: async () => [
+        {
+          id: 'r1',
+          companyId: ACME,
+          thresholdMinor: 5000,
+          requiredRole: 'APPROVER',
+        },
+      ],
+      requisitions: async () => [submitted('Printer paper')],
+    });
+    render(
+      <TestApp api={api}>
+        <ApprovalsScreen />
+      </TestApp>,
+    );
+    expect(await screen.findByText('Over €50.00')).toBeTruthy();
+  });
+
+  it('opens the decision detail from a whole row, with the rule callout and timeline', async () => {
+    const api = fakeApi({
+      companies: async () => [membership(ACME, 'Acme Trading', 'APPROVER')],
+      approvalRules: async () => [
+        {
+          id: 'r1',
+          companyId: ACME,
+          thresholdMinor: 5000,
+          requiredRole: 'APPROVER',
+        },
+      ],
+      requisitions: async () => [submitted('Printer paper')],
+    });
+    render(
+      <TestApp api={api}>
+        <ApprovalsScreen />
+      </TestApp>,
+    );
+    await openRow('Printer paper');
+    expect(
+      await screen.findByText('From €50.00 needs Approver; you can decide.'),
+    ).toBeTruthy();
+    expect(
+      screen.getByText('Requested by Rita · no cost center yet'),
+    ).toBeTruthy();
+    expect(screen.getByText('Drafted')).toBeTruthy();
+    expect(screen.getAllByText('Submitted')).toHaveLength(2);
+    expect(screen.getByText('Waiting for you')).toBeTruthy();
+    expect(screen.getByText('Total')).toBeTruthy();
+    fireEvent.press(screen.getByRole('button', { name: 'Back to Inbox' }));
+    expect(await screen.findByText('Printer paper')).toBeTruthy();
   });
 
   it('says when an admin decides because the company has no approval rule', async () => {
     renderAs('ADMIN', [
       submitted('Printer paper', { approvalRoute: 'NO_RULES' }),
     ]);
+    await openRow('Printer paper');
     expect(
       await screen.findByText(
-        'The company has no approval rule, so an admin decides.',
+        'The company has no approval rule, so an admin decides; you can decide.',
       ),
     ).toBeTruthy();
   });
 
   it('approves with an optional comment', async () => {
     const api = renderAs('APPROVER', [submitted('Printer paper')]);
-    await pressToWrite(await button('Approve Printer paper'));
+    await openRow('Printer paper');
+    await pressToWrite(await button('Approve'));
     expect(api.approveRequisition).toHaveBeenCalledWith(
       'token-alice',
       ACME,
@@ -100,11 +178,12 @@ describe('ApprovalsScreen', () => {
 
   it('sends the comment when there is one', async () => {
     const api = renderAs('APPROVER', [submitted('Printer paper')]);
+    await openRow('Printer paper');
     fireEvent.changeText(
-      await screen.findByLabelText('Comment on Printer paper (optional)'),
+      await screen.findByLabelText('Comment'),
       ' Within budget ',
     );
-    await pressToWrite(await button('Approve Printer paper'));
+    await pressToWrite(await button('Approve'));
     expect(api.approveRequisition).toHaveBeenCalledWith(
       'token-alice',
       ACME,
@@ -113,25 +192,25 @@ describe('ApprovalsScreen', () => {
     );
   });
 
-  it('rejects only with a reason', async () => {
+  it('rejects only with a comment, which becomes the reason', async () => {
     const api = renderAs('ADMIN', [submitted('Printer paper')]);
-    const reject = await button('Reject Printer paper');
+    await openRow('Printer paper');
+    const reject = await button('Reject');
     expect(reject.props.accessibilityState).toMatchObject({ disabled: true });
-    fireEvent.changeText(
-      screen.getByLabelText('Reason for rejecting Printer paper'),
-      '   ',
-    );
     expect(
-      screen.getByRole('button', { name: 'Reject Printer paper' }).props
-        .accessibilityState,
+      screen.getByText(
+        'A comment is required to reject. It is optional to approve.',
+      ),
+    ).toBeTruthy();
+    fireEvent.changeText(screen.getByLabelText('Comment'), '   ');
+    expect(
+      screen.getByRole('button', { name: 'Reject' }).props.accessibilityState,
     ).toMatchObject({ disabled: true });
     fireEvent.changeText(
-      screen.getByLabelText('Reason for rejecting Printer paper'),
+      screen.getByLabelText('Comment'),
       'Use the framework supplier',
     );
-    await pressToWrite(
-      screen.getByRole('button', { name: 'Reject Printer paper' }),
-    );
+    await pressToWrite(screen.getByRole('button', { name: 'Reject' }));
     expect(api.rejectRequisition).toHaveBeenCalledWith(
       'token-alice',
       ACME,

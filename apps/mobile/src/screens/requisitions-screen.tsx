@@ -1,57 +1,54 @@
-import type {
-  CompanyMembership,
-  Requisition,
-  RequisitionAction,
-} from '@procurely/shared-types';
-import { useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import type { CompanyMembership, Requisition } from '@procurely/shared-types';
+import { useRef, useState } from 'react';
+import { ScrollView } from 'react-native';
+import { EmptyState } from '../components/empty-state';
+import {
+  RowGroup,
+  TapRow,
+  TrailingColumn,
+} from '../components/requisition-parts';
 import { ScreenHeader } from '../components/screen-header';
 import {
   Button,
   ErrorNote,
-  ListRow,
   Loading,
   Money,
   StatusBadge,
-  statusLabel,
   styles,
 } from '../components/ui';
 import {
-  useCompanyMutation,
   useCostCenters,
   useRequisitions,
   useSignOutWhenUnauthorized,
-  writeErrorMessage,
 } from '../features/data';
-import { approvalNote } from '../features/approvals';
-import { formatMoney } from '../features/money';
 import { canRaiseRequisitions } from '../features/permissions';
-import { DecisionPanel } from './decision-panel';
+import { RequisitionDetail, titleOf } from './requisition-detail';
 import { RequisitionForm } from './requisition-form';
-import { CompanyLine, WithActiveCompany } from './with-active-company';
+import { WithActiveCompany } from './with-active-company';
+
+export { titleOf };
 
 type Pane = { kind: 'list' } | { kind: 'new' } | { kind: 'open'; id: string };
 
-export function titleOf(r: Requisition): string {
-  return r.justification === '' ? 'Untitled draft' : r.justification;
-}
-
 /** Requisitions of the company the person acts in. For requesters and admins only. */
 export function RequisitionsScreen() {
+  const scroll = useRef<ScrollView>(null);
+  const toTop = () => scroll.current?.scrollTo({ y: 0, animated: false });
   return (
-    <ScrollView contentContainerStyle={styles.screen}>
-      <ScreenHeader title="Requests" lead={{ kind: 'company' }} />
+    <ScrollView ref={scroll} contentContainerStyle={styles.screen}>
       <WithActiveCompany>
         {(active) =>
           canRaiseRequisitions(active.role) ? (
             // Keyed by company, so an open requisition never survives a company switch.
-            <Requisitions key={active.companyId} company={active} />
+            <Requisitions
+              key={active.companyId}
+              company={active}
+              onNavigate={toTop}
+            />
           ) : (
             <>
-              <CompanyLine company={active} />
-              <Text style={styles.body}>
-                Requisitions are for requesters and admins.
-              </Text>
+              <ScreenHeader title="Requests" lead={{ kind: 'company' }} />
+              <EmptyState title="Requisitions are for requesters and admins." />
             </>
           )
         }
@@ -60,11 +57,18 @@ export function RequisitionsScreen() {
   );
 }
 
-function Requisitions(props: { company: CompanyMembership }) {
+function Requisitions(props: {
+  company: CompanyMembership;
+  onNavigate: () => void;
+}) {
   const { company } = props;
   const requisitions = useRequisitions(company.companyId);
   const unauthorized = useSignOutWhenUnauthorized(requisitions.error);
-  const [pane, setPane] = useState<Pane>({ kind: 'list' });
+  const [pane, setPaneState] = useState<Pane>({ kind: 'list' });
+  const setPane = (next: Pane) => {
+    setPaneState(next);
+    props.onNavigate();
+  };
   const toList = () => setPane({ kind: 'list' });
   const body = () => {
     switch (pane.kind) {
@@ -79,11 +83,17 @@ function Requisitions(props: { company: CompanyMembership }) {
         );
       case 'new':
         return (
-          <RequisitionForm
-            company={company}
-            onSaved={(saved) => setPane({ kind: 'open', id: saved.id })}
-            onCancel={toList}
-          />
+          <>
+            <ScreenHeader
+              title="New requisition"
+              lead={{ kind: 'back', label: 'Requests', onPress: toList }}
+            />
+            <RequisitionForm
+              company={company}
+              onSaved={(saved) => setPane({ kind: 'open', id: saved.id })}
+              onCancel={toList}
+            />
+          </>
         );
       case 'open': {
         const open = requisitions.data?.find((r) => r.id === pane.id);
@@ -91,6 +101,7 @@ function Requisitions(props: { company: CompanyMembership }) {
           <RequisitionDetail
             company={company}
             requisition={open}
+            backLabel="Requests"
             onBack={toList}
           />
         ) : null;
@@ -103,7 +114,9 @@ function Requisitions(props: { company: CompanyMembership }) {
   };
   return (
     <>
-      <CompanyLine company={company} />
+      {(pane.kind === 'list' || !requisitions.data) && (
+        <ScreenHeader title="Requests" lead={{ kind: 'company' }} />
+      )}
       {requisitions.isPending && <Loading label="Loading requisitions" />}
       {requisitions.isError && !unauthorized && (
         <ErrorNote
@@ -122,141 +135,39 @@ function RequisitionList(props: {
   onNew: () => void;
   onOpen: (id: string) => void;
 }) {
+  const costCenters = useCostCenters(props.company.companyId);
+  const code = (r: Requisition) =>
+    costCenters.data?.find((c) => c.id === r.costCenterId)?.code;
   return (
     <>
       <Button variant="primary" label="New requisition" onPress={props.onNew} />
-      {props.rows.length === 0 && (
-        <Text style={styles.body}>No requisitions yet.</Text>
+      {props.rows.length === 0 ? (
+        <EmptyState
+          title="No requisitions yet."
+          body="Raise one to start a purchase."
+        />
+      ) : (
+        <RowGroup>
+          {props.rows.map((r, i) => (
+            <TapRow
+              key={r.id}
+              title={titleOf(r)}
+              meta={[r.requesterName, code(r)].filter(Boolean).join(' · ')}
+              trailing={
+                <TrailingColumn>
+                  <Money
+                    minor={r.totalMinor}
+                    currency={props.company.currency}
+                  />
+                  <StatusBadge status={r.status} />
+                </TrailingColumn>
+              }
+              last={i === props.rows.length - 1}
+              onPress={() => props.onOpen(r.id)}
+            />
+          ))}
+        </RowGroup>
       )}
-      {props.rows.map((r) => (
-        <ListRow
-          key={r.id}
-          title={titleOf(r)}
-          meta={`${statusLabel(r.status)} · ${formatMoney(r.totalMinor, props.company.currency)} · ${r.requesterName}`}
-          trailing={<StatusBadge status={r.status} />}
-        >
-          <Button
-            label="Open"
-            accessibilityLabel={`Open ${titleOf(r)}`}
-            onPress={() => props.onOpen(r.id)}
-          />
-        </ListRow>
-      ))}
-    </>
-  );
-}
-
-function RequisitionDetail(props: {
-  company: CompanyMembership;
-  requisition: Requisition;
-  onBack: () => void;
-}) {
-  const { company, requisition: r } = props;
-  const [editing, setEditing] = useState(false);
-  const costCenters = useCostCenters(company.companyId);
-  const costCenter = costCenters.data?.find((c) => c.id === r.costCenterId);
-  const note = approvalNote(r);
-  if (editing) {
-    return (
-      <RequisitionForm
-        company={company}
-        requisition={r}
-        onSaved={() => setEditing(false)}
-        onCancel={() => setEditing(false)}
-      />
-    );
-  }
-  return (
-    <View style={styles.card}>
-      <Text style={styles.heading}>{titleOf(r)}</Text>
-      <StatusBadge status={r.status} />
-      <Text style={styles.muted}>
-        {`${statusLabel(r.status)} · requested by ${r.requesterName}`}
-      </Text>
-      {note && <Text style={styles.body}>{note}</Text>}
-      <Text style={styles.body}>
-        {`Cost center: ${costCenter?.code ?? 'none yet'}`}
-      </Text>
-      {r.lines.map((l) => (
-        <Text key={l.id} style={styles.body}>
-          {`${l.quantity} × ${l.catalogItemName} at ${formatMoney(l.unitPriceMinor, company.currency)} = ${formatMoney(l.amountMinor, company.currency)}`}
-        </Text>
-      ))}
-      <Money label="Total" minor={r.totalMinor} currency={company.currency} />
-      <RequisitionActions
-        company={company}
-        requisition={r}
-        onEdit={() => setEditing(true)}
-      />
-      <DecisionPanel
-        companyId={company.companyId}
-        requisition={r}
-        title={titleOf(r)}
-      />
-      <Button label="Back to requisitions" onPress={props.onBack} />
-    </View>
-  );
-}
-
-/** Exactly the requester's actions the API offers this person; DecisionPanel has the others. */
-function RequisitionActions(props: {
-  company: CompanyMembership;
-  requisition: Requisition;
-  onEdit: () => void;
-}) {
-  const { companyId } = props.company;
-  const { id } = props.requisition;
-  const actions = props.requisition.actions.filter(
-    (a) => a !== 'approve' && a !== 'reject',
-  );
-  const move = useCompanyMutation(
-    companyId,
-    (api, token, action: 'submit' | 'cancel') =>
-      action === 'submit'
-        ? api.submitRequisition(token, companyId, id)
-        : api.cancelRequisition(token, companyId, id),
-  );
-  const button = (action: RequisitionAction) => {
-    switch (action) {
-      case 'edit':
-        return (
-          <Button key={action} label="Edit draft" onPress={props.onEdit} />
-        );
-      case 'submit':
-        return (
-          <Button
-            key={action}
-            label="Submit"
-            variant="primary"
-            disabled={move.isPending}
-            onPress={() => move.mutate('submit')}
-          />
-        );
-      case 'cancel':
-        return (
-          <Button
-            key={action}
-            label="Cancel requisition"
-            variant="destructive"
-            disabled={move.isPending}
-            onPress={() => move.mutate('cancel')}
-          />
-        );
-      case 'approve':
-      case 'reject':
-        return null;
-      default: {
-        const unhandled: never = action;
-        return unhandled;
-      }
-    }
-  };
-  return (
-    <>
-      {actions.length > 0 && (
-        <View style={styles.row}>{actions.map(button)}</View>
-      )}
-      {move.isError && <ErrorNote message={writeErrorMessage(move.error)} />}
     </>
   );
 }
