@@ -4,13 +4,18 @@ import type {
   CompanyMembership,
   CreateApprovalRuleRequest,
 } from '@procurely/shared-types';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
+import { EmptyState } from '../components/empty-state';
+import { ScreenHeader } from '../components/screen-header';
 import {
   Button,
   ErrorNote,
   FormActions,
+  ListRow,
   Loading,
+  Money,
   TextField,
   styles,
 } from '../components/ui';
@@ -31,6 +36,14 @@ const ROLES: ApproverRole[] = ['APPROVER', 'ADMIN'];
 export function ApprovalRulesScreen() {
   return (
     <ScrollView contentContainerStyle={styles.screen}>
+      <ScreenHeader
+        title="Approval rules"
+        lead={{
+          kind: 'back',
+          label: 'Company',
+          onPress: () => router.replace('/company'),
+        }}
+      />
       <WithActiveCompany>
         {(active) =>
           canManageApprovalRules(active.role) ? (
@@ -38,7 +51,7 @@ export function ApprovalRulesScreen() {
           ) : (
             <>
               <CompanyLine company={active} />
-              <Text style={styles.body}>Approval rules are for admins.</Text>
+              <EmptyState title="Approval rules are for admins." />
             </>
           )
         }
@@ -61,7 +74,11 @@ function Rules(props: { company: CompanyMembership }) {
         rule, an admin decides.
       </Text>
       {!adding && (
-        <Button label="Add approval rule" onPress={() => setAdding(true)} />
+        <Button
+          label="Add approval rule"
+          variant="primary"
+          onPress={() => setAdding(true)}
+        />
       )}
       {adding && (
         <NewRuleForm company={company} onDone={() => setAdding(false)} />
@@ -74,9 +91,7 @@ function Rules(props: { company: CompanyMembership }) {
         />
       )}
       {rules.data && rules.data.length === 0 && (
-        <Text style={styles.body}>
-          No approval rules: an admin decides every requisition.
-        </Text>
+        <EmptyState title="No approval rules: an admin decides every requisition." />
       )}
       {rules.data?.map((rule) => (
         <RuleCard key={rule.id} company={company} rule={rule} />
@@ -147,10 +162,12 @@ function RuleCard(props: { company: CompanyMembership; rule: ApprovalRule }) {
     api.deleteApprovalRule(token, companyId, id),
   );
   return (
-    <View style={styles.card}>
-      <Text style={styles.body}>
-        {`From ${amount}: ${approverRoleLabel(requiredRole)} approves`}
-      </Text>
+    <ListRow
+      title={`${approverRoleLabel(requiredRole)} approves`}
+      trailing={
+        <Money label="From" minor={thresholdMinor} currency={currency} />
+      }
+    >
       <Button
         label="Delete"
         variant="destructive"
@@ -161,6 +178,6 @@ function RuleCard(props: { company: CompanyMembership; rule: ApprovalRule }) {
       {remove.isError && (
         <ErrorNote message={writeErrorMessage(remove.error)} />
       )}
-    </View>
+    </ListRow>
   );
 }

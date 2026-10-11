@@ -5,12 +5,17 @@ import type {
 } from '@procurely/shared-types';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
+import { EmptyState } from '../components/empty-state';
+import { NavRow } from '../components/nav-row';
 import { ScreenHeader } from '../components/screen-header';
+import { SectionLabel } from '../components/section-label';
+import { theme } from '../components/theme';
 import {
   Button,
   ErrorNote,
   FormActions,
+  ListRow,
   Loading,
   TextField,
   styles,
@@ -33,22 +38,32 @@ export function CompanyScreen() {
   const { state, signOut } = useSession();
   return (
     <ScrollView contentContainerStyle={styles.screen}>
-      <ScreenHeader title="Company" lead={{ kind: 'company' }} />
-      <Text style={styles.heading}>
-        {state.status === 'signedIn' ? `Signed in as ${state.person.name}` : ''}
-      </Text>
+      <ScreenHeader
+        title="Company"
+        lead={{ kind: 'company' }}
+        subtitle={
+          state.status === 'signedIn'
+            ? `Signed in as ${state.person.name}`
+            : undefined
+        }
+      />
       <WithActiveCompany>
         {(active) => (
           <>
             <CompanyLine company={active} />
             {canManageApprovalRules(active.role) && (
-              <Button
-                label="Approval rules"
+              <NavRow
+                title="Approval rules"
+                meta="Who approves a requisition, by amount"
                 onPress={() => router.push('/approval-rules')}
               />
             )}
             {canManageMembers(active.role) && (
-              <Button label="Members" onPress={() => router.push('/members')} />
+              <NavRow
+                title="Members"
+                meta="Invite people and set their roles"
+                onPress={() => router.push('/members')}
+              />
             )}
             {canManageCostCenters(active.role) && (
               <CostCenters company={active} />
@@ -68,8 +83,8 @@ function CostCenters(props: { company: CompanyMembership }) {
   const canManage = canManageCostCenters(role);
   const [adding, setAdding] = useState(false);
   return (
-    <View style={{ gap: 8 }}>
-      <Text style={styles.heading}>Cost centers</Text>
+    <View style={{ gap: theme.space.sm }}>
+      <SectionLabel label="Cost centers" />
       {canManage && !adding && (
         <Button label="Add cost center" onPress={() => setAdding(true)} />
       )}
@@ -87,7 +102,7 @@ function CostCenters(props: { company: CompanyMembership }) {
         />
       )}
       {costCenters.data && costCenters.data.length === 0 && (
-        <Text style={styles.body}>No cost centers yet.</Text>
+        <EmptyState title="No cost centers yet." />
       )}
       {costCenters.data?.map((cc) => (
         <CostCenterCard key={cc.id} costCenter={cc} canManage={canManage} />
@@ -136,9 +151,8 @@ function CostCenterCard(props: { costCenter: CostCenter; canManage: boolean }) {
   );
   const error = rename.error ?? remove.error;
   return (
-    <View style={styles.card}>
-      <Text style={styles.body}>{code}</Text>
-      {renaming ? (
+    <ListRow title={code} meta={renaming ? undefined : name}>
+      {renaming && (
         <>
           <TextField
             label={`New name for ${code}`}
@@ -158,8 +172,6 @@ function CostCenterCard(props: { costCenter: CostCenter; canManage: boolean }) {
             error={null}
           />
         </>
-      ) : (
-        <Text style={styles.muted}>{name}</Text>
       )}
       {props.canManage && !renaming && (
         <View style={styles.row}>
@@ -181,6 +193,6 @@ function CostCenterCard(props: { costCenter: CostCenter; canManage: boolean }) {
         </View>
       )}
       {error && <ErrorNote message={writeErrorMessage(error)} />}
-    </View>
+    </ListRow>
   );
 }
