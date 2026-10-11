@@ -1,4 +1,4 @@
-.PHONY: help up down prune reset seed logs ps psql env
+.PHONY: help up down prune reset seed logs ps psql env e2e
 
 # Every checkout gets its own stack: the Compose project name and the host ports derive
 # from a checksum of this checkout's absolute path, so two checkouts never share containers,
@@ -53,3 +53,6 @@ env: ## Print this checkout's stack name, ports and database URLs as shell expor
 	@echo "export STACK_CHECKOUT='$(CURDIR)' COMPOSE_PROJECT_NAME=$(COMPOSE_PROJECT_NAME) API_PORT=$(API_PORT) DB_PORT=$(DB_PORT)"
 	@echo "export DATABASE_URL=postgresql://procurely_api:procurely_api@localhost:$(DB_PORT)/procurely"
 	@echo "export DIRECT_URL=postgresql://procurely:procurely@localhost:$(DB_PORT)/procurely"
+
+e2e: ## Run the saved Maestro flows against this checkout's stack (web target; see docs/android-emulator.md)
+	@bash '$(CURDIR)/scripts/e2e.sh'

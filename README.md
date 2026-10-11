@@ -189,6 +189,17 @@ Expo's built-in tunnel (`expo start --tunnel`) is a fallback for Metro only: it 
 
 **Verified** on 2026-10-04. With the steps above, the app opens in Expo Go on an iPhone over Tailscale. What is verified for Google sign-in on the phone is listed in [docs/google-sign-in.md](docs/google-sign-in.md#expo-go-is-enough-no-development-build).
 
+## End-to-end flows (Maestro)
+
+The main flow, requisition to approval to purchase order to goods receipt, is saved as a Maestro script in `e2e/maestro/` and runs against the seeded app. In Megacorp Industries, Ivan (requester) raises a 756.00 EUR requisition, Hanna (approver) approves it, Jonas (buyer) orders it from Ferro Industrial Supply, records a partial and then the full delivery, and closes the order. Everyone signs in through the dev login.
+
+```sh
+scripts/install-maestro.sh   # once: JDK 17 and Maestro into your home directory, no sudo
+make e2e                     # stack up, reseed, Metro, then the flows in headless Chromium
+```
+
+`make e2e` starts this checkout's stack and Metro (the same launch as the verify-procurely skill), reseeds, and runs every flow in `e2e/maestro/` against the Expo web target. Stop it afterwards with `.claude/skills/verify-procurely/scripts/cleanup.sh`, which stops Metro and the stack. Pass flow files as extra arguments to `scripts/e2e.sh` to run a subset. Whether an Android emulator works here, and why the flows run on web, is in [docs/android-emulator.md](docs/android-emulator.md). The flows are not in CI yet; the recommendation is there too.
+
 ## CI
 
 Every pull request runs `.github/workflows/ci.yml`: fifteen parallel jobs, each its own required check with a three-minute timeout:

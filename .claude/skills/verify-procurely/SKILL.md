@@ -5,7 +5,7 @@ description: Drive Procurely's Expo web app against this checkout's API stack to
 
 # Verify Procurely
 
-Primary surface: the Expo **web** app at `http://127.0.0.1:$METRO_PORT` (printed by launch; see Launch). Secondary: HTTP to this checkout's Nest API. Do not start Expo Go, an emulator, or a physical phone for verification; native-only behavior is out of scope (ticket #17).
+Primary surface: the Expo **web** app at `http://127.0.0.1:$METRO_PORT` (printed by launch; see Launch). Secondary: HTTP to this checkout's Nest API. Do not start Expo Go, an emulator, or a physical phone for verification; native-only behavior is out of scope. No Android emulator runs under WSL2 on this host (`docs/android-emulator.md`). The main requisition to goods receipt flow is saved as Maestro scripts in `e2e/maestro/`; `make e2e` replays it on this surface, so run it after a change that could break that flow and save a new flow there once a manual proof is stable.
 
 Read `features/README.md` before driving. Drive the mapped feature the task names; a proof of one entry point does not cover the others.
 
@@ -95,8 +95,9 @@ If this run created extra cost centers, suppliers, or catalog items and you need
 
 ## Helpers
 
-| Script               | Invocation                                                                                        |
-| -------------------- | ------------------------------------------------------------------------------------------------- |
-| Launch stack + Metro | `.claude/skills/verify-procurely/scripts/launch.sh`                                               |
-| Readiness            | `.claude/skills/verify-procurely/scripts/doctor.sh`                                               |
-| Teardown             | `.claude/skills/verify-procurely/scripts/cleanup.sh` (`DISPOSABLE=1` also drops volume and image) |
+| Script               | Invocation                                                                                          |
+| -------------------- | --------------------------------------------------------------------------------------------------- |
+| Launch stack + Metro | `.claude/skills/verify-procurely/scripts/launch.sh`                                                 |
+| Readiness            | `.claude/skills/verify-procurely/scripts/doctor.sh`                                                 |
+| Teardown             | `.claude/skills/verify-procurely/scripts/cleanup.sh` (`DISPOSABLE=1` also drops volume and image)   |
+| Replay saved flows   | `make e2e` (reseeds, so it wipes data from a manual proof; needs `scripts/install-maestro.sh` once) |
