@@ -1,6 +1,6 @@
 # Driving the app in the browser (agents)
 
-The Expo app has a web target. An agent starts the stack and Metro, opens the web page with `chrome-devtools-axi`, and drives it through the accessibility tree: buttons and text carry accessible labels, so `snapshot` shows what a person sees and `click @uid` presses it. Use this to reproduce a bug or verify a change before handing off. Native-only behavior (secure storage, gestures) needs the phone or, later, an emulator; see ticket #17.
+The Expo app has a web target. An agent starts the stack and Metro, opens the web page with `chrome-devtools-axi`, and drives it through the accessibility tree: buttons and text carry accessible labels, so `snapshot` shows what a person sees and `click @uid` presses it. Use this to reproduce a bug or verify a change before handing off. Native-only behavior (secure storage, gestures) needs the phone: an Android emulator does not start under WSL2 on this host without a `kvm` group change that needs sudo, see [android-emulator.md](android-emulator.md). Verified flows are saved as Maestro scripts in `e2e/maestro/` and run with `make e2e`.
 
 ## 1. Start the stack and Metro
 
@@ -65,4 +65,4 @@ Driven against a freshly seeded database. Buttons that act on one record carry t
 6. Mallory: "Catalog" and "Suppliers" of Fresh Start Ltd showed "No catalog items yet." and "No suppliers yet."
 7. `GET /audit-log` as Dave listed, as its newest entries and oldest first: `supplier.created`, `supplier.renamed`, `supplier.deactivated`, `catalog_item.created`, two `catalog_item.updated` (with from/to of the changed fields), `catalog_item.deleted` (all by Carol), then `cost_center.created`, `cost_center.renamed`, `cost_center.deleted` (by Dave).
 
-When a flow like this is stable it becomes a Maestro script (ticket #17).
+The main requisition to goods receipt flow is already saved as a Maestro script (`e2e/maestro/`, `make e2e`). When another flow is stable it becomes one too; the Maestro quirks to expect on the web target are in [android-emulator.md](android-emulator.md).

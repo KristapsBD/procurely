@@ -1,0 +1,6 @@
+appId: procurely
+---
+- tapOn: 'Any seeded person id'
+- inputText: ${PERSON_ID}
+- tapOn: 'Sign in with id'
+- assertVisible: 'Signed in as ${NAME}'
