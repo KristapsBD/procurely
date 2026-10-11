@@ -20,7 +20,7 @@
 
 ## Verification
 
-<!-- Each bullet names a real run path and its outcome. -->
+<!-- One to three bullets, each a real run and its outcome. -->
 
 ## Review
 
