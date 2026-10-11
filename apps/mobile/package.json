@@ -9,12 +9,15 @@
     "test": "jest"
   },
   "dependencies": {
+    "@expo-google-fonts/ibm-plex-mono": "^0.4.1",
+    "@expo-google-fonts/ibm-plex-sans": "^0.4.1",
     "@expo/metro-runtime": "~57.0.16",
     "@procurely/shared-types": "workspace:*",
     "@tanstack/react-query": "^5.104.0",
     "expo": "~57.0.26",
     "expo-constants": "~57.0.20",
     "expo-crypto": "~57.0.3",
+    "expo-font": "~57.0.4",
     "expo-linking": "~57.0.11",
     "expo-notifications": "~57.0.22",
     "expo-router": "~57.0.24",

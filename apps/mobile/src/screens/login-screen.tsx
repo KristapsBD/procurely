@@ -5,7 +5,8 @@ import { ScrollView, Text, TextInput, View } from 'react-native';
 import { queryKeys } from '../api/query-keys';
 import { API_URL } from '../config';
 import { DEV_PEOPLE } from '../features/dev-people';
-import { Button, ErrorNote, Loading, colors, styles } from '../components/ui';
+import { Button, ErrorNote, Loading, styles } from '../components/ui';
+import { theme } from '../components/theme';
 import {
   createPkcePair,
   GoogleSignInError,
@@ -150,7 +151,7 @@ function DevLogin() {
       <TextInput
         accessibilityLabel="Person id"
         placeholder="Any seeded person id"
-        placeholderTextColor={colors.muted}
+        placeholderTextColor={theme.palette.muted}
         autoCapitalize="none"
         autoCorrect={false}
         value={personId}
@@ -159,6 +160,7 @@ function DevLogin() {
       />
       <Button
         label="Sign in with id"
+        variant="primary"
         disabled={busy || personId.trim() === ''}
         onPress={() => void login(personId)}
       />
