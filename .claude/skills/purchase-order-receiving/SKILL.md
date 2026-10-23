@@ -57,7 +57,7 @@ Running the model unchanged after a code change checks the old code. Before you 
 | `migration.sql:184-186` closed check                                                                        | `RClosedCheck`                       | `LineGuardChecksClosed` |
 | `migration.sql:187-189` reads `ordered` and `received`                                                      | `RReadReceived`                      | `GuardReadsAfterLock`   |
 | `migration.sql:190-198` bounds checks, `RETURN NEW`                                                         | `RCheck`                             |                         |
-| `goods-receipts.service.ts:130-151`, then commit (`tenant-db.service.ts:207`)                               | `RCommit`                            |                         |
+| `goods-receipts.service.ts:130-151`, then commit (`tenant-db.service.ts:20`)                                | `RCommit`                            |                         |
 | `goods-receipts.service.ts:161-169` pre-check in `close`                                                    | `CPrecheck`                          | `AppPrecheck`           |
 | `goods-receipts.service.ts:170` closure insert                                                              | `CStmt`                              |                         |
 | `migration.sql:208` `PERFORM pg_advisory_xact_lock` in `purchase_order_closures_guard`                      | `CLock`                              | `ClosureGuardLocks`     |
