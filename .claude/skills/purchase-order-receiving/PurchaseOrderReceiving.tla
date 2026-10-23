@@ -3,7 +3,7 @@
 (* Goods receipts and the closure of ONE purchase order under concurrency. *)
 (*                                                                         *)
 (* Each process is one HTTP request, so one TenantDb.run transaction       *)
-(* (apps/api/src/tenancy/tenant-db.service.ts:207) at Postgres's default    *)
+(* (apps/api/src/tenancy/tenant-db.service.ts:20) at Postgres's default    *)
 (* READ COMMITTED isolation. A Receipt runs GoodsReceiptsService.create and *)
 (* a Closer runs GoodsReceiptsService.close                                 *)
 (* (apps/api/src/purchase-orders/goods-receipts.service.ts:82 and :155).    *)
@@ -46,7 +46,7 @@ Lines == DOMAIN Ordered   \* the order's purchase_order_lines
 Symmetry == Permutations(Receipts) \cup Permutations(Closers)
 
 \* A receipt's input lines in request order. parseCreateGoodsReceipt
-\* (goods-receipt-input.ts:287) and the unique index
+\* (goods-receipt-input.ts:63) and the unique index
 \* goods_receipt_lines_goods_receipt_id_purchase_order_line_id_key
 \* (migration.sql:69) allow each order line at most once per receipt.
 Entries == Lines \X Quantities
