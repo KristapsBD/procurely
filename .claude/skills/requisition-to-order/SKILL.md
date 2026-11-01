@@ -61,23 +61,23 @@ If you run the model unchanged after a code change, it checks the old code. Befo
 
 TypeScript files are under `apps/api/src/requisitions/`, `apps/api/src/purchase-orders/` or `apps/api/src/tenancy/`, and SQL files under `apps/api/prisma/migrations/`. `rules.sql` is `20260106000100_approval_rules/migration.sql`, `requisitions.sql` is `20260105000000_requisitions/migration.sql`, and `orders.sql` is `20261010125659_purchase_orders/migration.sql`.
 
-| Code (at the sync commit)                                                                         | Model                           | Switch in `MC.cfg`                     |
-| ------------------------------------------------------------------------------------------------- | ------------------------------- | -------------------------------------- |
-| `requisitions.service.ts:350` `FOR UPDATE` in `lock`, requester path                              | `RLock`                         | `RequisitionLock`                      |
-| `requisitions.service.ts:351`, `:366-372` read, rules, `decide` (`requisition-lifecycle.ts:179-196`) | `RequesterRead`, `RRead`         | `LifecycleChecks`                      |
-| `requisitions.service.ts:244` edit header, `:278` submit or cancel status                        | `RUpdate`                       |                                        |
-| `requisitions.service.ts:251-252` edit lines, policies `requisitions.sql:147-169`                 | `RLines`                        |                                        |
-| `requisitions.service.ts:350` `FOR UPDATE` in `lock`, decider path                                | `DLock`                         | `RequisitionLock`                      |
-| `requisitions.service.ts:311-313` `decideApproval` (`requisition-lifecycle.ts:199-216`)           | `DeciderRead`, `DRead`          | `LifecycleChecks`                      |
-| `requisitions.service.ts:315` decision insert, policy `rules.sql:167-181`, unique `rules.sql:62`  | `DInsert`                       | `PolicyOwnClause`, `PolicyRoleClause`  |
-| `requisitions.service.ts:326` status update, policies `requisitions.sql:124-134`, `rules.sql:226-240` | `DUpdate`                    | `PolicyOwnClause`, `PolicyRoleClause`  |
-| `rules.sql:199-220` `requisitions_visible_select`, `orders.sql:93-98` buyer select                | `Visible`                       | `PolicyRoleClause`, `OrderApprovedPolicy` |
-| `rules.sql:249-291` trigger `requisitions_guard_status`                                           | `GuardAllows`                   | `StatusGuard`                          |
-| `purchase-orders.service.ts:151-173` `requireConvertible`                                         | `BCheck`                        | `ConvertCheck`                         |
-| `purchase-orders.service.ts:106` order insert, policy `orders.sql:119-132`, unique `orders.sql:46` | `BInsert`                      | `OrderApprovedPolicy`, `OrderUnique`   |
-| foreign keys `rules.sql:71`, `orders.sql:61` (`FOR KEY SHARE` on the requisition)                 | `KeyShareThen`, `KeyShareWake`  |                                        |
-| `purchase-order-status.ts:12-23` `statusOf`                                                       | `OrderStatus`, `Receive`, `Close` |                                      |
-| `tenancy/tenant-db.service.ts:20` one transaction, then commit                                    | `DoCommit`                      |                                        |
+| Code (at the sync commit)                                                                             | Model                             | Switch in `MC.cfg`                        |
+| ----------------------------------------------------------------------------------------------------- | --------------------------------- | ----------------------------------------- |
+| `requisitions.service.ts:350` `FOR UPDATE` in `lock`, requester path                                  | `RLock`                           | `RequisitionLock`                         |
+| `requisitions.service.ts:351`, `:366-372` read, rules, `decide` (`requisition-lifecycle.ts:179-196`)  | `RequesterRead`, `RRead`          | `LifecycleChecks`                         |
+| `requisitions.service.ts:244` edit header, `:278` submit or cancel status                             | `RUpdate`                         |                                           |
+| `requisitions.service.ts:251-252` edit lines, policies `requisitions.sql:147-169`                     | `RLines`                          |                                           |
+| `requisitions.service.ts:350` `FOR UPDATE` in `lock`, decider path                                    | `DLock`                           | `RequisitionLock`                         |
+| `requisitions.service.ts:311-313` `decideApproval` (`requisition-lifecycle.ts:199-216`)               | `DeciderRead`, `DRead`            | `LifecycleChecks`                         |
+| `requisitions.service.ts:315` decision insert, policy `rules.sql:167-181`, unique `rules.sql:62`      | `DInsert`                         | `PolicyOwnClause`, `PolicyRoleClause`     |
+| `requisitions.service.ts:326` status update, policies `requisitions.sql:124-134`, `rules.sql:226-240` | `DUpdate`                         | `PolicyOwnClause`, `PolicyRoleClause`     |
+| `rules.sql:199-220` `requisitions_visible_select`, `orders.sql:93-98` buyer select                    | `Visible`                         | `PolicyRoleClause`, `OrderApprovedPolicy` |
+| `rules.sql:249-291` trigger `requisitions_guard_status`                                               | `GuardAllows`                     | `StatusGuard`                             |
+| `purchase-orders.service.ts:151-173` `requireConvertible`                                             | `BCheck`                          | `ConvertCheck`                            |
+| `purchase-orders.service.ts:106` order insert, policy `orders.sql:119-132`, unique `orders.sql:46`    | `BInsert`                         | `OrderApprovedPolicy`, `OrderUnique`      |
+| foreign keys `rules.sql:71`, `orders.sql:61` (`FOR KEY SHARE` on the requisition)                     | `KeyShareThen`, `KeyShareWake`    |                                           |
+| `purchase-order-status.ts:12-23` `statusOf`                                                           | `OrderStatus`, `Receive`, `Close` |                                           |
+| `tenancy/tenant-db.service.ts:20` one transaction, then commit                                        | `DoCommit`                        |                                           |
 
 How to mirror a change:
 
@@ -135,17 +135,17 @@ Out of scope:
 
 ## Coverage record
 
-| File                                                                         | Covered                                                                                                                                                                                                 |
-| ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `apps/api/src/requisitions/requisitions.service.ts`                          | `update`, `transition`, `decide`, `lock`, `loadForChange`, `writeLines`                                                                                                                                 |
-| `apps/api/src/requisitions/requisition-lifecycle.ts`                         | `TRANSITIONS`, `approvalRequirement`, `routeOf`, `mayDecide`, `decide`, `decideApproval`                                                                                                                |
-| `apps/api/src/purchase-orders/purchase-orders.service.ts`                    | `create`, `requireConvertible`                                                                                                                                                                          |
-| `apps/api/src/purchase-orders/purchase-order-status.ts`                      | `statusOf` (coarse)                                                                                                                                                                                     |
-| `apps/api/src/tenancy/tenant-db.service.ts`                                  | `TenantDb.run` (one transaction per request, default isolation)                                                                                                                                         |
-| `apps/api/src/tenancy/db-errors.ts`, `apps/api/src/tenancy/roles.ts`         | `translateDbError` and `rejectUnmatchedWrite`: the HTTP status each `refused*` and `failed*` outcome reaches the client as                                                                             |
-| `apps/api/prisma/migrations/20260105000000_requisitions/migration.sql`       | policies `requisitions_own_update`, `requisition_lines_own_draft_insert`, `requisition_lines_own_draft_delete`                                                                                          |
-| `apps/api/prisma/migrations/20260106000100_approval_rules/migration.sql`     | policies `requisitions_visible_select`, `requisitions_decider_update`, `requisition_decisions_decider_insert`; trigger `requisitions_guard_status`; unique index `requisition_decisions_requisition_id_key` |
-| `apps/api/prisma/migrations/20261010125659_purchase_orders/migration.sql`    | policies `requisitions_buyer_approved_select`, `purchase_orders_select` (buyers see every order), `purchase_orders_buyer_insert`; unique index `purchase_orders_requisition_id_key`; foreign key `purchase_orders_company_id_requisition_id_fkey`          |
+| File                                                                      | Covered                                                                                                                                                                                                                                           |
+| ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/api/src/requisitions/requisitions.service.ts`                       | `update`, `transition`, `decide`, `lock`, `loadForChange`, `writeLines`                                                                                                                                                                           |
+| `apps/api/src/requisitions/requisition-lifecycle.ts`                      | `TRANSITIONS`, `approvalRequirement`, `routeOf`, `mayDecide`, `decide`, `decideApproval`                                                                                                                                                          |
+| `apps/api/src/purchase-orders/purchase-orders.service.ts`                 | `create`, `requireConvertible`                                                                                                                                                                                                                    |
+| `apps/api/src/purchase-orders/purchase-order-status.ts`                   | `statusOf` (coarse)                                                                                                                                                                                                                               |
+| `apps/api/src/tenancy/tenant-db.service.ts`                               | `TenantDb.run` (one transaction per request, default isolation)                                                                                                                                                                                   |
+| `apps/api/src/tenancy/db-errors.ts`, `apps/api/src/tenancy/roles.ts`      | `translateDbError` and `rejectUnmatchedWrite`: the HTTP status each `refused*` and `failed*` outcome reaches the client as                                                                                                                        |
+| `apps/api/prisma/migrations/20260105000000_requisitions/migration.sql`    | policies `requisitions_own_update`, `requisition_lines_own_draft_insert`, `requisition_lines_own_draft_delete`                                                                                                                                    |
+| `apps/api/prisma/migrations/20260106000100_approval_rules/migration.sql`  | policies `requisitions_visible_select`, `requisitions_decider_update`, `requisition_decisions_decider_insert`; trigger `requisitions_guard_status`; unique index `requisition_decisions_requisition_id_key`                                       |
+| `apps/api/prisma/migrations/20261010125659_purchase_orders/migration.sql` | policies `requisitions_buyer_approved_select`, `purchase_orders_select` (buyers see every order), `purchase_orders_buyer_insert`; unique index `purchase_orders_requisition_id_key`; foreign key `purchase_orders_company_id_requisition_id_fkey` |
 
 **Sync commit:** `8d8cee64ad39a34784d50d2fb83221b2ed425571`. The model was last confirmed to describe the covered code at this commit. Move it forward only after you read every change to the covered code since this commit, confirm that the model matches the code at the new commit, and see `run.sh` and `run.sh --broken` both exit 0. Update the `file:line` references in the table and in the `.tla` comments at the same time.
 
