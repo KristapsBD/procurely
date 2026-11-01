@@ -1,0 +1,41 @@
+name: Formal verification
+
+on:
+  pull_request:
+    paths:
+      - .claude/skills/purchase-order-receiving/**
+      - apps/api/prisma/migrations/**
+      - apps/api/src/purchase-orders/**
+      - apps/api/src/tenancy/**
+      - .github/workflows/formal-verification.yml
+  push:
+    branches: [main]
+    paths:
+      - .claude/skills/purchase-order-receiving/**
+      - apps/api/prisma/migrations/**
+      - apps/api/src/purchase-orders/**
+      - apps/api/src/tenancy/**
+      - .github/workflows/formal-verification.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: formal-verification-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  purchase-order-receiving:
+    name: purchase-order-receiving
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: .claude/skills/purchase-order-receiving/.cache/tla2tools-*.jar
+          key: tla2tools-v1.7.4
+      - name: Model-check the code as it is
+        run: .claude/skills/purchase-order-receiving/run.sh
+      - name: Check that broken variants are caught
+        run: .claude/skills/purchase-order-receiving/run.sh --broken
